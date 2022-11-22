@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 18:46:55
  * Last Modified by: fasion
- * Last Modified time: 2022-11-20 12:03:17
+ * Last Modified time: 2022-11-21 12:33:03
  */
 
 package stl
@@ -58,12 +58,10 @@ func (set Set[Data]) Push(data Data) Set[Data] {
 }
 
 func (set Set[Data]) PushX(datas ...Data) Set[Data] {
-	ForEach(datas, set.Push)
-	// duplicated
-	// for _, data := range datas {
-	// 	set.Push(data)
-	// }
-	// return set
+	for _, data := range datas {
+		set.Push(data)
+	}
+	return set
 }
 
 func (set Set[Data]) Pop(data Data) Set[Data] {

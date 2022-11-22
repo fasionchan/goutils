@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2022-11-19 21:43:57
+ * Last Modified time: 2022-11-22 17:55:44
  */
 
 package stl
@@ -157,12 +157,24 @@ func UniqueFast[Data comparable, Datas ~[]Data](datas Datas) Datas {
 	return result
 }
 
+func UniqueBySet[Data comparable, Datas ~[]Data](datas Datas) Datas {
+	return NewSet(datas...).Slice()
+}
+
+func SortUniqueFast[Data constraints.Ordered, Datas ~[]Data](datas Datas) Datas {
+	return UniqueFast(SortFast(datas))
+}
+
 func DupSlice[Data any, Slice ~[]Data](slice Slice) Slice {
 	return append(make(Slice, 0, len(slice)), slice...)
 }
 
 func ConcatSlices[Data any, Slice ~[]Data](slices ...Slice) Slice {
 	return ConcatSlicesTo(nil, slices...)
+}
+
+func GetSliceElemPointers[Data any, Datas ~[]Data](datas Datas) []*Data {
+	return Map(datas, func(data Data) *Data { return &data })
 }
 
 func ConcatSlicesTo[Data any, Slice ~[]Data](slice Slice, slices ...Slice) Slice {
@@ -179,11 +191,31 @@ func MappingByKey[Data any, Datas ~[]Data, Key comparable](datas Datas, key func
 	return m
 }
 
+func MappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](datas Datas, keys func(Data) Keys) map[Key]Data {
+	m := map[Key]Data{}
+	for _, data := range datas {
+		for _, key := range UniqueBySet(keys(data)) {
+			m[key] = data
+		}
+	}
+	return m
+}
+
 func SliceMappingByKey[Data any, Datas ~[]Data, Key comparable](datas Datas, key func(Data) Key) map[Key]Datas {
 	m := map[Key]Datas{}
 	for _, data := range datas {
 		k := key(data)
 		m[k] = append(m[k], data)
+	}
+	return m
+}
+
+func SliceMappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](datas Datas, keys func(Data) Keys) map[Key]Datas {
+	m := map[Key]Datas{}
+	for _, data := range datas {
+		for _, key := range UniqueBySet(keys(data)) {
+			m[key] = append(m[key], data)
+		}
 	}
 	return m
 }
