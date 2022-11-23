@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2022-11-22 18:44:49
+ * Last Modified time: 2022-11-23 09:42:09
  */
 
 package queryutils
@@ -29,6 +29,7 @@ type ClonableSetinerInterface interface {
 
 type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
 
+// Create A Setin Handler
 func NewSetinHandlerCustom[
 	Data any,
 	Datas ~[]*Data,
@@ -334,6 +335,10 @@ func (mapping SetinHandlerMapping[Data, Datas]) Setin(ctx context.Context, datas
 	return nil
 }
 
+func (mapping SetinHandlerMapping[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Data] {
+	return NewSetiner[Data, Datas, []Data](mapping)
+}
+
 type UnknownSetinError struct {
 	setin string
 }
@@ -400,6 +405,7 @@ func (setiner *Setiner[Data, Datas, DataInstances]) ActionFor(datas Datas) *Seti
 	return NewSetinAction(setiner, datas)
 }
 
+// A SetinAction is A Setiner with datas, it can Dup, Clone, WithData and finally Setin.
 type SetinAction[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
 	*Setiner[Data, Datas, DataInstances]
 	datas Datas
