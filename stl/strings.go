@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2022-11-20 11:57:42
+ * Last Modified time: 2022-11-23 13:56:31
  */
 
 package stl
@@ -65,8 +65,8 @@ func (strs Strings) ForEach(handler func(string)) {
 	ForEach(strs, handler)
 }
 
-func (strs Strings) ForEachCustom(handler func(int, string, Strings)) {
-	ForEachCustom(strs, handler)
+func (strs Strings) ForEachPro(handler func(int, string, Strings)) {
+	ForEachPro(strs, handler)
 }
 
 func (strs Strings) Filter(filter func(string) bool) Strings {

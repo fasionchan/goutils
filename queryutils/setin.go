@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2022-11-23 09:42:09
+ * Last Modified time: 2022-11-23 13:59:26
  */
 
 package queryutils
@@ -30,7 +30,7 @@ type ClonableSetinerInterface interface {
 type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
 
 // Create A Setin Handler
-func NewSetinHandlerCustom[
+func NewSetinHandlerPro[
 	Data any,
 	Datas ~[]*Data,
 	Key comparable,
@@ -45,7 +45,7 @@ func NewSetinHandlerCustom[
 	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
 ) SetinHandler[Data, *Data, Datas] {
 	return func(ctx context.Context, datas Datas) error {
-		return SetinCustom(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler)
+		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler)
 	}
 }
 
@@ -64,10 +64,10 @@ func NewSetinHandler[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
 ) SetinHandler[Data, *Data, Datas] {
-	return NewSetinHandlerCustom[Data, Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
+	return NewSetinHandlerPro[Data, Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
 }
 
-func NewReversedSetinHandlerCustom[
+func NewReversedSetinHandlerPro[
 	Data any,
 	DataPtr ~*Data,
 	Datas ~[]DataPtr,
@@ -83,7 +83,7 @@ func NewReversedSetinHandlerCustom[
 	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
 ) SetinHandler[Data, DataPtr, Datas] {
 	return func(ctx context.Context, datas Datas) error {
-		return ReversedSetinCustom(ctx, datas, dataKey, subDataFetcher, subDataKeys, setinHandler)
+		return ReversedSetinPro(ctx, datas, dataKey, subDataFetcher, subDataKeys, setinHandler)
 	}
 }
 
@@ -104,10 +104,10 @@ func NewReversedSetinHandler[
 	subDataKeys func(SubData) Keys,
 	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
 ) SetinHandler[Data, DataPtr, Datas] {
-	return NewReversedSetinHandlerCustom[Data, DataPtr, Datas](DataPtr.GetId, subDataFetcher, subDataKeys, setinHandler)
+	return NewReversedSetinHandlerPro[Data, DataPtr, Datas](DataPtr.GetId, subDataFetcher, subDataKeys, setinHandler)
 }
 
-func GenericSetinCustom[
+func GenericSetinPro[
 	Data any,
 	Datas ~[]*Data,
 	Key comparable,
@@ -139,7 +139,7 @@ func GenericSetinCustom[
 	return nil
 }
 
-func SetinCustom[
+func SetinPro[
 	Data any,
 	Datas ~[]*Data,
 	Key comparable,
@@ -188,7 +188,7 @@ func Setin[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
 ) error {
-	return SetinCustom(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
+	return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
 }
 
 // 调整类型参数顺序，方便指定
@@ -212,7 +212,7 @@ func SetinX[
 	return Setin(ctx, datas, dataSubKeys, subDataFetcher, setinHandler)
 }
 
-func ReversedSetinCustom[
+func ReversedSetinPro[
 	Data any,
 	DataPtr ~*Data,
 	Datas ~[]DataPtr,
