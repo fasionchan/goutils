@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2022-11-23 09:42:09
+ * Last Modified time: 2022-11-29 15:52:34
  */
 
 package queryutils
@@ -27,6 +27,7 @@ type ClonableSetinerInterface interface {
 	Clone() ClonableSetinerInterface
 }
 
+type SetinTester[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas, setin string) (bool, error)
 type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
 
 // Create A Setin Handler
@@ -320,23 +321,37 @@ func (mapping SetinHandlerMapping[Data, Datas]) WithHandler(name string, handler
 	return mapping
 }
 
+func (mapping SetinHandlerMapping[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
+	handler, ok := mapping[setin]
+	if !ok {
+		return false, nil
+	}
+
+	if err := handler(ctx, datas); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (mapping SetinHandlerMapping[Data, Datas]) Setin(ctx context.Context, datas Datas, setins []string) error {
 	for _, setin := range setins {
-		handler, ok := mapping[setin]
-		if !ok {
-			return NewUnknownSetinError(setin)
-		}
-
-		if err := handler(ctx, datas); err != nil {
+		if ok, err := mapping.SetinOne(ctx, datas, setin); err != nil {
 			return err
+		} else if !ok {
+			return NewUnknownSetinError(setin)
 		}
 	}
 
 	return nil
 }
 
+func (mapping SetinHandlerMapping[Data, Datas]) NewTesters() SetinTesters[Data, Datas] {
+	return NewSetinTesters(mapping.SetinOne)
+}
+
 func (mapping SetinHandlerMapping[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Data] {
-	return NewSetiner[Data, Datas, []Data](mapping)
+	return mapping.NewTesters().NewSetiner()
 }
 
 type UnknownSetinError struct {
@@ -353,17 +368,49 @@ func (e UnknownSetinError) Error() string {
 	return fmt.Sprintf("unknown setin: %s", e.setin)
 }
 
-type Setiner[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
-	SetinHandlerMapping[Data, Datas]
+type SetinTesters[Data any, Datas ~[]*Data] []SetinTester[Data, *Data, Datas]
+
+func NewSetinTesters[Data any, Datas ~[]*Data](testers ...SetinTester[Data, *Data, Datas]) SetinTesters[Data, Datas] {
+	return testers
 }
 
-func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](handlers SetinHandlerMapping[Data, Datas]) *Setiner[Data, Datas, DataInstances] {
-	if handlers == nil {
-		handlers = SetinHandlerMapping[Data, Datas]{}
+func (testers SetinTesters[Data, Datas]) Append(more ...SetinTester[Data, *Data, Datas]) SetinTesters[Data, Datas] {
+	return append(testers, more...)
+}
+
+func (testers SetinTesters[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) error {
+	for _, tester := range testers {
+		if ok, err := tester(ctx, datas, setin); err != nil {
+			return err
+		} else if ok {
+			return nil
+		}
 	}
 
+	return NewUnknownSetinError(setin)
+}
+
+func (testers SetinTesters[Data, Datas]) Setin(ctx context.Context, datas Datas, setins []string) error {
+	for _, setin := range setins {
+		if err := testers.SetinOne(ctx, datas, setin); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (testers SetinTesters[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Data] {
+	return NewSetiner[Data, Datas, []Data](testers)
+}
+
+type Setiner[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
+	SetinTesters[Data, Datas]
+}
+
+func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](testers SetinTesters[Data, Datas]) *Setiner[Data, Datas, DataInstances] {
 	return &Setiner[Data, Datas, DataInstances]{
-		SetinHandlerMapping: handlers,
+		SetinTesters: testers,
 	}
 }
 
@@ -386,15 +433,15 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinFor(ctx context.Context
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinForData(ctx context.Context, data *Data, setins []string) error {
-	return setiner.SetinHandlerMapping.Setin(ctx, Datas{data}, setins)
+	return setiner.Setin(ctx, Datas{data}, setins)
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDatas(ctx context.Context, datas Datas, setins []string) error {
-	return setiner.SetinHandlerMapping.Setin(ctx, datas, setins)
+	return setiner.Setin(ctx, datas, setins)
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDataInstances(ctx context.Context, instances DataInstances, setins []string) error {
-	return setiner.SetinHandlerMapping.Setin(ctx, stl.GetSliceElemPointers(instances), setins)
+	return setiner.Setin(ctx, stl.GetSliceElemPointers(instances), setins)
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) Action() *SetinAction[Data, Datas, DataInstances] {
