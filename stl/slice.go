@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2022-11-22 17:55:44
+ * Last Modified time: 2022-12-30 14:03:15
  */
 
 package stl
@@ -12,6 +12,10 @@ import (
 
 	"golang.org/x/exp/constraints"
 )
+
+func NewSlice[Data any](datas ...Data) []Data {
+	return datas
+}
 
 func AnyMatch[Data any](datas []Data, test func(Data) bool) bool {
 	for _, data := range datas {
