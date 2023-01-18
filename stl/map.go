@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2022-11-19 20:37:45
+ * Last Modified time: 2023-01-18 15:43:52
  */
 
 package stl
@@ -13,6 +13,22 @@ func MapKeys[Key comparable, Value any, Map ~map[Key]Value](m Map) []Key {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func MapValues[Key comparable, Value any, Map ~map[Key]Value](m Map) []Value {
+	values := make([]Value, 0, len(m))
+	for _, v := range m {
+		values = append(values, v)
+	}
+	return values
+}
+
+func MapValuesByKeys[Key comparable, Value any, Map ~map[Key]Value](m Map, keys ...Key) []Value {
+	values := make([]Value, 0, len(keys))
+	for _, key := range keys {
+		values = append(values, m[key])
+	}
+	return values
 }
 
 func DupMap[Key comparable, Value any, Map ~map[Key]Value](m Map) Map {
