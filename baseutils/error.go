@@ -2,12 +2,17 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2022-12-25 17:57:21
+ * Last Modified time: 2023-04-14 17:19:56
  */
 
 package baseutils
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/fasionchan/goutils/stl"
+)
 
 type EnvironmentVariableNotFoundError struct {
 	name string
@@ -57,4 +62,27 @@ func NewNotImplementedError(hint string) NotImplementedError {
 
 func (e NotImplementedError) Error() string {
 	return fmt.Sprintf("not implemented: %s", e.hint)
+}
+
+type Errors []error
+
+func (errors Errors) Len() int {
+	return len(errors)
+}
+
+func (errors Errors) Empty() bool {
+	return errors.Len() == 0
+}
+
+func (errors Errors) PurgeZero() Errors {
+	return stl.Filter(errors, func(err error) bool {
+		return err != nil
+	})
+}
+
+func (errors Errors) Error() string {
+	chips := stl.MapPro(errors, func(i int, err error, errors Errors) string {
+		return fmt.Sprintf("#%d %s", i, err)
+	})
+	return strings.Join(chips, "\n")
 }

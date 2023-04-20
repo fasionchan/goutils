@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-01-18 15:43:52
+ * Last Modified time: 2023-04-14 17:11:39
  */
 
 package stl
@@ -70,4 +70,22 @@ func BatchDeleteMapFromAnother[Key comparable, Value any, Map ~map[Key]Value](m 
 		delete(m, key)
 	}
 	return m
+}
+
+func CacheMapValueWithInitializer[Key comparable, Value any, Map ~map[Key]Value](m Map, key Key, initializer func() Value) Value {
+	cached, ok := m[key]
+	if !ok {
+		cached = initializer()
+		m[key] = cached
+	}
+	return cached
+}
+
+func CacheMapValue[Key comparable, Value any, Map ~map[Key]Value](m Map, key Key, value Value) Value {
+	cached, ok := m[key]
+	if !ok {
+		cached = value
+		m[key] = cached
+	}
+	return cached
 }

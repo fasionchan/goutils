@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2022-12-30 14:03:15
+ * Last Modified time: 2023-04-20 15:14:31
  */
 
 package stl
@@ -12,10 +12,6 @@ import (
 
 	"golang.org/x/exp/constraints"
 )
-
-func NewSlice[Data any](datas ...Data) []Data {
-	return datas
-}
 
 func AnyMatch[Data any](datas []Data, test func(Data) bool) bool {
 	for _, data := range datas {
@@ -33,6 +29,82 @@ func AllMatch[Data any](datas []Data, test func(Data) bool) bool {
 		}
 	}
 	return true
+}
+
+func Equal[Data comparable](as []Data, bs []Data) bool {
+	if len(as) != len(bs) {
+		return false
+	}
+
+	if len(as) == 0 {
+		return true
+	}
+
+	for i, a := range as {
+		if a != bs[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func EqualBySort[Data constraints.Ordered](as []Data, bs []Data) bool {
+	if len(as) != len(bs) {
+		return false
+	}
+
+	if len(as) == 0 {
+		return true
+	}
+
+	less := func(a, b Data) bool {
+		return a < b
+	}
+
+	bs = Sort(bs, less)
+	for i, a := range Sort(as, less) {
+		if a != bs[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func EqualBySet[Data comparable](as []Data, bs []Data) bool {
+	if len(as) != len(bs) {
+		return false
+	}
+
+	if len(as) == 0 {
+		return true
+	}
+
+	return NewSet(as...).Equal(NewSet(bs...))
+}
+
+func Compare[Data constraints.Ordered](as []Data, bs []Data) int {
+	bn := len(bs)
+	for i, a := range as {
+		if i >= bn {
+			return 1
+		}
+
+		b := bs[i]
+		if a > b {
+			return 1
+		} else if a < b {
+			return -1
+		}
+	}
+
+	an := len(as)
+	if an == bn {
+		return 0
+	} else {
+		return -1
+	}
 }
 
 func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
@@ -162,7 +234,7 @@ func UniqueFast[Data comparable, Datas ~[]Data](datas Datas) Datas {
 }
 
 func UniqueBySet[Data comparable, Datas ~[]Data](datas Datas) Datas {
-	return NewSet(datas...).Slice()
+	return Datas(NewSet(datas...).Slice())
 }
 
 func SortUniqueFast[Data constraints.Ordered, Datas ~[]Data](datas Datas) Datas {
@@ -222,4 +294,109 @@ func SliceMappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](da
 		}
 	}
 	return m
+}
+
+func FillSliceToCap[Data any, Datas ~[]Data](datas Datas, g func(int) Data) Datas {
+	n := cap(datas)
+	for i := len(datas); i < n; i++ {
+		datas = append(datas, g(i))
+	}
+	return datas
+}
+
+func ReadChan[Data any](c chan Data, n int) []Data {
+	datas := make([]Data, 0, n)
+	for i := 0; i < n; i++ {
+		datas = append(datas, <-c)
+	}
+	return datas
+}
+
+func ReadChanAll[Data any, Datas ~[]Data](c chan Data) (datas Datas) {
+	for data := range c {
+		datas = append(datas, data)
+	}
+	return
+}
+
+type Slice[Data any] []Data
+
+func NewSlice[Data any](datas ...Data) Slice[Data] {
+	return datas
+}
+
+func (slice Slice[Data]) Native() []Data {
+	return slice
+}
+
+func (slice Slice[Data]) NotNilSlice() Slice[Data] {
+	if slice == nil {
+		return Slice[Data]{}
+	}
+	return slice
+}
+
+func (slice Slice[Data]) AnyMatch(f func(Data) bool) bool {
+	return AnyMatch(slice, f)
+}
+
+func (slice Slice[Data]) AllMatch(f func(Data) bool) bool {
+	return AllMatch(slice, f)
+}
+
+func (slice Slice[Data]) ForEachPro(f func(int, Data, Slice[Data])) {
+	ForEachPro(slice, f)
+}
+
+func (slice Slice[Data]) Map(f func(Data) Data) Slice[Data] {
+	return Map(slice, f)
+}
+
+func (slice Slice[Data]) Filter(f func(Data) bool) Slice[Data] {
+	return Filter(slice, f)
+}
+
+func (slice Slice[Data]) Dup() Slice[Data] {
+	return DupSlice(slice)
+}
+
+type ComparableSlice[Data comparable] []Data
+
+func NewComparableSlice[Data comparable](datas ...Data) ComparableSlice[Data] {
+	return datas
+}
+
+func (slice ComparableSlice[Data]) Native() []Data {
+	return slice
+}
+
+func (slice ComparableSlice[Data]) NotNilSlice() ComparableSlice[Data] {
+	if slice == nil {
+		return ComparableSlice[Data]{}
+	}
+	return slice
+}
+
+func (slice ComparableSlice[Data]) AnyMatch(f func(Data) bool) bool {
+	return AnyMatch(slice, f)
+}
+
+func (slice ComparableSlice[Data]) AllMatch(f func(Data) bool) bool {
+	return AllMatch(slice, f)
+}
+
+func (slice ComparableSlice[Data]) ForEachPro(f func(int, Data, ComparableSlice[Data])) {
+	ForEachPro(slice, f)
+}
+
+func (slice ComparableSlice[Data]) Map(f func(Data) Data) Slice[Data] {
+	return Map(slice, f)
+}
+
+func (slice ComparableSlice[Data]) Filter(f func(Data) bool) ComparableSlice[Data] {
+	return Filter(slice, f)
+}
+
+func (slice ComparableSlice[Data]) Dup() ComparableSlice[Data] {
+	return DupSlice(slice)
 }

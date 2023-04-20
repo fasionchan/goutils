@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 18:46:55
  * Last Modified by: fasion
- * Last Modified time: 2022-11-21 12:33:03
+ * Last Modified time: 2023-04-14 17:53:26
  */
 
 package stl
@@ -44,7 +44,7 @@ func (set Set[Data]) Equal(other Set[Data]) bool {
 	return true
 }
 
-func (set Set[Data]) Slice() []Data {
+func (set Set[Data]) Slice() Slice[Data] {
 	return MapKeys(set)
 }
 
@@ -111,4 +111,14 @@ func (set Set[Data]) Intersection(other Set[Data]) Set[Data] {
 		}
 	}
 	return result
+}
+
+func (set Set[Data]) FirstAppear(datas ...Data) (result Data) {
+	for _, data := range datas {
+		if set.Contain(data) {
+			result = data
+			return
+		}
+	}
+	return
 }
