@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-04-18 14:02:09
  * Last Modified by: fasion
- * Last Modified time: 2023-04-20 17:04:47
+ * Last Modified time: 2023-04-20 17:33:34
  */
 
 package jobutils
@@ -203,6 +203,12 @@ type TopicBroker struct {
 	handlers SmartHandlersMappingByString
 }
 
+func NewTopicBroker() *TopicBroker {
+	return &TopicBroker{
+		handlers: SmartHandlersMappingByString{},
+	}
+}
+
 func (broker *TopicBroker) Publish(topic string) {
 	broker.mutex.RLock()
 	defer broker.mutex.RUnlock()
@@ -210,8 +216,15 @@ func (broker *TopicBroker) Publish(topic string) {
 	broker.handlers[topic].Call()
 }
 
-func (broker *TopicBroker) Subscribe(topic string, callback func()) {
-
+func (broker *TopicBroker) Subscribe(topic string, callback func()) *TopicBrokerSubscribing {
+	return &TopicBrokerSubscribing{
+		broker: broker,
+		topic:  topic,
+		handler: &SmartHandler{
+			callback: callback,
+			ctx:      bgCtx,
+		},
+	}
 }
 
 func (broker *TopicBroker) subscribe(topic string, handler *SmartHandler) *TopicBroker {
@@ -240,12 +253,51 @@ func (broker *TopicBroker) Unsubscribe(topic string) {
 }
 
 type TopicBrokerSubscribing struct {
-	SmartHandler
+	broker  *TopicBroker
+	topic   string
+	handler *SmartHandler
+}
 
-	broker *TopicBroker
-	topic  string
+func (subscribing *TopicBrokerSubscribing) WithIdent(ident string) *TopicBrokerSubscribing {
+	subscribing.handler.ident = ident
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithAsync(async bool) *TopicBrokerSubscribing {
+	subscribing.handler.async = async
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithCtx(ctx context.Context) *TopicBrokerSubscribing {
+	subscribing.handler.ctx = ctx
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithConcurrentcy(n int) *TopicBrokerSubscribing {
+	subscribing.handler.tickets = NewJobTokens(n)
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithDelay(delay time.Duration) *TopicBrokerSubscribing {
+	subscribing.handler.delay = delay
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithInterval(interval time.Duration) *TopicBrokerSubscribing {
+	subscribing.handler.interval = interval
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithDeadline(deadline time.Duration) *TopicBrokerSubscribing {
+	subscribing.handler.deadline = deadline
+	return subscribing
+}
+
+func (subscribing *TopicBrokerSubscribing) WithMerge(merge bool) *TopicBrokerSubscribing {
+	subscribing.handler.merge = merge
+	return subscribing
 }
 
 func (subscribing *TopicBrokerSubscribing) Done() *TopicBroker {
-	return subscribing.broker.subscribe(subscribing.topic, &subscribing.SmartHandler)
+	return subscribing.broker.subscribe(subscribing.topic, subscribing.handler)
 }
