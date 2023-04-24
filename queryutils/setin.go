@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2022-12-20 21:11:04
+ * Last Modified time: 2023-04-24 13:56:16
  */
 
 package queryutils
@@ -455,7 +455,8 @@ func (setiner *Setiner[Data, Datas, DataInstances]) ActionFor(datas Datas) *Seti
 // A SetinAction is A Setiner with datas, it can Dup, Clone, WithData and finally Setin.
 type SetinAction[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
 	*Setiner[Data, Datas, DataInstances]
-	datas Datas
+	datas  Datas
+	setins []string
 }
 
 func NewSetinAction[Data any, Datas ~[]*Data, DataInstances ~[]Data](setiner *Setiner[Data, Datas, DataInstances], datas Datas) *SetinAction[Data, Datas, DataInstances] {
@@ -472,6 +473,16 @@ func (setiner *SetinAction[Data, Datas, DataInstances]) Dup() *SetinAction[Data,
 
 func (setiner *SetinAction[Data, Datas, DataInstances]) Clone() ClonableSetinerInterface {
 	return setiner
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) WithSetinsX(setins ...string) *SetinAction[Data, Datas, DataInstances] {
+	action.setins = setins
+	return action
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) WithSetins(setins ...string) CommonSetinerInterface {
+	action.setins = setins
+	return action
 }
 
 func (action *SetinAction[Data, Datas, DataInstances]) WithSetineds(setineds any) (CommonSetinerInterface, error) {
@@ -512,5 +523,8 @@ func (action *SetinAction[Data, Datas, DataInstances]) SetinX(ctx context.Contex
 }
 
 func (action *SetinAction[Data, Datas, DataInstances]) Setin(ctx context.Context, setins []string) error {
+	if len(setins) == 0 {
+		setins = action.setins
+	}
 	return action.SetinFor(ctx, action.datas, setins)
 }
