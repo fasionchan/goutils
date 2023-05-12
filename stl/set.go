@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 18:46:55
  * Last Modified by: fasion
- * Last Modified time: 2023-04-14 17:53:26
+ * Last Modified time: 2023-05-08 14:59:01
  */
 
 package stl
@@ -69,11 +69,19 @@ func (set Set[Data]) Pop(data Data) Set[Data] {
 	return set
 }
 
-func (set Set[Data]) Add(other Set[Data]) Set[Data] {
+func (set Set[Data]) Add(data Data) Set[Data] {
+	return set.Push(data)
+}
+
+func (set Set[Data]) AddX(datas ...Data) Set[Data] {
+	return set.PushX(datas...)
+}
+
+func (set Set[Data]) Merge(other Set[Data]) Set[Data] {
 	return ConcatMapInplace(set, other)
 }
 
-func (set Set[Data]) Sub(other Set[Data]) Set[Data] {
+func (set Set[Data]) Purge(other Set[Data]) Set[Data] {
 	return BatchDeleteMapFromAnother(set, other)
 }
 
@@ -82,7 +90,7 @@ func (set Set[Data]) Union(other Set[Data]) Set[Data] {
 }
 
 func (set Set[Data]) Difference(other Set[Data]) Set[Data] {
-	return set.Dup().Sub(other)
+	return set.Dup().Purge(other)
 }
 
 func (set Set[Data]) SymmetricDifference(other Set[Data]) Set[Data] {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-04-20 15:14:31
+ * Last Modified time: 2023-05-08 15:09:02
  */
 
 package stl
@@ -31,7 +31,7 @@ func AllMatch[Data any](datas []Data, test func(Data) bool) bool {
 	return true
 }
 
-func Equal[Data comparable](as []Data, bs []Data) bool {
+func SliceEqual[Datas ~[]Data, Data comparable](as Datas, bs Datas) bool {
 	if len(as) != len(bs) {
 		return false
 	}
@@ -221,7 +221,7 @@ func Unique[Data comparable, Datas ~[]Data](datas Datas, equal func(Data, Data) 
 	return result
 }
 
-func UniqueFast[Data comparable, Datas ~[]Data](datas Datas) Datas {
+func UniqueSorteds[Data comparable, Datas ~[]Data](datas Datas) Datas {
 	result := make(Datas, 0, len(datas))
 	var last Data
 	for i, data := range datas {
@@ -237,8 +237,20 @@ func UniqueBySet[Data comparable, Datas ~[]Data](datas Datas) Datas {
 	return Datas(NewSet(datas...).Slice())
 }
 
+func UniqueByKeySet[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Datas {
+	set := NewSet[Key]()
+	return Filter(datas, func(data Data) bool {
+		_key := key(data)
+		exists := set.Contain(_key)
+		if !exists {
+			set.Push(_key)
+		}
+		return !exists
+	})
+}
+
 func SortUniqueFast[Data constraints.Ordered, Datas ~[]Data](datas Datas) Datas {
-	return UniqueFast(SortFast(datas))
+	return UniqueSorteds(SortFast(datas))
 }
 
 func DupSlice[Data any, Slice ~[]Data](slice Slice) Slice {
@@ -375,6 +387,18 @@ func (slice ComparableSlice[Data]) NotNilSlice() ComparableSlice[Data] {
 		return ComparableSlice[Data]{}
 	}
 	return slice
+}
+
+func (slice ComparableSlice[Data]) Contain(data Data) bool {
+	return IndexOf(slice, data) >= 0
+}
+
+func (slice ComparableSlice[Data]) ContainAll(datas ...Data) bool {
+	return AllMatch(datas, slice.Contain)
+}
+
+func (slice ComparableSlice[Data]) ContainAny(datas ...Data) bool {
+	return AnyMatch(datas, slice.Contain)
 }
 
 func (slice ComparableSlice[Data]) AnyMatch(f func(Data) bool) bool {
