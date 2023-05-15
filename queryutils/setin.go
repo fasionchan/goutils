@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2023-04-24 13:56:16
+ * Last Modified time: 2023-05-15 10:13:24
  */
 
 package queryutils
@@ -125,7 +125,7 @@ func GenericSetinPro[
 	setinHandler func(data *Data, subDatasMapping SubDatasMapping) *Data,
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
-	keys = stl.NewSet(keys...).Slice() // 集合去重
+	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
 
 	subDatas, err := subDataFetcher(ctx, keys)
 	if err != nil {
@@ -157,7 +157,7 @@ func SetinPro[
 	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
-	keys = stl.NewSet(keys...).Slice() // 集合去重
+	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
 
 	subDatas, err := subDataFetcher(ctx, keys)
 	if err != nil {
