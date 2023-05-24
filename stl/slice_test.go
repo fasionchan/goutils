@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:31:44
  * Last Modified by: fasion
- * Last Modified time: 2023-04-20 14:49:25
+ * Last Modified time: 2023-05-15 15:59:25
  */
 
 package stl
@@ -38,10 +38,6 @@ func TestSlice(t *testing.T) {
 	}, 0))
 
 	assert.Equal(t, ConcatSlices([]int{1, 2}, []int{3, 4}), []int{1, 2, 3, 4})
-}
-
-func TestString(t *testing.T) {
-	assert.Equal(t, NewStrings("a\tb c", "d e", "f g\th\ni\rj").Split(" ", "\t", "\n", "\r").Native(), []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"})
 }
 
 func TestFilterDemo(t *testing.T) {

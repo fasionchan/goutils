@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2023-05-15 10:13:24
+ * Last Modified time: 2023-05-24 16:11:00
  */
 
 package queryutils
@@ -526,5 +526,21 @@ func (action *SetinAction[Data, Datas, DataInstances]) Setin(ctx context.Context
 	if len(setins) == 0 {
 		setins = action.setins
 	}
-	return action.SetinFor(ctx, action.datas, setins)
+	return action.Setiner.SetinForDatas(ctx, action.datas, setins)
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) SetinForData(ctx context.Context, data *Data) error {
+	return action.Setiner.SetinForData(ctx, data, action.setins)
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) SetinForDatas(ctx context.Context, datas Datas) error {
+	return action.Setiner.SetinForDatas(ctx, datas, action.setins)
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) SetinForDataInstances(ctx context.Context, instances DataInstances) error {
+	return action.Setiner.SetinForDataInstances(ctx, instances, action.setins)
+}
+
+func (action *SetinAction[Data, Datas, DataInstances]) SetinFor(ctx context.Context, dataX any) error {
+	return action.Setiner.SetinFor(ctx, dataX, action.setins)
 }

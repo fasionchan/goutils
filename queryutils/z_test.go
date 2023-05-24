@@ -1,11 +1,11 @@
 /*
  * Author: fasion
- * Created time: 2023-04-14 17:44:10
+ * Created time: 2023-05-24 16:14:26
  * Last Modified by: fasion
- * Last Modified time: 2023-05-15 15:58:50
+ * Last Modified time: 2023-05-24 16:14:52
  */
 
-package stl
+package queryutils
 
 import "testing"
 
