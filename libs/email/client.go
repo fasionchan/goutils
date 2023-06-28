@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2023-05-14 12:39:24
+ * Last Modified time: 2023-06-28 15:11:09
  */
 
 package email
@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/smtp"
+	"os"
 
 	"gopkg.in/gomail.v2"
 
@@ -22,6 +23,10 @@ import (
 const (
 	DefaultSmtpPort        = 25
 	DEfaultSmtpPortWithTls = 465
+
+	EnvNameSmtpServerLoc       = "SMTP_SERVER_LOC"
+	EnvNameEmailSenderAccount  = "EMAIL_SENDER_ACCOUNT"
+	EnvNameEmailSenderPassword = "EMAIL_SENDER_PASSWORD"
 )
 
 type EmailClient struct {
@@ -44,6 +49,37 @@ func NewEmailClient(loc, account, password string) (*EmailClient, error) {
 		accout:   account,
 		password: password,
 	}, nil
+}
+
+func NewEmailClientFromEnvPro(locEnvName, senderAccountEnvName, senderPasswordEnvName string, getenv func(string) string) (*EmailClient, error) {
+	loc := getenv(locEnvName)
+	if loc == "" {
+		return nil, baseutils.NewEnvironmentVariableNotFoundError(locEnvName)
+	}
+
+	senderAccount := getenv(senderAccountEnvName)
+	if senderAccount == "" {
+		return nil, baseutils.NewEnvironmentVariableNotFoundError(senderAccountEnvName)
+	}
+
+	senderPassword := getenv(senderPasswordEnvName)
+	if senderPassword == "" {
+		return nil, baseutils.NewEnvironmentVariableNotFoundError(senderPasswordEnvName)
+	}
+
+	return NewEmailClient(loc, senderAccount, senderPassword)
+}
+
+func NewEmailClientFromEnv(locEnvName, senderAccountEnvName, senderPasswordEnvName string) (*EmailClient, error) {
+	return NewEmailClientFromEnvPro(locEnvName, senderAccountEnvName, senderPasswordEnvName, os.Getenv)
+}
+
+func NewEmailClientFromDefaultEnvPro(getenv func(string) string) (*EmailClient, error) {
+	return NewEmailClientFromEnvPro(EnvNameSmtpServerLoc, EnvNameEmailSenderAccount, EnvNameEmailSenderPassword, getenv)
+}
+
+func NewEmailClientFromDefaultEnv() (*EmailClient, error) {
+	return NewEmailClientFromEnvPro(EnvNameSmtpServerLoc, EnvNameEmailSenderAccount, EnvNameEmailSenderPassword, os.Getenv)
 }
 
 func (client *EmailClient) WithTlsConfig(config *tls.Config) *EmailClient {
@@ -84,28 +120,4 @@ func (client *EmailClient) SendMessageSmart(to []string, subject, body string) e
 	msg.SetBody("text/html", body)
 
 	return client.SendMessage(msg)
-}
-
-type SmtpPlainAuth struct {
-	username, password string
-}
-
-func NewSmtpPlainAuth(username, password string) smtp.Auth {
-	return &SmtpPlainAuth{username, password}
-}
-
-func (a *SmtpPlainAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
-	return "LOGIN", []byte(a.username), nil
-}
-
-func (a *SmtpPlainAuth) Next(fromServer []byte, more bool) ([]byte, error) {
-	if more {
-		switch string(fromServer) {
-		case "Username:":
-			return []byte(a.username), nil
-		case "Password:":
-			return []byte(a.password), nil
-		}
-	}
-	return nil, nil
 }

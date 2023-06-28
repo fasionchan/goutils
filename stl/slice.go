@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-05-08 15:09:02
+ * Last Modified time: 2023-05-15 15:58:31
  */
 
 package stl
@@ -337,23 +337,28 @@ func NewSlice[Data any](datas ...Data) Slice[Data] {
 	return datas
 }
 
-func (slice Slice[Data]) Native() []Data {
-	return slice
-}
-
-func (slice Slice[Data]) NotNilSlice() Slice[Data] {
-	if slice == nil {
-		return Slice[Data]{}
-	}
-	return slice
-}
-
 func (slice Slice[Data]) AnyMatch(f func(Data) bool) bool {
 	return AnyMatch(slice, f)
 }
 
 func (slice Slice[Data]) AllMatch(f func(Data) bool) bool {
 	return AllMatch(slice, f)
+}
+
+func (slice Slice[Data]) Dup() Slice[Data] {
+	return DupSlice(slice)
+}
+
+func (slice Slice[Data]) Filter(f func(Data) bool) Slice[Data] {
+	return Filter(slice, f)
+}
+
+func (slice Slice[Data]) FilterPro(f func(int, Data, Slice[Data]) bool) Slice[Data] {
+	return FilterPro(slice, f)
+}
+
+func (slice Slice[Data]) ForEach(f func(Data)) {
+	ForEach(slice, f)
 }
 
 func (slice Slice[Data]) ForEachPro(f func(int, Data, Slice[Data])) {
@@ -364,12 +369,19 @@ func (slice Slice[Data]) Map(f func(Data) Data) Slice[Data] {
 	return Map(slice, f)
 }
 
-func (slice Slice[Data]) Filter(f func(Data) bool) Slice[Data] {
-	return Filter(slice, f)
+func (slice Slice[Data]) MapPro(f func(int, Data, Slice[Data]) Data) Slice[Data] {
+	return MapPro(slice, f)
 }
 
-func (slice Slice[Data]) Dup() Slice[Data] {
-	return DupSlice(slice)
+func (slice Slice[Data]) Native() []Data {
+	return slice
+}
+
+func (slice Slice[Data]) NotNilSlice() Slice[Data] {
+	if slice == nil {
+		return Slice[Data]{}
+	}
+	return slice
 }
 
 type ComparableSlice[Data comparable] []Data
