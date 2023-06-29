@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2023-06-28 15:11:09
+ * Last Modified time: 2023-06-28 15:53:05
  */
 
 package email
@@ -22,7 +22,7 @@ import (
 
 const (
 	DefaultSmtpPort        = 25
-	DEfaultSmtpPortWithTls = 465
+	DefaultSmtpPortWithTls = 465
 
 	EnvNameSmtpServerLoc       = "SMTP_SERVER_LOC"
 	EnvNameEmailSenderAccount  = "EMAIL_SENDER_ACCOUNT"
@@ -38,7 +38,7 @@ type EmailClient struct {
 }
 
 func NewEmailClient(loc, account, password string) (*EmailClient, error) {
-	addr, port, err := baseutils.ParseNetloc(loc, "localhost", DEfaultSmtpPortWithTls)
+	addr, port, err := baseutils.ParseNetloc(loc, "localhost", DefaultSmtpPortWithTls)
 	if err != nil {
 		return nil, err
 	}
