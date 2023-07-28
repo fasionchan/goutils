@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-04-14 17:11:39
+ * Last Modified time: 2023-07-27 10:56:26
  */
 
 package stl
@@ -88,4 +88,27 @@ func CacheMapValue[Key comparable, Value any, Map ~map[Key]Value](m Map, key Key
 		m[key] = cached
 	}
 	return cached
+}
+
+func SubMapByKeys[Key comparable, Value any, Map ~map[Key]Value](m Map, keys ...Key) Map {
+	result := Map{}
+	for _, key := range keys {
+		if value, ok := m[key]; ok {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func MapValueGetter[Key comparable, Value any, Map ~map[Key]Value](m Map) func(Key) Value {
+	return func(k Key) Value {
+		return m[k]
+	}
+}
+
+func MapValueGetterPro[Key comparable, Value any, Map ~map[Key]Value](m Map, keys ...Key) func(Key) (Value, bool) {
+	return func(k Key) (v Value, ok bool) {
+		v, ok = m[k]
+		return
+	}
 }

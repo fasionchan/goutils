@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-05-15 15:58:31
+ * Last Modified time: 2023-07-28 13:55:57
  */
 
 package stl
@@ -116,6 +116,14 @@ func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
 
 	var zero Data
 	return zero, false
+}
+
+func Index[Data any](datas []Data, i int) (data Data, ok bool) {
+	ok = i >= 0 && i < len(datas)
+	if ok {
+		data = datas[i]
+	}
+	return
 }
 
 func IndexOf[Data comparable](datas []Data, target Data) int {
