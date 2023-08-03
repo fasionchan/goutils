@@ -2,10 +2,38 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-07-27 10:56:26
+ * Last Modified time: 2023-08-03 10:16:18
  */
 
 package stl
+
+func BuildMap[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value any](datas Datas, kv func(data Data) (Key, Value)) Map {
+	result := Map{}
+	for _, data := range datas {
+		key, value := kv(data)
+		result[key] = value
+	}
+	return result
+}
+
+func BuildMapPro[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value any](datas Datas, kv func(data Data) (Key, Value, bool, error)) (Map, error) {
+	result := Map{}
+
+	for _, data := range datas {
+		key, value, ok, err := kv(data)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			continue
+		}
+
+		result[key] = value
+	}
+
+	return result, nil
+}
 
 func MapKeys[Key comparable, Value any, Map ~map[Key]Value](m Map) []Key {
 	keys := make([]Key, 0, len(m))
