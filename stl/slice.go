@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-07-28 13:55:57
+ * Last Modified time: 2023-10-13 13:32:19
  */
 
 package stl
@@ -195,10 +195,16 @@ func MapAndConcat[Data any, Datas ~[]Data, Result any, Results ~[]Result](datas 
 	return ConcatSlices(slices...)
 }
 
-func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Data, Result) Result, initial Result) (result Result) {
+// func ConvertSliceItemType[Sources ~[]Source, Destinations ~[]Destination, Source any, Destination any](sources Sources) Destinations {
+// 	return Map(sources, func(source Source) Destination {
+// 		return source
+// 	})
+// }
+
+func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {
 	result = initial
 	for _, data := range datas {
-		result = reducer(data, result)
+		result = reducer(result, data)
 	}
 	return
 }
