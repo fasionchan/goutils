@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:24:48
  * Last Modified by: fasion
- * Last Modified time: 2022-11-23 13:56:05
+ * Last Modified time: 2023-10-13 14:17:35
  */
 
 package stl
@@ -53,10 +53,10 @@ func MapProArgs[Data any, Datas ~[]Data, Result any](mapper func(int, Data, Data
 	return MapPro(Datas(datas), mapper)
 }
 
-func ReducePro[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(int, Data, Datas, Result) Result, initial Result) (result Result) {
+func ReducePro[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data, int, Datas) Result, initial Result) (result Result) {
 	result = initial
 	for i, data := range datas {
-		result = reducer(i, data, datas, result)
+		result = reducer(result, data, i, datas)
 	}
 	return
 }

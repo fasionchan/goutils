@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:31:44
  * Last Modified by: fasion
- * Last Modified time: 2023-05-15 15:59:25
+ * Last Modified time: 2023-10-13 14:18:06
  */
 
 package stl
@@ -33,7 +33,7 @@ func TestSlice(t *testing.T) {
 
 	assert.Equal(t, []int{0, 2, 4}, Map([]int{0, 1, 2}, func(i int) int { return i * 2 }))
 
-	assert.Equal(t, 45, Reduce(testNumbers, func(current int, previous int) int {
+	assert.Equal(t, 45, Reduce(testNumbers, func(previous int, current int) int {
 		return current + previous
 	}, 0))
 
@@ -77,7 +77,7 @@ func TestReduceDemo(t *testing.T) {
 	// 应用实例：对数列进行求和
 	var testNumbers = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 
-	var accumulator = func(current int, previous int) int {
+	var accumulator = func(previous int, current int) int {
 		return current + previous
 	}
 

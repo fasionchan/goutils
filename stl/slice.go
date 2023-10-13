@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-10-13 13:32:19
+ * Last Modified time: 2023-10-13 14:16:18
  */
 
 package stl
@@ -280,7 +280,7 @@ func GetSliceElemPointers[Data any, Datas ~[]Data](datas Datas) []*Data {
 }
 
 func ConcatSlicesTo[Data any, Slice ~[]Data](slice Slice, slices ...Slice) Slice {
-	return Reduce(slices, func(current Slice, result Slice) Slice {
+	return Reduce(slices, func(result Slice, current Slice) Slice {
 		return append(result, current...)
 	}, slice)
 }
