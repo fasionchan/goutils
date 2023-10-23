@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-10-13 14:16:18
+ * Last Modified time: 2023-10-23 13:54:58
  */
 
 package stl
@@ -116,6 +116,45 @@ func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
 
 	var zero Data
 	return zero, false
+}
+
+func FindOrDefault[Data any](datas []Data, test func(Data) bool, defaultData Data) Data {
+	if data, ok := Find(datas, test); ok {
+		return data
+	} else {
+		return defaultData
+	}
+}
+
+func FindOrZero[Data any](datas []Data, test func(Data) bool) Data {
+	data, _ := Find(datas, test)
+	return data
+}
+
+func FindLast[Data any](datas []Data, test func(Data) bool) (Data, bool) {
+	for i := len(datas) - 1; i >= 0; i-- {
+		data := datas[i]
+		if test(data) {
+			return data, true
+		}
+
+	}
+
+	var zero Data
+	return zero, false
+}
+
+func FindLastOrDefault[Data any](datas []Data, test func(Data) bool, defaultData Data) Data {
+	if data, ok := FindLast(datas, test); ok {
+		return data
+	} else {
+		return defaultData
+	}
+}
+
+func FindLastOrZero[Data any](datas []Data, test func(Data) bool) Data {
+	data, _ := FindLast(datas, test)
+	return data
 }
 
 func Index[Data any](datas []Data, i int) (data Data, ok bool) {
