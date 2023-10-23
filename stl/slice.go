@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-10-23 13:54:58
+ * Last Modified time: 2023-10-23 14:26:07
  */
 
 package stl
@@ -108,6 +108,10 @@ func Compare[Data constraints.Ordered](as []Data, bs []Data) int {
 }
 
 func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
+	return FindFirst(datas, test)
+}
+
+func FindFirst[Data any](datas []Data, test func(Data) bool) (Data, bool) {
 	for _, data := range datas {
 		if test(data) {
 			return data, true
@@ -119,6 +123,10 @@ func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
 }
 
 func FindOrDefault[Data any](datas []Data, test func(Data) bool, defaultData Data) Data {
+	return FindFirstOrDefault(datas, test, defaultData)
+}
+
+func FindFirstOrDefault[Data any](datas []Data, test func(Data) bool, defaultData Data) Data {
 	if data, ok := Find(datas, test); ok {
 		return data
 	} else {
@@ -127,6 +135,10 @@ func FindOrDefault[Data any](datas []Data, test func(Data) bool, defaultData Dat
 }
 
 func FindOrZero[Data any](datas []Data, test func(Data) bool) Data {
+	return FindFirstOrZero(datas, test)
+}
+
+func FindFirstOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	data, _ := Find(datas, test)
 	return data
 }
