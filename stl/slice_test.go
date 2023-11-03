@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:31:44
  * Last Modified by: fasion
- * Last Modified time: 2023-10-13 14:18:06
+ * Last Modified time: 2023-10-23 14:31:20
  */
 
 package stl
@@ -59,7 +59,7 @@ func TestFindDemo(t *testing.T) {
 		return i%2 == 1
 	}
 
-	fmt.Println(Find(testNumbers, odd)) // 输出：1 true
+	fmt.Println(FindFirst(testNumbers, odd)) // 输出：1 true
 }
 
 func TestMapDemo(t *testing.T) {

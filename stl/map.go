@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-08-03 10:16:18
+ * Last Modified time: 2023-10-23 15:30:53
  */
 
 package stl
@@ -35,7 +35,7 @@ func BuildMapPro[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Va
 	return result, nil
 }
 
-func MapKeys[Key comparable, Value any, Map ~map[Key]Value](m Map) []Key {
+func MapKeys[Map ~map[Key]Value, Key comparable, Value any](m Map) []Key {
 	keys := make([]Key, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
