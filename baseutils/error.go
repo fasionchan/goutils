@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2023-04-14 17:19:56
+ * Last Modified time: 2023-11-08 11:11:17
  */
 
 package baseutils
@@ -13,6 +13,30 @@ import (
 
 	"github.com/fasionchan/goutils/stl"
 )
+
+type GenericNotFoundError struct {
+	t    string
+	name string
+}
+
+func NewGenericNotFoundError(t, name string) GenericNotFoundError {
+	return GenericNotFoundError{
+		t:    t,
+		name: name,
+	}
+}
+
+func (e GenericNotFoundError) Name() string {
+	return e.name
+}
+
+func (e GenericNotFoundError) Type() string {
+	return e.t
+}
+
+func (e GenericNotFoundError) Error() string {
+	return fmt.Sprintf("%s not found: %s", e.Type(), e.Name())
+}
 
 type EnvironmentVariableNotFoundError struct {
 	name string
