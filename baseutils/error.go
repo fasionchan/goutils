@@ -2,14 +2,13 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2023-11-08 11:11:17
+ * Last Modified time: 2023-11-23 14:55:05
  */
 
 package baseutils
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -88,25 +87,4 @@ func (e NotImplementedError) Error() string {
 	return fmt.Sprintf("not implemented: %s", e.hint)
 }
 
-type Errors []error
-
-func (errors Errors) Len() int {
-	return len(errors)
-}
-
-func (errors Errors) Empty() bool {
-	return errors.Len() == 0
-}
-
-func (errors Errors) PurgeZero() Errors {
-	return stl.Filter(errors, func(err error) bool {
-		return err != nil
-	})
-}
-
-func (errors Errors) Error() string {
-	chips := stl.MapPro(errors, func(i int, err error, errors Errors) string {
-		return fmt.Sprintf("#%d %s", i, err)
-	})
-	return strings.Join(chips, "\n")
-}
+type Errors = stl.Errors

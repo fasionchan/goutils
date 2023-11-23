@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-10-23 14:31:09
+ * Last Modified time: 2023-11-23 15:14:18
  */
 
 package stl
@@ -107,11 +107,14 @@ func Compare[Data constraints.Ordered](as []Data, bs []Data) int {
 	}
 }
 
-// func Find[Data any](datas []Data, test func(Data) bool) (Data, bool) {
-// 	return FindFirst(datas, test)
-// }
+func FirstOneOrZero[Datas ~[]Data, Data any](datas Datas) (data Data) {
+	if len(datas) > 0 {
+		data = datas[0]
+	}
+	return
+}
 
-func FindFirst[Data any](datas []Data, test func(Data) bool) (Data, bool) {
+func FindFirst[Datas ~[]Data, Data any](datas Datas, test func(Data) bool) (Data, bool) {
 	for _, data := range datas {
 		if test(data) {
 			return data, true
@@ -133,6 +136,13 @@ func FindFirstOrDefault[Data any](datas []Data, test func(Data) bool, defaultDat
 func FindFirstOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	data, _ := FindFirst(datas, test)
 	return data
+}
+
+func FindFirstNotZero[Data comparable](datas []Data) Data {
+	var zero Data
+	return FindFirstOrZero(datas, func(data Data) bool {
+		return data != zero
+	})
 }
 
 func FindLast[Data any](datas []Data, test func(Data) bool) (Data, bool) {
@@ -195,6 +205,22 @@ func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas 
 	return result
 }
 
+func JoinSlices[Slice ~[]Data, Data any](sep Slice, slices ...Slice) Slice {
+	return JoinSlicesTo(nil, sep, false, slices...)
+}
+
+func JoinSlicesTo[Slice ~[]Data, Data any](slice Slice, sep Slice, keepFirstSep bool, slices ...Slice) Slice {
+	keepSep := keepFirstSep
+	return Reduce(slices, func(result Slice, current Slice) Slice {
+		if keepSep {
+			result = append(result, sep...)
+		} else {
+			keepSep = true
+		}
+		return append(result, current...)
+	}, slice)
+}
+
 func Purge[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas {
 	result := make(Datas, 0, len(datas))
 	for _, data := range datas {
@@ -243,6 +269,43 @@ func MapAndConcat[Data any, Datas ~[]Data, Result any, Results ~[]Result](datas 
 // 		return source
 // 	})
 // }
+
+func MapAndConcatWithError[Datas ~[]Data, Results ~[]Result, Data any, Result any](datas Datas, stopWhenError bool, mapper func(Data) (Results, error)) (Results, error) {
+	slices, errs := MapWithError(datas, stopWhenError, mapper)
+	if err := errs.FirstError(); err != nil {
+		return nil, err
+	}
+
+	return ConcatSlices(slices...), nil
+}
+
+func MapAndJoinWithError[Datas ~[]Data, Results ~[]Result, Data any, Result any](datas Datas, sep Results, stopWhenError bool, mapper func(Data) (Results, error)) (Results, error) {
+	slices, errs := MapWithError(datas, stopWhenError, mapper)
+	if err := errs.FirstError(); err != nil {
+		return nil, err
+	}
+
+	return JoinSlices(sep, slices...), nil
+}
+
+func MapWithError[Datas ~[]Data, Result any, Data any](datas Datas, stopWhenError bool, mapper func(Data) (Result, error)) (results []Result, errs Errors) {
+	// 分配空间
+	results = make([]Result, 0, len(datas))
+	errs = make(Errors, 0, len(datas))
+
+	for _, data := range datas {
+		result, err := mapper(data)
+
+		results = append(results, result)
+		errs = append(errs, err)
+
+		if err != nil && stopWhenError {
+			return
+		}
+	}
+
+	return
+}
 
 func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {
 	result = initial
