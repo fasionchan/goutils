@@ -2,10 +2,20 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-12-13 10:58:42
+ * Last Modified time: 2023-12-13 11:18:20
  */
 
 package stl
+
+func FilterMap[Map ~map[Key]Value, Key comparable, Value any](m Map, tester func(Key, Value, Map) bool) Map {
+	result := Map{}
+	for key, value := range m {
+		if tester(key, value, m) {
+			result[key] = value
+		}
+	}
+	return result
+}
 
 type KeyValuePair[Key any, Value any] struct {
 	Key   Key
