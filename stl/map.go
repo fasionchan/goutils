@@ -2,10 +2,75 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-10-23 15:30:53
+ * Last Modified time: 2023-12-13 10:58:42
  */
 
 package stl
+
+type KeyValuePair[Key any, Value any] struct {
+	Key   Key
+	Value Value
+}
+
+type KeyValuePairs[Key any, Value any] []KeyValuePair[Key, Value]
+
+func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairs[Key, Value] {
+	return MapMapToSlice[KeyValuePairs[Key, Value]](m, func(key Key, value Value, m Map) KeyValuePair[Key, Value] {
+		return KeyValuePair[Key, Value]{
+			Key:   key,
+			Value: value,
+		}
+	})
+}
+
+type KeyValuePairPtrs[Key any, Value any] []*KeyValuePair[Key, Value]
+
+func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairPtrs[Key, Value] {
+	return MapMapToSlice[KeyValuePairPtrs[Key, Value]](m, func(key Key, value Value, m Map) *KeyValuePair[Key, Value] {
+		return &KeyValuePair[Key, Value]{
+			Key:   key,
+			Value: value,
+		}
+	})
+}
+
+func MapMap[Map ~map[Key]Value, Key comparable, Value any](m Map, mapper func(Key, Value, Map) (Key, Value)) Map {
+	result := Map{}
+	for key, value := range m {
+		key, value = mapper(key, value, m)
+		result[key] = value
+	}
+	return result
+}
+
+func MapMapToSlice[Slice ~[]SliceItem, Map ~map[Key]Value, SliceItem any, Key comparable, Value any](m Map, convert func(Key, Value, Map) SliceItem) Slice {
+	result := make(Slice, 0, len(m))
+
+	for key, value := range m {
+		result = append(result, convert(key, value, m))
+	}
+
+	return result
+}
+
+func MapMapToSlicePro[Slice ~[]SliceItem, Map ~map[Key]Value, SliceItem any, Key comparable, Value any](m Map, convert func(Key, Value, Map) (SliceItem, bool, error)) (Slice, error) {
+	result := make(Slice, 0, len(m))
+
+	for key, value := range m {
+		item, ok, err := convert(key, value, m)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			continue
+		}
+
+		result = append(result, item)
+	}
+
+	return result, nil
+}
 
 func BuildMap[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value any](datas Datas, kv func(data Data) (Key, Value)) Map {
 	result := Map{}
