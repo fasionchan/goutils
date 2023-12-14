@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-14 16:24:08
+ * Last Modified time: 2023-12-14 16:27:53
  */
 
 package stl
@@ -37,6 +37,13 @@ func NewCachedDataFetcherLite[Data any](fetcher func(context.Context) (Data, err
 		}
 		return
 	})
+}
+
+func (fetcher *CachedDataFetcher[Data]) Dup() *CachedDataFetcher[Data] {
+	return &CachedDataFetcher[Data]{
+		fetcher:         fetcher.fetcher,
+		expiresDuration: fetcher.expiresDuration,
+	}
 }
 
 func (fetcher *CachedDataFetcher[Data]) WithFetcher(fetcherFunc func(context.Context) (Data, time.Time, error)) *CachedDataFetcher[Data] {

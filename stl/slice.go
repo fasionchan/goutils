@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-11-23 15:14:18
+ * Last Modified time: 2023-12-14 16:49:31
  */
 
 package stl
@@ -110,6 +110,13 @@ func Compare[Data constraints.Ordered](as []Data, bs []Data) int {
 func FirstOneOrZero[Datas ~[]Data, Data any](datas Datas) (data Data) {
 	if len(datas) > 0 {
 		data = datas[0]
+	}
+	return
+}
+
+func LastOneOrZero[Datas ~[]Data, Data any](datas Datas) (data Data) {
+	if len(datas) > 0 {
+		data = datas[len(datas)-1]
 	}
 	return
 }
