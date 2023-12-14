@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-11-24 15:13:32
+ * Last Modified time: 2023-12-14 16:24:08
  */
 
 package stl
@@ -14,11 +14,13 @@ import (
 )
 
 type CachedDataFetcher[Data any] struct {
-	data            Data
-	lastFetchTime   time.Time
-	expiresDuration time.Duration
 	fetcher         func(context.Context) (Data, time.Time, error)
-	mutex           sync.Mutex
+	expiresDuration time.Duration
+
+	data          Data
+	lastFetchTime time.Time
+
+	mutex sync.Mutex
 }
 
 func NewCachedDataFetcher[Data any](fetcher func(context.Context) (Data, time.Time, error)) *CachedDataFetcher[Data] {
@@ -35,6 +37,16 @@ func NewCachedDataFetcherLite[Data any](fetcher func(context.Context) (Data, err
 		}
 		return
 	})
+}
+
+func (fetcher *CachedDataFetcher[Data]) WithFetcher(fetcherFunc func(context.Context) (Data, time.Time, error)) *CachedDataFetcher[Data] {
+	fetcher.fetcher = fetcherFunc
+	return fetcher
+}
+
+func (fetcher *CachedDataFetcher[Data]) WithExpiresDuration(duration time.Duration) *CachedDataFetcher[Data] {
+	fetcher.expiresDuration = duration
+	return fetcher
 }
 
 func (fetcher *CachedDataFetcher[Data]) Get(ctx context.Context) (data Data, ok bool) {
