@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:31:44
  * Last Modified by: fasion
- * Last Modified time: 2023-10-23 14:31:20
+ * Last Modified time: 2023-12-18 10:26:45
  */
 
 package stl
@@ -15,6 +15,18 @@ import (
 )
 
 var testNumbers = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+func TestDivide(t *testing.T) {
+	case1 := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	fmt.Println(Divide(case1, 1, false))
+	fmt.Println(Divide(case1, 2, false))
+	fmt.Println(Divide(case1[1:], 2, false))
+	fmt.Println(Divide(case1, 9, false))
+	fmt.Println(Divide(case1, 10, false))
+	fmt.Println(Divide(case1, 11, false))
+	fmt.Println(Divide(case1, 0, false))
+	fmt.Println(Divide(case1, -1, false))
+}
 
 func TestSlice(t *testing.T) {
 	assert.Equal(t, true, AnyMatch(testNumbers, func(i int) bool {

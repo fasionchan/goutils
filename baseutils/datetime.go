@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 11:59:31
  * Last Modified by: fasion
- * Last Modified time: 2023-12-15 18:23:40
+ * Last Modified time: 2023-12-18 09:59:38
  */
 
 package baseutils
@@ -21,10 +21,18 @@ func AlignNextTime(base time.Time, interval time.Duration, offset time.Duration)
 	return result
 }
 
+func NewTimes(times ...time.Time) []time.Time {
+	return times
+}
+
 func MinTime(times ...time.Time) time.Time {
 	return stl.Headmost(times, time.Time.Before)
 }
 
 func MaxTime(times ...time.Time) time.Time {
 	return stl.Headmost(times, time.Time.After)
+}
+
+func SortTimes(times ...time.Time) []time.Time {
+	return stl.Sort(times, time.Time.Before)
 }

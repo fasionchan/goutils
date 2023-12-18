@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-12-15 18:17:54
+ * Last Modified time: 2023-12-18 10:26:06
  */
 
 package stl
@@ -44,6 +44,30 @@ func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bo
 			index = i
 		}
 	}
+	return
+}
+
+func Divide[Datas ~[]Data, Data any](datas Datas, size int, dup bool) (subs []Datas) {
+	if size <= 0 {
+		subs = []Datas{datas}
+		return
+	}
+
+	n := len(datas)
+	for i := 0; i < n; i += size {
+		last := i + size
+		if last > n {
+			last = n
+		}
+
+		sub := datas[i:last]
+		if dup {
+			sub = DupSlice(sub)
+		}
+
+		subs = append(subs, sub)
+	}
+
 	return
 }
 
