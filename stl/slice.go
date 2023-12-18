@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-12-14 16:49:31
+ * Last Modified time: 2023-12-15 18:17:54
  */
 
 package stl
@@ -29,6 +29,22 @@ func AllMatch[Data any](datas []Data, test func(Data) bool) bool {
 		}
 	}
 	return true
+}
+
+func Backmost[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data, index int) {
+	result, _ = BackmostPro(datas, before)
+	return
+}
+
+func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data, index int) {
+	index = -1
+	for i, data := range datas {
+		if index == 0 || !before(data, result) {
+			result = data
+			index = i
+		}
+	}
+	return
 }
 
 func SliceEqual[Datas ~[]Data, Data comparable](as Datas, bs Datas) bool {
@@ -210,6 +226,22 @@ func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas 
 		}
 	}
 	return result
+}
+
+func Headmost[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data) {
+	result, _ = HeadmostPro(datas, before)
+	return
+}
+
+func HeadmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data, index int) {
+	index = -1
+	for i, data := range datas {
+		if i == 0 || before(data, result) {
+			result = data
+			index = i
+		}
+	}
+	return
 }
 
 func JoinSlices[Slice ~[]Data, Data any](sep Slice, slices ...Slice) Slice {

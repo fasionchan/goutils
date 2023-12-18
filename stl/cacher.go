@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-14 16:27:53
+ * Last Modified time: 2023-12-15 09:22:20
  */
 
 package stl
@@ -56,18 +56,26 @@ func (fetcher *CachedDataFetcher[Data]) WithExpiresDuration(duration time.Durati
 	return fetcher
 }
 
-func (fetcher *CachedDataFetcher[Data]) Get(ctx context.Context) (data Data, ok bool) {
-	fetcher.mutex.Lock()
-	defer fetcher.mutex.Unlock()
-
-	return fetcher.get()
+func (fetcher *CachedDataFetcher[Data]) Get(ctx context.Context) (Data, bool) {
+	return fetcher.GetPro(ctx, 0)
 }
 
-func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (data Data, ok bool, err error) {
+func (fetcher *CachedDataFetcher[Data]) GetPro(ctx context.Context, expiresDuration time.Duration) (data Data, ok bool) {
 	fetcher.mutex.Lock()
 	defer fetcher.mutex.Unlock()
 
-	data, ok = fetcher.get()
+	return fetcher.get(expiresDuration)
+}
+
+func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (Data, bool, error) {
+	return fetcher.FetchPro(ctx, 0)
+}
+
+func (fetcher *CachedDataFetcher[Data]) FetchPro(ctx context.Context, expiresDuration time.Duration) (data Data, ok bool, err error) {
+	fetcher.mutex.Lock()
+	defer fetcher.mutex.Unlock()
+
+	data, ok = fetcher.get(expiresDuration)
 	if ok {
 		return
 	}
@@ -83,12 +91,8 @@ func (fetcher *CachedDataFetcher[Data]) Refresh(ctx context.Context) (data Data,
 }
 
 func (fetcher *CachedDataFetcher[Data]) refresh(ctx context.Context) (data Data, ok bool, err error) {
-	if _, _, err = fetcher.refetch(ctx); err != nil {
-		return
-	}
-
-	data, ok = fetcher.get()
-
+	data, _, err = fetcher.refetch(ctx)
+	ok = err == nil
 	return
 }
 
@@ -104,14 +108,18 @@ func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data,
 	return
 }
 
-func (fetcher *CachedDataFetcher[Data]) get() (Data, bool) {
+func (fetcher *CachedDataFetcher[Data]) get(expiresDuration time.Duration) (Data, bool) {
 	if fetcher.lastFetchTime.IsZero() {
 		return fetcher.data, false
 	}
 
-	if fetcher.expiresDuration > 0 && time.Since(fetcher.lastFetchTime) > fetcher.expiresDuration {
-		return fetcher.data, false
+	if expiresDuration <= 0 {
+		expiresDuration = fetcher.expiresDuration
 	}
 
-	return fetcher.data, true
+	if expiresDuration <= 0 {
+		return fetcher.data, true
+	}
+
+	return fetcher.data, time.Since(fetcher.lastFetchTime) <= expiresDuration
 }
