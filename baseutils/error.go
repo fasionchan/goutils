@@ -2,13 +2,14 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2023-11-23 14:55:05
+ * Last Modified time: 2023-12-21 17:11:28
  */
 
 package baseutils
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -85,6 +86,50 @@ func NewNotImplementedError(hint string) NotImplementedError {
 
 func (e NotImplementedError) Error() string {
 	return fmt.Sprintf("not implemented: %s", e.hint)
+}
+
+type BadTypeError struct {
+	expected string
+	given    string
+}
+
+func NewBlankBadTypeError() BadTypeError {
+	return BadTypeError{}
+}
+
+func NewBadTypeError(expected, given string) BadTypeError {
+	return BadTypeError{
+		expected: expected,
+		given:    given,
+	}
+}
+
+func (err BadTypeError) WithExpected(expected string) BadTypeError {
+	err.expected = expected
+	return err
+}
+
+func (err BadTypeError) WithExpectedReflectType(expected reflect.Type) BadTypeError {
+	err.expected = expected.String()
+	return err
+}
+
+func (err BadTypeError) WithGiven(given string) BadTypeError {
+	err.given = given
+	return err
+}
+
+func (err BadTypeError) WithGivenReflectType(given reflect.Type) BadTypeError {
+	err.given = given.String()
+	return err
+}
+
+func NewBadTypeErrorWithGivenReflectType(expected, given reflect.Type) BadTypeError {
+	return NewBadTypeError(expected.String(), given.String())
+}
+
+func (e BadTypeError) Error() string {
+	return fmt.Sprintf("bad type error: [%s] expected, but given [%s]", e.expected, e.given)
 }
 
 type Errors = stl.Errors

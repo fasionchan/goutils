@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-12-13 11:18:20
+ * Last Modified time: 2023-12-21 16:52:29
  */
 
 package stl
@@ -33,6 +33,10 @@ func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyV
 	})
 }
 
+func (pairs KeyValuePairs[Key, Value]) ToTypelessSlice() []any {
+	return ToTypelessSlice(pairs)
+}
+
 type KeyValuePairPtrs[Key any, Value any] []*KeyValuePair[Key, Value]
 
 func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairPtrs[Key, Value] {
@@ -42,6 +46,10 @@ func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) K
 			Value: value,
 		}
 	})
+}
+
+func (pairs KeyValuePairPtrs[Key, Value]) ToTypelessSlice() []any {
+	return ToTypelessSlice(pairs)
 }
 
 func MapMap[Map ~map[Key]Value, Key comparable, Value any](m Map, mapper func(Key, Value, Map) (Key, Value)) Map {
