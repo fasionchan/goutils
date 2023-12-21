@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:24:48
  * Last Modified by: fasion
- * Last Modified time: 2023-10-13 14:17:35
+ * Last Modified time: 2023-12-21 11:51:21
  */
 
 package stl
@@ -51,6 +51,25 @@ func MapPro[Data any, Datas ~[]Data, Result any](datas Datas, mapper func(int, D
 
 func MapProArgs[Data any, Datas ~[]Data, Result any](mapper func(int, Data, Datas) Result, datas ...Data) []Result {
 	return MapPro(Datas(datas), mapper)
+}
+
+func MapWithErrorPro[Datas ~[]Data, Result any, Data any](datas Datas, stopWhenError bool, mapper func(int, Data, Datas) (Result, error)) (results []Result, errs Errors) {
+	// 分配空间
+	results = make([]Result, 0, len(datas))
+	errs = make(Errors, 0, len(datas))
+
+	for i, data := range datas {
+		result, err := mapper(i, data, datas)
+
+		results = append(results, result)
+		errs = append(errs, err)
+
+		if err != nil && stopWhenError {
+			return
+		}
+	}
+
+	return
 }
 
 func ReducePro[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data, int, Datas) Result, initial Result) (result Result) {
