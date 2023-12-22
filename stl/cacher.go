@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-22 16:15:30
+ * Last Modified time: 2023-12-22 17:44:34
  */
 
 package stl
@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+type CachedDataFetcherFetchFunc[Data any] func(ctx context.Context, expires time.Duration) (Data, time.Time, error)
+type CachedDataFetcherFetchFuncLite[Data any] func(ctx context.Context) (Data, error)
 type CachedDataFetcherCallbackFunc[Data any] func(context.Context, Data, time.Time)
 
 type CachedDataFetcherCallback[Data any] struct {
@@ -93,7 +95,7 @@ func (timed *TimedValue[Value]) ValueAndTime() (value Value, t time.Time) {
 }
 
 type CachedDataFetcher[Data any] struct {
-	fetcher         func(context.Context) (Data, time.Time, error)
+	fetcher         CachedDataFetcherFetchFunc[Data]
 	expiresDuration time.Duration
 
 	callbacks CachedDataFetcherCallbacks[Data]
@@ -103,14 +105,14 @@ type CachedDataFetcher[Data any] struct {
 	mutex sync.Mutex
 }
 
-func NewCachedDataFetcher[Data any](fetcher func(context.Context) (Data, time.Time, error)) *CachedDataFetcher[Data] {
+func NewCachedDataFetcher[Data any](fetcher CachedDataFetcherFetchFunc[Data]) *CachedDataFetcher[Data] {
 	return &CachedDataFetcher[Data]{
 		fetcher: fetcher,
 	}
 }
 
-func NewCachedDataFetcherLite[Data any](fetcher func(context.Context) (Data, error)) *CachedDataFetcher[Data] {
-	return NewCachedDataFetcher(func(ctx context.Context) (data Data, t time.Time, err error) {
+func NewCachedDataFetcherLite[Data any](fetcher CachedDataFetcherFetchFuncLite[Data]) *CachedDataFetcher[Data] {
+	return NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (data Data, t time.Time, err error) {
 		data, err = fetcher(ctx)
 		if err == nil {
 			t = time.Now()
@@ -143,7 +145,7 @@ func (fetcher *CachedDataFetcher[Data]) EnsureExpiresDuration(expiresDuration ti
 	return fetcher
 }
 
-func (fetcher *CachedDataFetcher[Data]) WithFetcher(fetcherFunc func(context.Context) (Data, time.Time, error)) *CachedDataFetcher[Data] {
+func (fetcher *CachedDataFetcher[Data]) WithFetcher(fetcherFunc CachedDataFetcherFetchFunc[Data]) *CachedDataFetcher[Data] {
 	fetcher.fetcher = fetcherFunc
 	return fetcher
 }
@@ -153,12 +155,13 @@ func (fetcher *CachedDataFetcher[Data]) WithExpiresDuration(duration time.Durati
 	return fetcher
 }
 
-func (fetcher *CachedDataFetcher[Data]) SubscribeOthers(timeout time.Duration, others ...interface {
+func (fetcher *CachedDataFetcher[Data]) WithOthersSubscribed(timeout time.Duration, others ...interface {
 	RegisterCallbackFuncLite(func(context.Context), time.Duration)
-}) {
+}) *CachedDataFetcher[Data] {
 	for _, other := range others {
 		other.RegisterCallbackFuncLite(fetcher.TriggerRefresh, timeout)
 	}
+	return fetcher
 }
 
 func (fetcher *CachedDataFetcher[Data]) RegisterCallbackFuncLite(callback func(context.Context), timeout time.Duration) {
@@ -206,8 +209,8 @@ func (fetcher *CachedDataFetcher[Data]) GetWithSince(since time.Time) (Data, tim
 	return fetcher.getWithSince(since)
 }
 
-func (fetcher *CachedDataFetcher[Data]) FetchLite(ctx context.Context) (data Data, ok bool, err error) {
-	data, _, ok, err = fetcher.Fetch(ctx)
+func (fetcher *CachedDataFetcher[Data]) FetchLite(ctx context.Context) (data Data, err error) {
+	data, _, _, err = fetcher.Fetch(ctx)
 	return
 }
 
@@ -257,7 +260,7 @@ func (fetcher *CachedDataFetcher[Data]) refresh(ctx context.Context) (data Data,
 }
 
 func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data, t time.Time, err error) {
-	data, t, err = fetcher.fetcher(ctx)
+	data, t, err = fetcher.fetcher(ctx, fetcher.expiresDuration)
 	if err != nil {
 		return
 	}
