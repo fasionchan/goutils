@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-22 16:15:30
+ * Last Modified time: 2023-12-23 12:09:25
  */
 
 package stl
@@ -126,6 +126,18 @@ func (fetcher *CachedDataFetcher[Data]) Dup() *CachedDataFetcher[Data] {
 	}
 }
 
+func (fetcher *CachedDataFetcher[Data]) SinceTimeFromExpiresDuration(expiresDuration time.Duration) (since time.Time) {
+	if expiresDuration <= 0 {
+		expiresDuration = fetcher.expiresDuration
+	}
+
+	if expiresDuration > 0 {
+		since = time.Now().Add(-expiresDuration)
+	}
+
+	return
+}
+
 func (fetcher *CachedDataFetcher[Data]) EnsureExpiresDuration(expiresDuration time.Duration) *CachedDataFetcher[Data] {
 	if expiresDuration <= 0 {
 		return fetcher
@@ -188,9 +200,6 @@ func (fetcher *CachedDataFetcher[Data]) registerCallback(callback *CachedDataFet
 }
 
 func (fetcher *CachedDataFetcher[Data]) GetCached() (Data, time.Time) {
-	fetcher.mutex.Lock()
-	defer fetcher.mutex.Unlock()
-
 	return fetcher.getCached()
 }
 
@@ -206,17 +215,21 @@ func (fetcher *CachedDataFetcher[Data]) GetWithSince(since time.Time) (Data, tim
 	return fetcher.getWithSince(since)
 }
 
-func (fetcher *CachedDataFetcher[Data]) FetchLite(ctx context.Context) (data Data, ok bool, err error) {
-	data, _, ok, err = fetcher.Fetch(ctx)
+func (fetcher *CachedDataFetcher[Data]) FetchLite(ctx context.Context) (data Data, err error) {
+	data, _, err = fetcher.Fetch(ctx)
 	return
 }
 
-func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (Data, time.Time, bool, error) {
+func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (Data, time.Time, error) {
 	return fetcher.FetchWithExpires(ctx, 0)
 }
 
-func (fetcher *CachedDataFetcher[Data]) FetchWithExpires(ctx context.Context, expiresDuration time.Duration) (data Data, t time.Time, ok bool, err error) {
-	data, t, ok = fetcher.getWithExpires(expiresDuration)
+func (fetcher *CachedDataFetcher[Data]) FetchWithExpires(ctx context.Context, expiresDuration time.Duration) (data Data, t time.Time, err error) {
+	return fetcher.FetchWithSince(ctx, fetcher.SinceTimeFromExpiresDuration(expiresDuration))
+}
+
+func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, since time.Time) (data Data, t time.Time, err error) {
+	data, t, ok := fetcher.getWithSince(since)
 	if ok {
 		return
 	}
@@ -224,36 +237,29 @@ func (fetcher *CachedDataFetcher[Data]) FetchWithExpires(ctx context.Context, ex
 	fetcher.mutex.Lock()
 	defer fetcher.mutex.Unlock()
 
-	return fetcher.refresh(ctx)
-}
-
-func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, since time.Time) (data Data, t time.Time, ok bool, err error) {
 	data, t, ok = fetcher.getWithSince(since)
 	if ok {
 		return
 	}
 
-	fetcher.mutex.Lock()
-	defer fetcher.mutex.Unlock()
+	data, t, err = fetcher.refetch(ctx)
+	if err == nil {
+		return
+	}
 
-	return fetcher.refresh(ctx)
+	data, t = fetcher.getCached()
+	return
 }
 
 func (fetcher *CachedDataFetcher[Data]) TriggerRefresh(ctx context.Context) {
 	fetcher.Refresh(ctx)
 }
 
-func (fetcher *CachedDataFetcher[Data]) Refresh(ctx context.Context) (data Data, t time.Time, ok bool, err error) {
+func (fetcher *CachedDataFetcher[Data]) Refresh(ctx context.Context) (data Data, t time.Time, err error) {
 	fetcher.mutex.Lock()
 	defer fetcher.mutex.Unlock()
 
-	return fetcher.refresh(ctx)
-}
-
-func (fetcher *CachedDataFetcher[Data]) refresh(ctx context.Context) (data Data, t time.Time, ok bool, err error) {
-	data, t, err = fetcher.refetch(ctx)
-	ok = err == nil
-	return
+	return fetcher.refetch(ctx)
 }
 
 func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data, t time.Time, err error) {
@@ -276,16 +282,7 @@ func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data,
 }
 
 func (fetcher *CachedDataFetcher[Data]) getWithExpires(expiresDuration time.Duration) (Data, time.Time, bool) {
-	if expiresDuration <= 0 {
-		expiresDuration = fetcher.expiresDuration
-	}
-
-	var since time.Time
-	if expiresDuration > 0 {
-		since = time.Now().Add(-expiresDuration)
-	}
-
-	return fetcher.getWithSince(since)
+	return fetcher.getWithSince(fetcher.SinceTimeFromExpiresDuration(expiresDuration))
 }
 
 func (fetcher *CachedDataFetcher[Data]) getWithSince(since time.Time) (data Data, t time.Time, ok bool) {
