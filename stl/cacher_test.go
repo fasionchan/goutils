@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-12-22 13:09:37
  * Last Modified by: fasion
- * Last Modified time: 2023-12-22 16:16:44
+ * Last Modified time: 2023-12-22 18:16:14
  */
 
 package stl
@@ -17,7 +17,7 @@ import (
 )
 
 func TestAutoRefresh(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
 		fmt.Println("fetch data")
 		return nil, time.Now(), nil
 	}).WithExpiresDuration(time.Second * 2)
@@ -60,7 +60,7 @@ func TestAutoRefresh(t *testing.T) {
 }
 
 func TestCachedFetcherWithExpires(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
 		return nil, time.Now(), nil
 	}).WithExpiresDuration(time.Second * 2)
 
@@ -93,7 +93,7 @@ func TestCachedFetcherWithExpires(t *testing.T) {
 }
 
 func TestCacherFetcherCallback(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
 		return nil, time.Now(), nil
 	})
 
@@ -121,6 +121,6 @@ func TestCachedFetcherSubscribeOthersCompile(t *testing.T) {
 		var b CachedDataFetcher[string]
 		var c CachedDataFetcher[error]
 
-		NewCachedDataFetcher[bool](nil).SubscribeOthers(0, &a, &b, &c)
+		NewCachedDataFetcher[bool](nil).WithOthersSubscribed(0, &a, &b, &c)
 	}
 }

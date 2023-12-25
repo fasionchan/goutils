@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-22 17:44:34
+ * Last Modified time: 2023-12-22 18:15:06
  */
 
 package stl
@@ -11,6 +11,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type CachedDataFetcherFetchFunc[Data any] func(ctx context.Context, expires time.Duration) (Data, time.Time, error)
@@ -95,6 +97,8 @@ func (timed *TimedValue[Value]) ValueAndTime() (value Value, t time.Time) {
 }
 
 type CachedDataFetcher[Data any] struct {
+	*zap.Logger
+
 	fetcher         CachedDataFetcherFetchFunc[Data]
 	expiresDuration time.Duration
 
@@ -107,6 +111,7 @@ type CachedDataFetcher[Data any] struct {
 
 func NewCachedDataFetcher[Data any](fetcher CachedDataFetcherFetchFunc[Data]) *CachedDataFetcher[Data] {
 	return &CachedDataFetcher[Data]{
+		Logger:  zap.NewNop(),
 		fetcher: fetcher,
 	}
 }
@@ -260,10 +265,24 @@ func (fetcher *CachedDataFetcher[Data]) refresh(ctx context.Context) (data Data,
 }
 
 func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data, t time.Time, err error) {
+	fetcher.Info("Referching",
+		zap.Duration("ExpiresDuration", fetcher.expiresDuration),
+		zap.Time("LastFetchedTime", fetcher.data.Time()),
+	)
 	data, t, err = fetcher.fetcher(ctx, fetcher.expiresDuration)
 	if err != nil {
+		fetcher.Error("ReferchFailed",
+			zap.Error(err),
+			zap.Duration("ExpiresDuration", fetcher.expiresDuration),
+			zap.Time("LastFetchedTime", fetcher.data.Time()),
+		)
 		return
 	}
+	fetcher.Info("Referched",
+		zap.Time("FetchedTime", t),
+		zap.Duration("ExpiresDuration", fetcher.expiresDuration),
+		zap.Time("LastFetchedTime", fetcher.data.Time()),
+	)
 
 	if t.IsZero() {
 		t = time.Now()
