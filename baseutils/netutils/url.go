@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2024-01-05 09:24:00
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 11:19:44
+ * Last Modified time: 2024-01-05 13:41:52
  */
 
 package netutils
@@ -10,7 +10,13 @@ package netutils
 import (
 	"encoding/json"
 	"net/url"
+
+	"github.com/fasionchan/goutils/stl"
 )
+
+func NewUrlValuesFromMap(m map[string]string) url.Values {
+	return stl.MultivalueMap[url.Values](m)
+}
 
 func JoinRawUrl(base string, target string) (string, error) {
 	url, err := JoinUrlPro(nil, nil, base, target)
