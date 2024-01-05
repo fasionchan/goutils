@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 13:19:48
+ * Last Modified time: 2024-01-05 13:40:56
  */
 
 package stl
@@ -59,6 +59,12 @@ func MapMap[DstMap ~map[DstKey]DstValue, DstKey comparable, DstValue any, SrcMap
 		result[dstKey] = dstValue
 	}
 	return result
+}
+
+func MultivalueMap[Result ~map[Key]Values, Values ~[]Value, Map ~map[Key]Value, Key comparable, Value any](m Map) Result {
+	return MapMap[Result](m, func(key Key, value Value, _ Map) (Key, Values) {
+		return key, Values{value}
+	})
 }
 
 func MapMapToSlice[Slice ~[]SliceItem, Map ~map[Key]Value, SliceItem any, Key comparable, Value any](m Map, convert func(Key, Value, Map) SliceItem) Slice {
