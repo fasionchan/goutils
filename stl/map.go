@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2023-12-21 16:52:29
+ * Last Modified time: 2024-01-05 11:30:12
  */
 
 package stl
@@ -150,15 +150,23 @@ func DupMap[Key comparable, Value any, Map ~map[Key]Value](m Map) Map {
 	return dup
 }
 
-func ConcatMapInplace[Key comparable, Value any, Map ~map[Key]Value](m1, m2 Map) Map {
-	for key, value := range m2 {
-		m1[key] = value
+func ConcatMapInplace[Map ~map[Key]Value, Key comparable, Value any](dst, src Map) Map {
+	for key, value := range src {
+		dst[key] = value
 	}
-	return m1
+	return dst
 }
 
-func ConcatMap[Key comparable, Value any, Map ~map[Key]Value](m1, m2 Map) Map {
-	return ConcatMap(DupMap(m1), m2)
+func ConcatMap[Key comparable, Value any, Map ~map[Key]Value](dst, src Map) Map {
+	return ConcatMap(DupMap(dst), src)
+}
+
+func ConcatMapsTo[Map ~map[Key]Value, Key comparable, Value any](dst Map, maps ...Map) Map {
+	return Reduce(maps, ConcatMapInplace[Map], dst)
+}
+
+func ConcatMaps[Map ~map[Key]Value, Key comparable, Value any](maps ...Map) Map {
+	return ConcatMapsTo(Map{}, maps...)
 }
 
 func PopMap[Key comparable, Value any, Map ~map[Key]Value](m Map, key Key) (value Value, ok bool) {

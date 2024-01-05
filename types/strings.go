@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2023-05-08 15:26:52
+ * Last Modified time: 2024-01-05 09:03:02
  */
 
 package types
@@ -116,7 +116,7 @@ func (strs Strings) TrimSpace() Strings {
 
 // go example
 func (strs Strings) Split(seps ...string) Strings {
-	return stl.Reduce(seps, func(sep string, result Strings) Strings {
+	return stl.Reduce(seps, func(result Strings, sep string) Strings {
 		return stl.MapAndConcat(result, func(str string) Strings {
 			return strings.Split(str, sep)
 		})

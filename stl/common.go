@@ -2,10 +2,19 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2023-12-21 16:51:40
+ * Last Modified time: 2024-01-04 18:07:56
  */
 
 package stl
+
+func New[Data any]() (data Data) {
+	return
+}
+
+func NewPtr[Ptr ~*Data, Data any]() Ptr {
+	var data Data
+	return &data
+}
 
 func Dup[Data any, Ptr ~*Data](ptr Ptr) Ptr {
 	dup := *ptr
