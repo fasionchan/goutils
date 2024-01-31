@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2023-12-19 17:40:09
+ * Last Modified time: 2024-01-31 15:06:50
  */
 
 package stl
@@ -45,6 +45,50 @@ func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bo
 		}
 	}
 	return
+}
+
+func CountAndMapPro[
+	Number interface {
+		constraints.Integer | constraints.Float
+	},
+	Mapper func(Number, []Data) Data,
+	Data any,
+](start, end, step Number, mapper Mapper) []Data {
+	n := int((end-start)/step) + 1
+	if n < 0 {
+		return nil
+	}
+
+	datas := make([]Data, 0, n)
+	for i := start; i < end; i += step {
+		datas = append(datas, mapper(i, datas))
+	}
+
+	return datas
+}
+
+func CountAndMap[
+	Number interface {
+		constraints.Integer | constraints.Float
+	},
+	Mapper func(Number) Data,
+	Data any,
+](start, end, step Number, mapper Mapper) []Data {
+	return CountAndMapPro(start, end, step, func(number Number, _ []Data) Data {
+		return mapper(number)
+	})
+}
+
+func CountAndMapLite[
+	Number interface {
+		constraints.Integer | constraints.Float
+	},
+	Mapper func() Data,
+	Data any,
+](start, end, step Number, mapper Mapper) []Data {
+	return CountAndMapPro(start, end, step, func(_ Number, _ []Data) Data {
+		return mapper()
+	})
 }
 
 func Divide[Datas ~[]Data, Data any](datas Datas, size int, dup bool) (subs []Datas) {
@@ -368,6 +412,15 @@ func MapWithError[Datas ~[]Data, Result any, Data any](datas Datas, stopWhenErro
 	}
 
 	return
+}
+
+func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Data) error) error {
+	for _, data := range datas {
+		if err := f(data); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {

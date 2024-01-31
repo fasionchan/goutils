@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-01-18 15:44:58
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 11:32:09
+ * Last Modified time: 2024-01-08 11:07:43
  */
 
 package stl
@@ -36,7 +36,7 @@ func TestMapKeyValuePairPtrs(t *testing.T) {
 
 func TestMapMap(t *testing.T) {
 	m := map[string]int{"a": 1, "b": 2, "c": 3}
-	fmt.Println(MapMap(m, func(key string, value int, m map[string]int) (string, int) {
+	fmt.Println(MapMap[map[string]int](m, func(key string, value int, m map[string]int) (string, int) {
 		return key, value * 2
 	}))
 }

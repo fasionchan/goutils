@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2023-12-25 09:35:35
+ * Last Modified time: 2024-01-30 11:40:28
  */
 
 package stl
@@ -133,6 +133,15 @@ func (fetcher *CachedDataFetcher[Data]) Dup() *CachedDataFetcher[Data] {
 	}
 }
 
+func (fetcher *CachedDataFetcher[Data]) WithCachedDataPurged() *CachedDataFetcher[Data] {
+	fetcher.data = nil
+	return fetcher
+}
+
+func (fetcher *CachedDataFetcher[Data]) PurgeCachedData() {
+	fetcher.WithCachedDataPurged()
+}
+
 func (fetcher *CachedDataFetcher[Data]) SinceTimeFromExpiresDuration(expiresDuration time.Duration) (since time.Time) {
 	if expiresDuration <= 0 {
 		expiresDuration = fetcher.expiresDuration
@@ -223,9 +232,17 @@ func (fetcher *CachedDataFetcher[Data]) GetWithSince(since time.Time) (Data, tim
 	return fetcher.getWithSince(since)
 }
 
+func (fetcher *CachedDataFetcher[Data]) GetFetchLite() func(ctx context.Context) (Data, error) {
+	return fetcher.FetchLite
+}
+
 func (fetcher *CachedDataFetcher[Data]) FetchLite(ctx context.Context) (data Data, err error) {
 	data, _, err = fetcher.Fetch(ctx)
 	return
+}
+
+func (fetcher *CachedDataFetcher[Data]) GetFetch() func(ctx context.Context) (Data, time.Time, error) {
+	return fetcher.Fetch
 }
 
 func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (Data, time.Time, error) {
@@ -261,6 +278,10 @@ func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, sinc
 
 func (fetcher *CachedDataFetcher[Data]) TriggerRefresh(ctx context.Context) {
 	fetcher.Refresh(ctx)
+}
+
+func (fetcher *CachedDataFetcher[Data]) GetRefresh() func(ctx context.Context) (Data, time.Time, error) {
+	return fetcher.Refresh
 }
 
 func (fetcher *CachedDataFetcher[Data]) Refresh(ctx context.Context) (data Data, t time.Time, err error) {

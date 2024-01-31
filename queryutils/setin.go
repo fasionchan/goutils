@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2023-05-24 16:11:00
+ * Last Modified time: 2024-01-30 11:33:42
  */
 
 package queryutils
@@ -504,12 +504,16 @@ func (action *SetinAction[Data, Datas, DataInstances]) WithDataX(dataX any) (*Se
 }
 
 func (action *SetinAction[Data, Datas, DataInstances]) WithData(data *Data) *SetinAction[Data, Datas, DataInstances] {
-	action.datas = Datas{data}
+	if data == nil {
+		action.datas = nil
+	} else {
+		action.datas = Datas{data}
+	}
 	return action
 }
 
 func (action *SetinAction[Data, Datas, DataInstances]) WithDatas(datas Datas) *SetinAction[Data, Datas, DataInstances] {
-	action.datas = datas
+	action.datas = stl.PurgeZero(datas)
 	return action
 }
 

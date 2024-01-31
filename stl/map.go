@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 13:40:56
+ * Last Modified time: 2024-01-08 11:11:39
  */
 
 package stl
@@ -50,6 +50,10 @@ func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) K
 
 func (pairs KeyValuePairPtrs[Key, Value]) ToTypelessSlice() []any {
 	return ToTypelessSlice(pairs)
+}
+
+func MapMapLite[Map ~map[Key]Value, Key comparable, Value any](m Map, mapper func(Key, Value, Map) (Key, Value)) Map {
+	return MapMap[Map](m, mapper)
 }
 
 func MapMap[DstMap ~map[DstKey]DstValue, DstKey comparable, DstValue any, SrcMap ~map[SrcKey]SrvValue, SrcKey comparable, SrvValue any](m SrcMap, mapper func(SrcKey, SrvValue, SrcMap) (DstKey, DstValue)) DstMap {
