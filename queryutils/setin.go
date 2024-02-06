@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-01-30 11:33:42
+ * Last Modified time: 2024-02-06 11:50:19
  */
 
 package queryutils
@@ -30,6 +30,37 @@ type ClonableSetinerInterface interface {
 type SetinTester[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas, setin string) (bool, error)
 type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
 
+func NewSetinerHandlerFromComputedHandler[Datas ~[]*Data, Data any](handler SetinComputedHandler[Datas, Data]) SetinHandler[Data, *Data, Datas] {
+	return func(ctx context.Context, datas Datas) error {
+		return handler(datas)
+	}
+}
+
+type SetinComputedHandler[Datas ~[]*Data, Data any] func(datas Datas) error
+
+func NewSetinComputedHandlerFromSingleton[Datas ~[]*Data, Data any](handler func(*Data) error) SetinComputedHandler[Datas, Data] {
+	return func(datas Datas) error {
+		return stl.Errors(stl.Map(datas, handler)).Simplify()
+	}
+}
+
+func PartialUnarySetinHandler[
+	Data any,
+	Arg any,
+](handler func(*Data, Arg), arg Arg) func(*Data) {
+	return func(data *Data) {
+		handler(data, arg)
+	}
+}
+
+func BatchCallUnarySetinHandler[
+	Datas ~[]*Data,
+	Data any,
+	Arg any,
+](datas Datas, handler func(*Data, Arg), arg Arg) {
+	stl.ForEach(datas, PartialUnarySetinHandler(handler, arg))
+}
+
 // Create A Setin Handler
 func NewSetinHandlerPro[
 	Data any,
@@ -46,7 +77,7 @@ func NewSetinHandlerPro[
 	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
 ) SetinHandler[Data, *Data, Datas] {
 	return func(ctx context.Context, datas Datas) error {
-		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler)
+		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, stl.UnchainUnaryHandler(setinHandler))
 	}
 }
 
@@ -154,7 +185,7 @@ func SetinPro[
 	dataSubKeys func(*Data) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKey func(SubData) Key,
-	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
+	setinHandler func(data *Data, subDataMapping SubDataMapping),
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
 	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
@@ -165,9 +196,7 @@ func SetinPro[
 	}
 
 	subDataMapping := stl.MappingByKey(subDatas, subDataKey)
-	stl.ForEach(datas, func(data *Data) {
-		setinHandler(data, subDataMapping)
-	})
+	BatchCallUnarySetinHandler(datas, setinHandler, subDataMapping)
 
 	return nil
 }
@@ -187,7 +216,7 @@ func Setin[
 	datas Datas,
 	dataSubKeys func(*Data) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
-	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
+	setinHandler func(data *Data, subDataMapping SubDataMapping),
 ) error {
 	return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
 }
@@ -208,7 +237,7 @@ func SetinX[
 	datas Datas,
 	dataSubKeys func(*Data) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
-	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
+	setinHandler func(data *Data, subDataMapping SubDataMapping),
 ) error {
 	return Setin(ctx, datas, dataSubKeys, subDataFetcher, setinHandler)
 }
@@ -319,6 +348,10 @@ func (mapping SetinHandlerMapping[Data, Datas]) Self() SetinHandlerMapping[Data,
 func (mapping SetinHandlerMapping[Data, Datas]) WithHandler(name string, handler SetinHandler[Data, *Data, Datas]) SetinHandlerMapping[Data, Datas] {
 	mapping[name] = handler
 	return mapping
+}
+
+func (mapping SetinHandlerMapping[Data, Datas]) WithComputedHandler(name string, handler SetinComputedHandler[Datas, Data]) SetinHandlerMapping[Data, Datas] {
+	return mapping.WithHandler(name, NewSetinerHandlerFromComputedHandler(handler))
 }
 
 func (mapping SetinHandlerMapping[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
