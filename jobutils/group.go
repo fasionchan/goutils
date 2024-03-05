@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-15 11:35:06
  * Last Modified by: fasion
- * Last Modified time: 2023-03-15 14:59:01
+ * Last Modified time: 2024-03-05 14:53:19
  */
 
 package jobutils
@@ -138,4 +138,97 @@ func (group *JobGroup) Wait() {
 	}
 
 	group.wg.Wait()
+}
+
+type TokenGenerator struct {
+	Tokens chan struct{}
+
+	maxTokens     int
+	initalTokens  int
+	batchSize     int
+	batchInterval time.Duration
+}
+
+func (generator *TokenGenerator) StartWith(maxTokens int, initalTokens int, batchSize int, batchInterval time.Duration) *TokenGenerator {
+	return generator.
+		WithMaxTokens(maxTokens).
+		WithInitalTokens(initalTokens).
+		WithBatchSize(batchSize).
+		WithBatchInterval(batchInterval).
+		Start()
+}
+
+func (generator *TokenGenerator) Start() *TokenGenerator {
+	tokens := make(chan struct{}, generator.maxTokens)
+	for i := 0; i < generator.initalTokens; i++ {
+		tokens <- struct{}{}
+	}
+	generator.Tokens = tokens
+
+	go func() {
+		for {
+			time.Sleep(generator.batchInterval)
+
+			for i := 0; i < generator.batchSize; i++ {
+				generator.Tokens <- struct{}{}
+			}
+		}
+	}()
+
+	return generator
+}
+
+func (generator *TokenGenerator) WithMaxTokens(maxTokens int) *TokenGenerator {
+	generator.maxTokens = maxTokens
+	return generator
+}
+
+func (generator *TokenGenerator) WithInitalTokens(initalTokens int) *TokenGenerator {
+	generator.initalTokens = initalTokens
+	return generator
+}
+
+func (generator *TokenGenerator) WithBatchSize(batchSize int) *TokenGenerator {
+	generator.batchSize = batchSize
+	return generator
+}
+
+func (generator *TokenGenerator) WithBatchInterval(batchInterval time.Duration) *TokenGenerator {
+	generator.batchInterval = batchInterval
+	return generator
+}
+
+func (generator *TokenGenerator) Acquire(ctx context.Context, timeout time.Duration) bool {
+	tokens := generator.Tokens
+	if tokens == nil {
+		return true
+	}
+
+	switch {
+	case timeout < 0:
+		select {
+		case <-tokens:
+			return true
+		case <-ctx.Done():
+			return false
+		}
+	case timeout == 0:
+		select {
+		case <-tokens:
+			return true
+		case <-ctx.Done():
+			return false
+		default:
+			return false
+		}
+	default:
+		select {
+		case <-tokens:
+			return true
+		case <-ctx.Done():
+			return false
+		case <-time.After(timeout):
+			return false
+		}
+	}
 }
