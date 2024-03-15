@@ -47,6 +47,15 @@ func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bo
 	return
 }
 
+func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
+	for _, data := range datas {
+		if data == target {
+			return true
+		}
+	}
+	return false
+}
+
 func CountAndMapPro[
 	Number interface {
 		constraints.Integer | constraints.Float

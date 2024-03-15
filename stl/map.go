@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-01-08 11:11:39
+ * Last Modified time: 2024-03-11 10:47:07
  */
 
 package stl
@@ -240,4 +240,16 @@ func MapValueGetterPro[Key comparable, Value any, Map ~map[Key]Value](m Map, key
 		v, ok = m[k]
 		return
 	}
+}
+
+func PurgeMapKeys[Map ~map[Key]Value, Key comparable, Value any](m Map, keys ...Key) Map {
+	for _, key := range keys {
+		delete(m, key)
+	}
+	return m
+}
+
+func PurgeMapZeroKey[Map ~map[Key]Value, Key comparable, Value any](m Map) Map {
+	var zeroKey Key
+	return PurgeMapKeys(m, zeroKey)
 }
