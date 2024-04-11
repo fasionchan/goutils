@@ -2,10 +2,12 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-01-04 18:07:56
+ * Last Modified time: 2024-04-11 14:38:11
  */
 
 package stl
+
+import "reflect"
 
 func New[Data any]() (data Data) {
 	return
@@ -39,4 +41,9 @@ func ToTypeless[Data any](data Data) any {
 
 func ToTypelessSlice[Datas ~[]Data, Data any](datas Datas) []any {
 	return Map(datas, ToTypeless[Data])
+}
+
+func ReflectType[T any]() reflect.Type {
+	var value T
+	return reflect.TypeOf(value)
 }
