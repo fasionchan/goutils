@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 18:46:55
  * Last Modified by: fasion
- * Last Modified time: 2023-05-08 14:59:01
+ * Last Modified time: 2024-05-09 14:13:20
  */
 
 package stl
@@ -20,6 +20,14 @@ func NewEmptySet[Data comparable]() Set[Data] {
 func (set Set[Data]) Contain(data Data) bool {
 	_, ok := set[data]
 	return ok
+}
+
+func (set Set[Data]) ContainAll(datas ...Data) bool {
+	return AllMatch(datas, set.Contain)
+}
+
+func (set Set[Data]) ContainAny(datas ...Data) bool {
+	return AnyMatch(datas, set.Contain)
 }
 
 func (set Set[Data]) Len() int {

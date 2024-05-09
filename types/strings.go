@@ -2,12 +2,13 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 09:03:02
+ * Last Modified time: 2024-05-09 13:49:43
  */
 
 package types
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fasionchan/goutils/stl"
@@ -29,6 +30,10 @@ func NewStringsFromStringSlice(strs StringSlice) Strings {
 
 func NewStringsFromSet(set StringSet) Strings {
 	return NewStringsFromStringSlice(set.Slice())
+}
+
+func SplitToStrings(s, sep string) Strings {
+	return strings.Split(s, sep)
 }
 
 func (strs Strings) Len() int {
@@ -86,6 +91,10 @@ func (strs Strings) AllMatch(test func(string) bool) bool {
 	return stl.AllMatch(strs, test)
 }
 
+func (strs Strings) FirstOneOrZero() string {
+	return stl.FirstOneOrZero(strs)
+}
+
 func (strs Strings) ForEach(handler func(string)) {
 	stl.ForEach(strs, handler)
 }
@@ -108,6 +117,12 @@ func (strs Strings) PurgeZero() Strings {
 
 func (strs Strings) Map(mapper func(string) string) Strings {
 	return stl.Map(strs, mapper)
+}
+
+func (strs Strings) MapWithSprintf(format string) Strings {
+	return strs.Map(func(s string) string {
+		return fmt.Sprintf(format, s)
+	})
 }
 
 func (strs Strings) TrimSpace() Strings {
