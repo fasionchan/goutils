@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-02-06 11:50:19
+ * Last Modified time: 2024-06-08 08:24:29
  */
 
 package queryutils
@@ -447,6 +447,16 @@ func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](testers SetinTe
 	}
 }
 
+func (setiner *Setiner[Data, Datas, DataInstances]) BindingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
+	return setiner.ProvidingSubDataSetiner(registry).UsingSubDataSetiner(registry)
+}
+
+func (setiner *Setiner[Data, Datas, DataInstances]) ProvidingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
+	var data Data
+	registry.WithHandlerByData(setiner.SetinFor, data)
+	return setiner
+}
+
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinFor(ctx context.Context, dataX any, setins []string) error {
 	if dataX == nil {
 		return nil
@@ -475,6 +485,13 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDatas(ctx context.Co
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDataInstances(ctx context.Context, instances DataInstances, setins []string) error {
 	return setiner.Setin(ctx, stl.GetSliceElemPointers(instances), setins)
+}
+
+func (setiner *Setiner[Data, Datas, DataInstances]) UsingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
+	setiner.SetinTesters = setiner.SetinTesters.Append(func(ctx context.Context, datas Datas, setin string) (bool, error) {
+		return true, registry.setinOne(ctx, datas, setin)
+	})
+	return setiner
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) Action() *SetinAction[Data, Datas, DataInstances] {
