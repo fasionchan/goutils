@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 12:44:29
+ * Last Modified time: 2024-06-08 13:36:42
  */
 
 package queryutils
@@ -403,7 +403,7 @@ func (e UnknownSetinError) Error() string {
 	if e.setiner == "" {
 		return fmt.Sprintf("unknown setin: %s", e.setin)
 	}
-	return fmt.Sprintf("unknown setin: %s(%s)", e.setin, e.setiner)
+	return fmt.Sprintf("unknown setin: %s, from setiner: %s", e.setin, e.setiner)
 }
 
 func (e UnknownSetinError) WithSetiner(setiner string) UnknownSetinError {
@@ -464,13 +464,13 @@ func (testers SetinTesters[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Da
 }
 
 type Setiner[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
-	testers        SetinTesters[Data, Datas]
+	SetinTesters[Data, Datas]
 	subDataSetiner SubDataSetiner
 }
 
 func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](testers SetinTesters[Data, Datas]) *Setiner[Data, Datas, DataInstances] {
 	return &Setiner[Data, Datas, DataInstances]{
-		testers: testers,
+		SetinTesters: testers,
 	}
 }
 
@@ -528,7 +528,7 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDataInstances(ctx co
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinOne(ctx context.Context, datas Datas, setin string) error {
-	matched, err := setiner.testers.TestSetinOne(ctx, datas, setin)
+	matched, err := setiner.SetinTesters.TestSetinOne(ctx, datas, setin)
 	if err != nil {
 		return err
 	}
