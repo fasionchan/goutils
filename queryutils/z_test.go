@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-24 16:14:26
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 08:24:16
+ * Last Modified time: 2024-06-08 12:31:01
  */
 
 package queryutils
@@ -47,4 +47,5 @@ func TestEssentialDataTypeIdent(t *testing.T) {
 	fmt.Println(EssentialDataTypeIdent(types.NewStrings().Empty))
 	fmt.Println(EssentialDataTypeIdent(baseutils.BadTypeError{}))
 	fmt.Println(EssentialDataTypeIdent(&baseutils.BadTypeError{}))
+	fmt.Println(EssentialDataTypeIdent(&Setiner[int, []*int, []int]{}))
 }

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 08:24:29
+ * Last Modified time: 2024-06-08 12:44:29
  */
 
 package queryutils
@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -27,7 +28,7 @@ type ClonableSetinerInterface interface {
 	Clone() ClonableSetinerInterface
 }
 
-type SetinTester[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas, setin string) (bool, error)
+type SetinTester[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
 type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
 
 func NewSetinerHandlerFromComputedHandler[Datas ~[]*Data, Data any](handler SetinComputedHandler[Datas, Data]) SetinHandler[Data, *Data, Datas] {
@@ -388,7 +389,8 @@ func (mapping SetinHandlerMapping[Data, Datas]) NewSetiner() *Setiner[Data, Data
 }
 
 type UnknownSetinError struct {
-	setin string
+	setin   string
+	setiner string
 }
 
 func NewUnknownSetinError(setin string) UnknownSetinError {
@@ -398,7 +400,15 @@ func NewUnknownSetinError(setin string) UnknownSetinError {
 }
 
 func (e UnknownSetinError) Error() string {
-	return fmt.Sprintf("unknown setin: %s", e.setin)
+	if e.setiner == "" {
+		return fmt.Sprintf("unknown setin: %s", e.setin)
+	}
+	return fmt.Sprintf("unknown setin: %s(%s)", e.setin, e.setiner)
+}
+
+func (e UnknownSetinError) WithSetiner(setiner string) UnknownSetinError {
+	e.setiner = setiner
+	return e
 }
 
 type SetinTesters[Data any, Datas ~[]*Data] []SetinTester[Data, *Data, Datas]
@@ -412,15 +422,31 @@ func (testers SetinTesters[Data, Datas]) Append(more ...SetinTester[Data, *Data,
 }
 
 func (testers SetinTesters[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) error {
-	for _, tester := range testers {
-		if ok, err := tester(ctx, datas, setin); err != nil {
-			return err
-		} else if ok {
-			return nil
-		}
+	matched, err := testers.TestSetinOne(ctx, datas, setin)
+	if err != nil {
+		return err
+	}
+
+	if matched {
+		return nil
 	}
 
 	return NewUnknownSetinError(setin)
+}
+
+func (testers SetinTesters[Data, Datas]) TestSetinOne(ctx context.Context, datas Datas, setin string) (matched bool, err error) {
+	for _, tester := range testers {
+		matched, err = tester(ctx, datas, setin)
+		if err != nil {
+			break
+		}
+
+		if matched {
+			break
+		}
+	}
+
+	return
 }
 
 func (testers SetinTesters[Data, Datas]) Setin(ctx context.Context, datas Datas, setins []string) error {
@@ -438,23 +464,37 @@ func (testers SetinTesters[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Da
 }
 
 type Setiner[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
-	SetinTesters[Data, Datas]
+	testers        SetinTesters[Data, Datas]
+	subDataSetiner SubDataSetiner
 }
 
 func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](testers SetinTesters[Data, Datas]) *Setiner[Data, Datas, DataInstances] {
 	return &Setiner[Data, Datas, DataInstances]{
-		SetinTesters: testers,
+		testers: testers,
 	}
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) BindingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
-	return setiner.ProvidingSubDataSetiner(registry).UsingSubDataSetiner(registry)
+func (setiner *Setiner[Data, Datas, DataInstances]) BindingDefaultSubDataSetiner() *Setiner[Data, Datas, DataInstances] {
+	return setiner.BindingSubDataSetiner(GetDefaultSubDataSetiner())
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) ProvidingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
+func (setiner *Setiner[Data, Datas, DataInstances]) BindingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
+	return setiner.ProvidingSubDataSetiner(subDataSetiner).UsingSubDataSetiner(subDataSetiner)
+}
+
+func (setiner *Setiner[Data, Datas, DataInstances]) ProvidingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
 	var data Data
-	registry.WithHandlerByData(setiner.SetinFor, data)
+	subDataSetiner.WithHandlerByData(setiner.SetinFor, data)
 	return setiner
+}
+
+func (setiner *Setiner[Data, Datas, DataInstances]) Setin(ctx context.Context, datas Datas, setins []string) error {
+	for _, setin := range setins {
+		if err := setiner.SetinOne(ctx, datas, setin); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (setiner *Setiner[Data, Datas, DataInstances]) SetinFor(ctx context.Context, dataX any, setins []string) error {
@@ -487,10 +527,28 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDataInstances(ctx co
 	return setiner.Setin(ctx, stl.GetSliceElemPointers(instances), setins)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) UsingSubDataSetiner(registry TypelessSetinHandlerRegistry) *Setiner[Data, Datas, DataInstances] {
-	setiner.SetinTesters = setiner.SetinTesters.Append(func(ctx context.Context, datas Datas, setin string) (bool, error) {
-		return true, registry.setinOne(ctx, datas, setin)
-	})
+func (setiner *Setiner[Data, Datas, DataInstances]) SetinOne(ctx context.Context, datas Datas, setin string) error {
+	matched, err := setiner.testers.TestSetinOne(ctx, datas, setin)
+	if err != nil {
+		return err
+	}
+
+	if matched {
+		return nil
+	}
+
+	subDataSetiner := setiner.subDataSetiner
+	if subDataSetiner != nil {
+		if strings.ContainsAny(setin, ".-(") {
+			return subDataSetiner.setinOne(ctx, datas, setin)
+		}
+	}
+
+	return NewUnknownSetinError(setin).WithSetiner(DataTypeIdent(setiner))
+}
+
+func (setiner *Setiner[Data, Datas, DataInstances]) UsingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
+	setiner.subDataSetiner = subDataSetiner
 	return setiner
 }
 

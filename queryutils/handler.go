@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2024-06-08 01:00:31
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 08:24:37
+ * Last Modified time: 2024-06-08 12:36:56
  */
 
 package queryutils
@@ -31,7 +31,15 @@ func (handler TypelessSetinHandler) SetinX(ctx context.Context, dataX any, setin
 	return handler(ctx, dataX, setins)
 }
 
+type SubDataSetiner = TypelessSetinHandlerRegistry
+
+var NewSubDataSetiner = NewTypelessSetinHandlerRegistry
+
 type TypelessSetinHandlerRegistry TypelessSetinHandlerMappingByString
+
+func NewTypelessSetinHandlerRegistry() TypelessSetinHandlerRegistry {
+	return TypelessSetinHandlerRegistry{}
+}
 
 func (registry TypelessSetinHandlerRegistry) WithHandlerByIdent(handler TypelessSetinHandler, ident string) TypelessSetinHandlerRegistry {
 	registry[ident] = handler
@@ -99,9 +107,16 @@ Start:
 	minusIndex := strings.Index(setin, "-")
 	bracketIndex := strings.Index(setin, "(")
 
-	index := stl.Min([]int{dotIndex, minusIndex, bracketIndex}, len(setin))
+	indexes := stl.PurgeValue([]int{dotIndex, minusIndex, bracketIndex}, -1)
+	if len(indexes) == 0 {
+		return registry.setinOneWithDataHandler(ctx, dataX, setin)
+	}
+
+	index := stl.Min(indexes, 0)
+
 	name := setin[:index]
 	setin = setin[index:]
+
 	if setin == "" {
 		// todo visit data?
 		return nil
@@ -128,27 +143,40 @@ func (registry TypelessSetinHandlerRegistry) setinOneWithDataHandler(ctx context
 type TypelessSetinHandlerMappingByString map[string]TypelessSetinHandler
 
 func GetSubData(data any, name string) (any, error) {
-	value := reflect.ValueOf(data)
-	field := value.FieldByName(name)
-	if field.IsValid() {
-		return field.Interface(), nil
+	return GetSubDataFromReflectValue(reflect.ValueOf(data), name)
+}
+
+func GetSubDataFromReflectValue(value reflect.Value, name string) (any, error) {
+	valueKind := value.Kind()
+
+	if valueKind == reflect.Struct {
+		field := value.FieldByName(name)
+		if field.IsValid() {
+			return field.Interface(), nil
+		}
 	}
 
 	method := value.MethodByName(name)
 	if method.IsValid() {
 		methodType := method.Type()
 		if methodType.NumIn() != 0 {
-			return nil, baseutils.NewBadTypeError("TransformMethod", ReflectTypeIdent(methodType))
+			return nil, baseutils.NewBadTypeError("TransformMethod", DataTypeIdentFromReflectType(methodType))
 		}
 
 		if methodType.NumOut() != 1 {
-			return nil, baseutils.NewBadTypeError("TransformMethod", ReflectTypeIdent(methodType))
+			return nil, baseutils.NewBadTypeError("TransformMethod", DataTypeIdentFromReflectType(methodType))
 		}
 
 		return method.Call(nil)[0].Interface(), nil
 	}
 
-	return nil, baseutils.NewGenericNotFoundError(ReflectTypeIdent(value.Type()), name)
+	if valueKind == reflect.Pointer {
+		if !value.IsNil() {
+			return GetSubDataFromReflectValue(value.Elem(), name)
+		}
+	}
+
+	return nil, baseutils.NewGenericNotFoundError(DataTypeIdentFromReflectType(value.Type()), name)
 }
 
 func EssentialDataType(data any) reflect.Type {
@@ -165,11 +193,34 @@ func EssentialDataType(data any) reflect.Type {
 	}
 }
 
-func ReflectTypeIdent(type_ reflect.Type) string {
-	// todo . is ok?
-	return fmt.Sprintf("%s.%s", type_.PkgPath(), type_.Name())
+func DataTypeIdent(data any) string {
+	return DataTypeIdentFromReflectValue(reflect.ValueOf(data))
+}
+
+func DataTypeIdentFromReflectValue(value reflect.Value) string {
+	return DataTypeIdentFromReflectType(value.Type())
+}
+
+func DataTypeIdentFromReflectType(type_ reflect.Type) string {
+	name := type_.Name()
+	if name == "" {
+		return type_.String()
+	}
+
+	pkgPath := type_.PkgPath()
+	if pkgPath == "" {
+		return name
+	}
+
+	return fmt.Sprintf("%s.%s", pkgPath, name)
 }
 
 func EssentialDataTypeIdent(data any) string {
-	return ReflectTypeIdent(EssentialDataType(data))
+	return DataTypeIdentFromReflectType(EssentialDataType(data))
+}
+
+var defaultSubDataSetiner = NewSubDataSetiner()
+
+func GetDefaultSubDataSetiner() SubDataSetiner {
+	return defaultSubDataSetiner
 }
