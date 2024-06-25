@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2023-06-30 14:59:43
+ * Last Modified time: 2024-05-23 09:45:19
  */
 
 package email
@@ -136,7 +136,10 @@ func (client *EmailClient) SendMessageSmart(to []string, subject, body string) e
 	msg.SetHeader("From", client.accout)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
-	msg.SetBody("text/html", body)
+
+	if len(body) > 0 {
+		msg.SetBody("text/html", body)
+	}
 
 	return client.SendMessage(msg)
 }

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-05-09 13:49:43
+ * Last Modified time: 2024-06-25 10:05:07
  */
 
 package types
@@ -138,6 +138,18 @@ func (strs Strings) Split(seps ...string) Strings {
 	}, strs)
 }
 
+func (strs Strings) UniqueBySet() Strings {
+	return stl.UniqueBySet(strs)
+}
+
+func (strs Strings) UniqueByInplaceSort() Strings {
+	return strs.InplaceSort().UniqueSorteds()
+}
+
+func (strs Strings) UniqueBySort() Strings {
+	return strs.Sort().UniqueSorteds()
+}
+
 func (strs Strings) UniqueSorteds() Strings {
 	return stl.UniqueSorteds(strs)
 }
@@ -156,6 +168,10 @@ func (strs Strings) Equal(other Strings) bool {
 
 func (strs Strings) Contain(str string) bool {
 	return stl.ComparableSlice[string](strs).Contain(str)
+}
+
+func (strs Strings) ItemsUnique() bool {
+	return strs.ToSet().Len() == strs.Len()
 }
 
 func StringComparer(a, b string) bool {

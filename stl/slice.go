@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-01-31 15:06:50
+ * Last Modified time: 2024-06-25 09:52:01
  */
 
 package stl
@@ -54,6 +54,14 @@ func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
 		}
 	}
 	return false
+}
+
+func CountByKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) map[Key]int {
+	result := map[Key]int{}
+	for _, data := range datas {
+		result[key(data)] += 1
+	}
+	return result
 }
 
 func CountAndMapPro[
@@ -404,6 +412,11 @@ func MapAndJoinWithError[Datas ~[]Data, Results ~[]Result, Data any, Result any]
 	return JoinSlices(sep, slices...), nil
 }
 
+func MapUtilError[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) (Result, error)) ([]Result, error) {
+	results, errs := MapWithError(datas, true, mapper)
+	return results, errs.FirstError()
+}
+
 func MapWithError[Datas ~[]Data, Result any, Data any](datas Datas, stopWhenError bool, mapper func(Data) (Result, error)) (results []Result, errs Errors) {
 	// 分配空间
 	results = make([]Result, 0, len(datas))
@@ -574,6 +587,24 @@ func ReadChanAll[Data any, Datas ~[]Data](c chan Data) (datas Datas) {
 		datas = append(datas, data)
 	}
 	return
+}
+
+func ZipToPairs[Key any, Value any](keys []Key, values []Value) KeyValuePairs[Key, Value] {
+	n := len(keys)
+	if len(values) < n {
+		n = len(values)
+	}
+
+	pairs := make(KeyValuePairs[Key, Value], n)
+
+	for i := 0; i < n; i++ {
+		pairs = append(pairs, KeyValuePair[Key, Value]{
+			Key:   keys[i],
+			Value: values[i],
+		})
+	}
+
+	return pairs
 }
 
 type Slice[Data any] []Data

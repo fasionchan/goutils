@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-03-11 10:47:07
+ * Last Modified time: 2024-06-25 10:16:15
  */
 
 package stl
@@ -65,6 +65,27 @@ func MapMap[DstMap ~map[DstKey]DstValue, DstKey comparable, DstValue any, SrcMap
 	return result
 }
 
+func MapMapPro[DM ~map[DK]DV, SM ~map[SK]SV, SK comparable, SV any, DK comparable, DV any](sm SM, mapper func(sk SK, sv SV, sm SM, dm DM) (DK, DV, bool, error)) (DM, bool, error) {
+	allOk := true
+	dm := DM{}
+
+	for sk, sv := range sm {
+		dk, dv, ok, err := mapper(sk, sv, sm, dm)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if !ok {
+			allOk = false
+			continue
+		}
+
+		dm[dk] = dv
+	}
+
+	return dm, allOk, nil
+}
+
 func MultivalueMap[Result ~map[Key]Values, Values ~[]Value, Map ~map[Key]Value, Key comparable, Value any](m Map) Result {
 	return MapMap[Result](m, func(key Key, value Value, _ Map) (Key, Values) {
 		return key, Values{value}
@@ -100,7 +121,7 @@ func MapMapToSlicePro[Slice ~[]SliceItem, Map ~map[Key]Value, SliceItem any, Key
 	return result, nil
 }
 
-func BuildMap[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value any](datas Datas, kv func(data Data) (Key, Value)) Map {
+func BuildMap[Map ~map[Key]Value, Datas ~[]Data, Key comparable, Value any, Data any](datas Datas, kv func(data Data) (Key, Value)) Map {
 	result := Map{}
 	for _, data := range datas {
 		key, value := kv(data)
@@ -109,7 +130,7 @@ func BuildMap[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value
 	return result
 }
 
-func BuildMapPro[Datas ~[]Data, Map ~map[Key]Value, Data any, Key comparable, Value any](datas Datas, kv func(data Data) (Key, Value, bool, error)) (Map, error) {
+func BuildMapPro[Map ~map[Key]Value, Datas ~[]Data, Key comparable, Value any, Data any](datas Datas, kv func(data Data) (Key, Value, bool, error)) (Map, error) {
 	result := Map{}
 
 	for _, data := range datas {
