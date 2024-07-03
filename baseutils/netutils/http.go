@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2024-01-05 08:49:25
  * Last Modified by: fasion
- * Last Modified time: 2024-01-05 13:42:19
+ * Last Modified time: 2024-07-03 13:49:23
  */
 
 package netutils
@@ -40,4 +40,26 @@ func NewCookiesFromMap(mapping map[string]string) Cookies {
 
 func NewHeaderFromMap(m map[string]string) http.Header {
 	return stl.MultivalueMap[http.Header](m)
+}
+
+func CopyHeaderByNames(src, dst http.Header, names ...string) http.Header {
+	for _, name := range names {
+		for _, value := range src.Values(name) {
+			dst.Add(name, value)
+		}
+	}
+	return dst
+}
+
+func HeaderSubset(header http.Header, names ...string) http.Header {
+	return CopyHeaderByNames(header, make(http.Header), names...)
+}
+
+func PurgeHeaderInplace(header http.Header, names ...string) http.Header {
+	stl.ForEach(names, header.Del)
+	return header
+}
+
+func PurgeHeader(header http.Header, names ...string) http.Header {
+	return PurgeHeaderInplace(header.Clone(), names...)
 }

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-23 14:54:24
  * Last Modified by: fasion
- * Last Modified time: 2024-02-06 11:12:33
+ * Last Modified time: 2024-06-25 17:57:23
  */
 
 package stl
@@ -13,6 +13,18 @@ import (
 )
 
 type Errors []error
+
+func NewErrors(errs ...error) Errors {
+	return errs
+}
+
+func (errors Errors) Append(more ...error) Errors {
+	return append(errors, more...)
+}
+
+func (errors Errors) Concat(mores ...Errors) Errors {
+	return ConcatSlicesTo(errors, mores...)
+}
 
 func (errors Errors) Len() int {
 	return len(errors)

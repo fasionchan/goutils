@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-04-11 14:38:11
+ * Last Modified time: 2024-06-25 15:20:08
  */
 
 package stl
@@ -19,6 +19,10 @@ func NewPtr[Ptr ~*Data, Data any]() Ptr {
 }
 
 func Dup[Data any, Ptr ~*Data](ptr Ptr) Ptr {
+	if ptr == nil {
+		return nil
+	}
+
 	dup := *ptr
 	return &dup
 }
