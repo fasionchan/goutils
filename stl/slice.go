@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-06-25 09:52:01
+ * Last Modified time: 2024-07-16 09:55:20
  */
 
 package stl
@@ -303,6 +303,12 @@ func ForEach[Data any](datas []Data, handler func(data Data)) {
 	}
 }
 
+func ForEachByMapper[Data any, MappedData any](datas []Data, mapper func(data Data) MappedData) {
+	for _, data := range datas {
+		mapper(data)
+	}
+}
+
 func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas {
 	result := make(Datas, 0, len(datas))
 	for _, data := range datas {
@@ -545,6 +551,18 @@ func MappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](datas D
 		}
 	}
 	return m
+}
+
+func SliceEmpty[Datas ~[]Data, Data any](datas Datas) bool {
+	return len(datas) == 0
+}
+
+func SliceLen[Datas ~[]Data, Data any](datas Datas) int {
+	return len(datas)
+}
+
+func SliceNil[Datas ~[]Data, Data any](datas Datas) bool {
+	return datas == nil
 }
 
 func SliceMappingByKey[Data any, Datas ~[]Data, Key comparable](datas Datas, key func(Data) Key) map[Key]Datas {

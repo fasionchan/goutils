@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 13:36:42
+ * Last Modified time: 2024-07-16 09:55:48
  */
 
 package queryutils
@@ -28,18 +28,18 @@ type ClonableSetinerInterface interface {
 	Clone() ClonableSetinerInterface
 }
 
-type SetinTester[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
-type SetinHandler[Data any, DataPtr ~*Data, Datas ~[]DataPtr] func(ctx context.Context, datas Datas) error
+type SetinTester[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
+type SetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas) error
 
-func NewSetinerHandlerFromComputedHandler[Datas ~[]*Data, Data any](handler SetinComputedHandler[Datas, Data]) SetinHandler[Data, *Data, Datas] {
+func NewSetinerHandlerFromComputedHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any](handler SetinComputedHandler[Datas, DataPtr, Data]) SetinHandler[Datas, DataPtr, Data] {
 	return func(ctx context.Context, datas Datas) error {
 		return handler(datas)
 	}
 }
 
-type SetinComputedHandler[Datas ~[]*Data, Data any] func(datas Datas) error
+type SetinComputedHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(datas Datas) error
 
-func NewSetinComputedHandlerFromSingleton[Datas ~[]*Data, Data any](handler func(*Data) error) SetinComputedHandler[Datas, Data] {
+func NewSetinComputedHandlerFromSingleton[Datas ~[]DataPtr, DataPtr ~*Data, Data any](handler func(DataPtr) error) SetinComputedHandler[Datas, DataPtr, Data] {
 	return func(datas Datas) error {
 		return stl.Errors(stl.Map(datas, handler)).Simplify()
 	}
@@ -48,113 +48,117 @@ func NewSetinComputedHandlerFromSingleton[Datas ~[]*Data, Data any](handler func
 func PartialUnarySetinHandler[
 	Data any,
 	Arg any,
-](handler func(*Data, Arg), arg Arg) func(*Data) {
-	return func(data *Data) {
-		handler(data, arg)
+](handler func(Data, Arg) Data, arg Arg) func(Data) Data {
+	return func(data Data) Data {
+		return handler(data, arg)
 	}
 }
 
 func BatchCallUnarySetinHandler[
-	Datas ~[]*Data,
-	Data any,
+	Datas ~[]DataPtr,
 	Arg any,
-](datas Datas, handler func(*Data, Arg), arg Arg) {
-	stl.ForEach(datas, PartialUnarySetinHandler(handler, arg))
+	DataPtr ~*Data,
+	Data any,
+](datas Datas, handler func(DataPtr, Arg) DataPtr, arg Arg) {
+	stl.ForEachByMapper(datas, PartialUnarySetinHandler(handler, arg))
 }
 
 // Create A Setin Handler
 func NewSetinHandlerPro[
-	Data any,
-	Datas ~[]*Data,
-	Key comparable,
-	Keys ~[]Key,
-	SubData any,
+	Datas ~[]DataPtr,
 	SubDatas ~[]SubData,
+	Keys ~[]Key,
 	SubDataMapping ~map[Key]SubData,
+	DataPtr ~*Data,
+	Data any,
+	SubData any,
+	Key comparable,
 ](
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKey func(SubData) Key,
-	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
-) SetinHandler[Data, *Data, Datas] {
+	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
+) SetinHandler[Datas, DataPtr, Data] {
 	return func(ctx context.Context, datas Datas) error {
-		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, stl.UnchainUnaryHandler(setinHandler))
+		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler)
 	}
 }
 
 func NewSetinHandler[
-	Data any,
-	Datas ~[]*Data,
-	Key comparable,
+	Datas ~[]DataPtr,
+	SubDatas ~[]SubData,
 	Keys ~[]Key,
+	SubDataMapping ~map[Key]SubData,
+	DataPtr ~*Data,
+	Data any,
 	SubData interface {
 		GetId() Key
 	},
-	SubDatas ~[]SubData,
-	SubDataMapping ~map[Key]SubData,
+	Key comparable,
 ](
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
-	setinHandler func(data *Data, subDataMapping SubDataMapping) *Data,
-) SetinHandler[Data, *Data, Datas] {
-	return NewSetinHandlerPro[Data, Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
+	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
+) SetinHandler[Datas, DataPtr, Data] {
+	return NewSetinHandlerPro[Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
 }
 
 func NewReversedSetinHandlerPro[
-	Data any,
-	DataPtr ~*Data,
 	Datas ~[]DataPtr,
-	Key comparable,
-	Keys ~[]Key,
-	SubData any,
 	SubDatas ~[]SubData,
+	Keys ~[]Key,
 	SubDatasMapping ~map[Key]SubDatas,
+	DataPtr ~*Data,
+	Data any,
+	SubData any,
+	Key comparable,
 ](
 	dataKey func(DataPtr) Key,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
-) SetinHandler[Data, DataPtr, Datas] {
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
+) SetinHandler[Datas, DataPtr, Data] {
 	return func(ctx context.Context, datas Datas) error {
 		return ReversedSetinPro(ctx, datas, dataKey, subDataFetcher, subDataKeys, setinHandler)
 	}
 }
 
 func NewReversedSetinHandler[
-	Data any,
+	Datas ~[]DataPtr,
+	SubDatas ~[]SubData,
+	Keys ~[]Key,
+	SubDatasMapping ~map[Key]SubDatas,
 	DataPtr interface {
 		~*Data
 		GetId() Key
 	},
-	Datas ~[]DataPtr,
-	Key comparable,
-	Keys ~[]Key,
+	Data any,
 	SubData any,
-	SubDatas ~[]SubData,
-	SubDatasMapping ~map[Key]SubDatas,
+	Key comparable,
 ](
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
-) SetinHandler[Data, DataPtr, Datas] {
-	return NewReversedSetinHandlerPro[Data, DataPtr, Datas](DataPtr.GetId, subDataFetcher, subDataKeys, setinHandler)
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
+) SetinHandler[Datas, DataPtr, Data] {
+	return NewReversedSetinHandlerPro[Datas](DataPtr.GetId, subDataFetcher, subDataKeys, setinHandler)
 }
 
 func GenericSetinPro[
-	Data any,
-	Datas ~[]*Data,
-	Key comparable,
-	Keys ~[]Key,
-	SubData any,
+	Datas ~[]DataPtr,
 	SubDatas ~[]SubData,
+	Keys ~[]Key,
 	SubDatasMapping ~map[Key]SubDatas,
+	DataPtr ~*Data,
+	Data any,
+	SubData any,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data *Data, subDatasMapping SubDatasMapping) *Data,
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
 	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
@@ -165,7 +169,7 @@ func GenericSetinPro[
 	}
 
 	subDatasMapping := stl.SliceMappingByKeys(subDatas, subDataKeys)
-	stl.ForEach(datas, func(data *Data) {
+	stl.ForEach(datas, func(data DataPtr) {
 		setinHandler(data, subDatasMapping)
 	})
 
@@ -173,20 +177,21 @@ func GenericSetinPro[
 }
 
 func SetinPro[
-	Data any,
-	Datas ~[]*Data,
-	Key comparable,
-	Keys ~[]Key,
-	SubData any,
+	Datas ~[]DataPtr,
 	SubDatas ~[]SubData,
+	Keys ~[]Key,
 	SubDataMapping ~map[Key]SubData,
+	DataPtr ~*Data,
+	Data any,
+	SubData any,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKey func(SubData) Key,
-	setinHandler func(data *Data, subDataMapping SubDataMapping),
+	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
 	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
@@ -203,62 +208,64 @@ func SetinPro[
 }
 
 func Setin[
-	Data any,
-	Datas ~[]*Data,
-	Key comparable,
+	Datas ~[]DataPtr,
+	SubDatas ~[]SubData,
 	Keys ~[]Key,
+	SubDataMapping ~map[Key]SubData,
+	DataPtr ~*Data,
+	Data any,
 	SubData interface {
 		GetId() Key
 	},
-	SubDatas ~[]SubData,
-	SubDataMapping ~map[Key]SubData,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
-	setinHandler func(data *Data, subDataMapping SubDataMapping),
+	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
 ) error {
 	return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
 }
 
 // 调整类型参数顺序，方便指定
 func SetinX[
-	Datas ~[]*Data,
+	Datas ~[]DataPtr,
 	SubDatas ~[]SubData,
 	Keys ~[]Key,
+	SubDataMapping ~map[Key]SubData,
+	DataPtr ~*Data,
 	Data any,
-	Key comparable,
 	SubData interface {
 		GetId() Key
 	},
-	SubDataMapping ~map[Key]SubData,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
-	dataSubKeys func(*Data) Keys,
+	dataSubKeys func(DataPtr) Keys,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
-	setinHandler func(data *Data, subDataMapping SubDataMapping),
+	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
 ) error {
 	return Setin(ctx, datas, dataSubKeys, subDataFetcher, setinHandler)
 }
 
 func ReversedSetinPro[
-	Data any,
-	DataPtr ~*Data,
 	Datas ~[]DataPtr,
-	Key comparable,
-	Keys ~[]Key,
-	SubData any,
 	SubDatas ~[]SubData,
+	Keys ~[]Key,
 	SubDatasMapping ~map[Key]SubDatas,
+	DataPtr ~*Data,
+	Data any,
+	SubData any,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
 	dataKey func(DataPtr) Key,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
 ) error {
 	keys := stl.Map(datas, dataKey)
 	keys = stl.NewSet(keys...).Slice() // 集合去重
@@ -277,24 +284,23 @@ func ReversedSetinPro[
 }
 
 func ReversedSetin[
-	Data interface {
-	},
+	Datas ~[]DataPtr,
+	SubDatas ~[]SubData,
+	Keys ~[]Key,
+	SubDatasMapping ~map[Key]SubDatas,
 	DataPtr interface {
 		~*Data
 		GetId() Key
 	},
-	Datas ~[]DataPtr,
-	Key comparable,
-	Keys ~[]Key,
+	Data any,
 	SubData any,
-	SubDatas ~[]SubData,
-	SubDatasMapping ~map[Key]SubDatas,
+	Key comparable,
 ](
 	ctx context.Context,
 	datas Datas,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
 ) error {
 	keys := stl.Map(datas, DataPtr.GetId)
 	keys = stl.NewSet(keys...).Slice() // 集合去重
@@ -315,47 +321,46 @@ func ReversedSetin[
 // 调整类型参数顺序，方便指定
 func ReversedSetinX[
 	Datas ~[]DataPtr,
-	Keys ~[]Key,
 	SubDatas ~[]SubData,
-	Data interface {
-	},
+	Keys ~[]Key,
+	SubDatasMapping ~map[Key]SubDatas,
 	DataPtr interface {
 		~*Data
 		GetId() Key
 	},
+	Data any,
 	Key comparable,
 	SubData any,
-	SubDatasMapping ~map[Key]SubDatas,
 ](
 	ctx context.Context,
 	datas Datas,
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKeys func(SubData) Keys,
-	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) *Data,
+	setinHandler func(data DataPtr, subDatasMapping SubDatasMapping) DataPtr,
 ) error {
 	return ReversedSetin(ctx, datas, subDataFetcher, subDataKeys, setinHandler)
 }
 
-type SetinHandlerMapping[Data any, Datas ~[]*Data] map[string]SetinHandler[Data, *Data, Datas]
+type SetinHandlerMapping[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] map[string]SetinHandler[Datas, DataPtr, Data]
 
-func NewSetinHandlerMapping[Data any, Datas ~[]*Data]() SetinHandlerMapping[Data, Datas] {
-	return SetinHandlerMapping[Data, Datas]{}
+func NewSetinHandlerMapping[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any]() SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
+	return SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]{}
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) Self() SetinHandlerMapping[Data, Datas] {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Self() SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
 	return mapping
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) WithHandler(name string, handler SetinHandler[Data, *Data, Datas]) SetinHandlerMapping[Data, Datas] {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithHandler(name string, handler SetinHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
 	mapping[name] = handler
 	return mapping
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) WithComputedHandler(name string, handler SetinComputedHandler[Datas, Data]) SetinHandlerMapping[Data, Datas] {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithComputedHandler(name string, handler SetinComputedHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
 	return mapping.WithHandler(name, NewSetinerHandlerFromComputedHandler(handler))
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
 	handler, ok := mapping[setin]
 	if !ok {
 		return false, nil
@@ -368,7 +373,7 @@ func (mapping SetinHandlerMapping[Data, Datas]) SetinOne(ctx context.Context, da
 	return true, nil
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) Setin(ctx context.Context, datas Datas, setins []string) error {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Setin(ctx context.Context, datas Datas, setins []string) error {
 	for _, setin := range setins {
 		if ok, err := mapping.SetinOne(ctx, datas, setin); err != nil {
 			return err
@@ -380,11 +385,11 @@ func (mapping SetinHandlerMapping[Data, Datas]) Setin(ctx context.Context, datas
 	return nil
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) NewTesters() SetinTesters[Data, Datas] {
-	return NewSetinTesters(mapping.SetinOne)
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) NewTesters() SetinTesters[Datas, DataInstances, DataPtr, Data] {
+	return NewSetinTesters[Datas, DataInstances](mapping.SetinOne)
 }
 
-func (mapping SetinHandlerMapping[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Data] {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) NewSetiner() *Setiner[Datas, DataInstances, DataPtr, Data] {
 	return mapping.NewTesters().NewSetiner()
 }
 
@@ -411,17 +416,17 @@ func (e UnknownSetinError) WithSetiner(setiner string) UnknownSetinError {
 	return e
 }
 
-type SetinTesters[Data any, Datas ~[]*Data] []SetinTester[Data, *Data, Datas]
+type SetinTesters[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] []SetinTester[Datas, DataPtr, Data]
 
-func NewSetinTesters[Data any, Datas ~[]*Data](testers ...SetinTester[Data, *Data, Datas]) SetinTesters[Data, Datas] {
+func NewSetinTesters[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](testers ...SetinTester[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
 	return testers
 }
 
-func (testers SetinTesters[Data, Datas]) Append(more ...SetinTester[Data, *Data, Datas]) SetinTesters[Data, Datas] {
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Append(more ...SetinTester[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
 	return append(testers, more...)
 }
 
-func (testers SetinTesters[Data, Datas]) SetinOne(ctx context.Context, datas Datas, setin string) error {
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) error {
 	matched, err := testers.TestSetinOne(ctx, datas, setin)
 	if err != nil {
 		return err
@@ -434,7 +439,7 @@ func (testers SetinTesters[Data, Datas]) SetinOne(ctx context.Context, datas Dat
 	return NewUnknownSetinError(setin)
 }
 
-func (testers SetinTesters[Data, Datas]) TestSetinOne(ctx context.Context, datas Datas, setin string) (matched bool, err error) {
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) TestSetinOne(ctx context.Context, datas Datas, setin string) (matched bool, err error) {
 	for _, tester := range testers {
 		matched, err = tester(ctx, datas, setin)
 		if err != nil {
@@ -449,7 +454,7 @@ func (testers SetinTesters[Data, Datas]) TestSetinOne(ctx context.Context, datas
 	return
 }
 
-func (testers SetinTesters[Data, Datas]) Setin(ctx context.Context, datas Datas, setins []string) error {
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Setin(ctx context.Context, datas Datas, setins []string) error {
 	for _, setin := range setins {
 		if err := testers.SetinOne(ctx, datas, setin); err != nil {
 			return err
@@ -459,36 +464,36 @@ func (testers SetinTesters[Data, Datas]) Setin(ctx context.Context, datas Datas,
 	return nil
 }
 
-func (testers SetinTesters[Data, Datas]) NewSetiner() *Setiner[Data, Datas, []Data] {
-	return NewSetiner[Data, Datas, []Data](testers)
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) NewSetiner() *Setiner[Datas, DataInstances, DataPtr, Data] {
+	return NewSetiner[Datas, DataInstances, DataPtr, Data](testers)
 }
 
-type Setiner[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
-	SetinTesters[Data, Datas]
+type Setiner[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] struct {
+	SetinTesters[Datas, DataInstances, DataPtr, Data]
 	subDataSetiner SubDataSetiner
 }
 
-func NewSetiner[Data any, Datas ~[]*Data, DataInstances ~[]Data](testers SetinTesters[Data, Datas]) *Setiner[Data, Datas, DataInstances] {
-	return &Setiner[Data, Datas, DataInstances]{
+func NewSetiner[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](testers SetinTesters[Datas, DataInstances, DataPtr, Data]) *Setiner[Datas, DataInstances, DataPtr, Data] {
+	return &Setiner[Datas, DataInstances, DataPtr, Data]{
 		SetinTesters: testers,
 	}
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) BindingDefaultSubDataSetiner() *Setiner[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) BindingDefaultSubDataSetiner() *Setiner[Datas, DataInstances, DataPtr, Data] {
 	return setiner.BindingSubDataSetiner(GetDefaultSubDataSetiner())
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) BindingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) BindingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Datas, DataInstances, DataPtr, Data] {
 	return setiner.ProvidingSubDataSetiner(subDataSetiner).UsingSubDataSetiner(subDataSetiner)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) ProvidingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ProvidingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Datas, DataInstances, DataPtr, Data] {
 	var data Data
 	subDataSetiner.WithHandlerByData(setiner.SetinFor, data)
 	return setiner
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) Setin(ctx context.Context, datas Datas, setins []string) error {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) Setin(ctx context.Context, datas Datas, setins []string) error {
 	for _, setin := range setins {
 		if err := setiner.SetinOne(ctx, datas, setin); err != nil {
 			return err
@@ -497,7 +502,7 @@ func (setiner *Setiner[Data, Datas, DataInstances]) Setin(ctx context.Context, d
 	return nil
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) SetinFor(ctx context.Context, dataX any, setins []string) error {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinFor(ctx context.Context, dataX any, setins []string) error {
 	if dataX == nil {
 		return nil
 	}
@@ -515,19 +520,19 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinFor(ctx context.Context
 	return BadDataTypeError
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) SetinForData(ctx context.Context, data *Data, setins []string) error {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinForData(ctx context.Context, data *Data, setins []string) error {
 	return setiner.Setin(ctx, Datas{data}, setins)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDatas(ctx context.Context, datas Datas, setins []string) error {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinForDatas(ctx context.Context, datas Datas, setins []string) error {
 	return setiner.Setin(ctx, datas, setins)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) SetinForDataInstances(ctx context.Context, instances DataInstances, setins []string) error {
-	return setiner.Setin(ctx, stl.GetSliceElemPointers(instances), setins)
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinForDataInstances(ctx context.Context, instances DataInstances, setins []string) error {
+	return setiner.Setin(ctx, DatasFromInstances[Datas](instances), setins)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) SetinOne(ctx context.Context, datas Datas, setin string) error {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) error {
 	matched, err := setiner.SetinTesters.TestSetinOne(ctx, datas, setin)
 	if err != nil {
 		return err
@@ -547,57 +552,57 @@ func (setiner *Setiner[Data, Datas, DataInstances]) SetinOne(ctx context.Context
 	return NewUnknownSetinError(setin).WithSetiner(DataTypeIdent(setiner))
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) UsingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) UsingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Datas, DataInstances, DataPtr, Data] {
 	setiner.subDataSetiner = subDataSetiner
 	return setiner
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) Action() *SetinAction[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) Action() *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	return setiner.ActionFor(nil)
 }
 
-func (setiner *Setiner[Data, Datas, DataInstances]) ActionFor(datas Datas) *SetinAction[Data, Datas, DataInstances] {
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ActionFor(datas Datas) *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	return NewSetinAction(setiner, datas)
 }
 
 // A SetinAction is A Setiner with datas, it can Dup, Clone, WithData and finally Setin.
-type SetinAction[Data any, Datas ~[]*Data, DataInstances ~[]Data] struct {
-	*Setiner[Data, Datas, DataInstances]
+type SetinAction[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] struct {
+	*Setiner[Datas, DataInstances, DataPtr, Data]
 	datas  Datas
 	setins []string
 }
 
-func NewSetinAction[Data any, Datas ~[]*Data, DataInstances ~[]Data](setiner *Setiner[Data, Datas, DataInstances], datas Datas) *SetinAction[Data, Datas, DataInstances] {
-	return &SetinAction[Data, Datas, DataInstances]{
+func NewSetinAction[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](setiner *Setiner[Datas, DataInstances, DataPtr, Data], datas Datas) *SetinAction[Datas, DataInstances, DataPtr, Data] {
+	return &SetinAction[Datas, DataInstances, DataPtr, Data]{
 		Setiner: setiner,
 		datas:   datas,
 	}
 }
 
-func (setiner *SetinAction[Data, Datas, DataInstances]) Dup() *SetinAction[Data, Datas, DataInstances] {
+func (setiner *SetinAction[Datas, DataInstances, DataPtr, Data]) Dup() *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	dup := *setiner
 	return &dup
 }
 
-func (setiner *SetinAction[Data, Datas, DataInstances]) Clone() ClonableSetinerInterface {
+func (setiner *SetinAction[Datas, DataInstances, DataPtr, Data]) Clone() ClonableSetinerInterface {
 	return setiner
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithSetinsX(setins ...string) *SetinAction[Data, Datas, DataInstances] {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithSetinsX(setins ...string) *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	action.setins = setins
 	return action
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithSetins(setins ...string) CommonSetinerInterface {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithSetins(setins ...string) CommonSetinerInterface {
 	action.setins = setins
 	return action
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithSetineds(setineds any) (CommonSetinerInterface, error) {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithSetineds(setineds any) (CommonSetinerInterface, error) {
 	return action.WithDataX(setineds)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithDataX(dataX any) (*SetinAction[Data, Datas, DataInstances], error) {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithDataX(dataX any) (*SetinAction[Datas, DataInstances, DataPtr, Data], error) {
 	if data, ok := dataX.(*Data); ok {
 		return action.WithData(data), nil
 	} else if datas, ok := dataX.(Datas); ok {
@@ -611,7 +616,7 @@ func (action *SetinAction[Data, Datas, DataInstances]) WithDataX(dataX any) (*Se
 	return nil, BadDataTypeError
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithData(data *Data) *SetinAction[Data, Datas, DataInstances] {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithData(data *Data) *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	if data == nil {
 		action.datas = nil
 	} else {
@@ -620,39 +625,47 @@ func (action *SetinAction[Data, Datas, DataInstances]) WithData(data *Data) *Set
 	return action
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithDatas(datas Datas) *SetinAction[Data, Datas, DataInstances] {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithDatas(datas Datas) *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	action.datas = stl.PurgeZero(datas)
 	return action
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) WithDataInstances(datas DataInstances) *SetinAction[Data, Datas, DataInstances] {
-	action.datas = stl.GetSliceElemPointers(datas)
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) WithDataInstances(datas DataInstances) *SetinAction[Datas, DataInstances, DataPtr, Data] {
+	action.datas = DatasFromInstances[Datas](datas)
 	return action
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) SetinX(ctx context.Context, setins ...string) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) SetinX(ctx context.Context, setins ...string) error {
 	return action.Setin(ctx, setins)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) Setin(ctx context.Context, setins []string) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) Setin(ctx context.Context, setins []string) error {
 	if len(setins) == 0 {
 		setins = action.setins
 	}
 	return action.Setiner.SetinForDatas(ctx, action.datas, setins)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) SetinForData(ctx context.Context, data *Data) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) SetinForData(ctx context.Context, data *Data) error {
 	return action.Setiner.SetinForData(ctx, data, action.setins)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) SetinForDatas(ctx context.Context, datas Datas) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) SetinForDatas(ctx context.Context, datas Datas) error {
 	return action.Setiner.SetinForDatas(ctx, datas, action.setins)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) SetinForDataInstances(ctx context.Context, instances DataInstances) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) SetinForDataInstances(ctx context.Context, instances DataInstances) error {
 	return action.Setiner.SetinForDataInstances(ctx, instances, action.setins)
 }
 
-func (action *SetinAction[Data, Datas, DataInstances]) SetinFor(ctx context.Context, dataX any) error {
+func (action *SetinAction[Datas, DataInstances, DataPtr, Data]) SetinFor(ctx context.Context, dataX any) error {
 	return action.Setiner.SetinFor(ctx, dataX, action.setins)
+}
+
+func DatasFromInstances[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](instances DataInstances) Datas {
+	datas := make(Datas, 0, len(instances))
+	for i, _ := range instances {
+		datas = append(datas, &instances[i])
+	}
+	return datas
 }
