@@ -2,10 +2,16 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-06-25 10:16:15
+ * Last Modified time: 2024-07-17 13:47:44
  */
 
 package stl
+
+type Mapping[Key comparable, Value any] map[Key]Value
+
+func NewMapping[Key comparable, Value any]() Mapping[Key, Value] {
+	return Mapping[Key, Value]{}
+}
 
 func FilterMap[Map ~map[Key]Value, Key comparable, Value any](m Map, tester func(Key, Value, Map) bool) Map {
 	result := Map{}
@@ -22,6 +28,13 @@ type KeyValuePair[Key any, Value any] struct {
 	Value Value
 }
 
+func (pair *KeyValuePair[Key, Value]) GetKey() (key Key) {
+	if pair != nil {
+		return pair.Key
+	}
+	return
+}
+
 type KeyValuePairs[Key any, Value any] []KeyValuePair[Key, Value]
 
 func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairs[Key, Value] {
@@ -31,6 +44,10 @@ func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyV
 			Value: value,
 		}
 	})
+}
+
+func (pairs KeyValuePairs[Key, Value]) Append(others ...KeyValuePair[Key, Value]) KeyValuePairs[Key, Value] {
+	return append(pairs, others...)
 }
 
 func (pairs KeyValuePairs[Key, Value]) ToTypelessSlice() []any {

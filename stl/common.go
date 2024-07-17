@@ -2,12 +2,73 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-06-25 15:20:08
+ * Last Modified time: 2024-07-17 14:25:06
  */
 
 package stl
 
-import "reflect"
+import (
+	"context"
+	"fmt"
+	"reflect"
+)
+
+type ContextValues[Key comparable, Value any] map[Key]Value
+
+func NewContextValues[Key comparable, Value any]() ContextValues[Key, Value] {
+	return ContextValues[Key, Value]{}
+}
+
+func (values ContextValues[Key, Value]) ApplyTo(ctx context.Context) context.Context {
+	if values.Empty() {
+		return ctx
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	for key, value := range values {
+		ctx = context.WithValue(ctx, key, value)
+	}
+
+	return ctx
+}
+
+func (values ContextValues[Key, Value]) Empty() bool {
+	return values.Len() == 0
+}
+
+func (values ContextValues[Key, Value]) Len() int {
+	return len(values)
+}
+
+func (values ContextValues[Key, Value]) With(key Key, value Value) ContextValues[Key, Value] {
+	if values != nil {
+		values[key] = value
+	}
+	return values
+}
+
+func LookupContextValue[Value any, Key any](ctx context.Context, key Key) (value Value, ok bool) {
+	if ctx != nil {
+		value, ok = ctx.Value(key).(Value)
+	}
+	return
+}
+
+func MustLookupContextValue[Value any, Key any](ctx context.Context, key Key) (value Value) {
+	value, ok := LookupContextValue[Value](ctx, key)
+	if !ok {
+		panic(fmt.Sprintf("context value not found: %v", key))
+	}
+	return
+}
+
+func GetContextValue[Value any, Key any](ctx context.Context, key Key) (value Value) {
+	value, _ = LookupContextValue[Value](ctx, key)
+	return
+}
 
 func New[Data any]() (data Data) {
 	return
