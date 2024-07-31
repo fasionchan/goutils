@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-07-16 09:55:20
+ * Last Modified time: 2024-07-31 13:54:57
  */
 
 package stl
@@ -637,6 +637,14 @@ func (slice Slice[Data]) AnyMatch(f func(Data) bool) bool {
 
 func (slice Slice[Data]) AllMatch(f func(Data) bool) bool {
 	return AllMatch(slice, f)
+}
+
+func (slice Slice[Data]) Append(datas ...Data) Slice[Data] {
+	return append(slice, datas...)
+}
+
+func (slice Slice[Data]) Concat(others ...Slice[Data]) Slice[Data] {
+	return ConcatSlicesTo(slice, others...)
 }
 
 func (slice Slice[Data]) Dup() Slice[Data] {

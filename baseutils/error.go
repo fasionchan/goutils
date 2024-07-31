@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2023-12-21 17:11:28
+ * Last Modified time: 2024-07-22 13:17:44
  */
 
 package baseutils
@@ -10,6 +10,7 @@ package baseutils
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -130,6 +131,22 @@ func NewBadTypeErrorWithGivenReflectType(expected, given reflect.Type) BadTypeEr
 
 func (e BadTypeError) Error() string {
 	return fmt.Sprintf("bad type error: [%s] expected, but given [%s]", e.expected, e.given)
+}
+
+type NilError struct {
+	name string
+}
+
+func NewNilError(name string) NilError {
+	return NilError{name: name}
+}
+
+func NewNilErrorFromNames(names ...string) NilError {
+	return NewNilError(strings.Join(names, "."))
+}
+
+func (err NilError) Error() string {
+	return fmt.Sprintf("%s is nil", err.name)
 }
 
 type Errors = stl.Errors

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2024-01-30 11:40:28
+ * Last Modified time: 2024-07-29 11:16:37
  */
 
 package stl
@@ -118,9 +118,10 @@ func NewCachedDataFetcher[Data any](fetcher CachedDataFetcherFetchFunc[Data]) *C
 
 func NewCachedDataFetcherLite[Data any](fetcher CachedDataFetcherFetchFuncLite[Data]) *CachedDataFetcher[Data] {
 	return NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (data Data, t time.Time, err error) {
+		fetchingTime := time.Now()
 		data, err = fetcher(ctx)
 		if err == nil {
-			t = time.Now()
+			t = fetchingTime
 		}
 		return
 	})
@@ -135,6 +136,11 @@ func (fetcher *CachedDataFetcher[Data]) Dup() *CachedDataFetcher[Data] {
 
 func (fetcher *CachedDataFetcher[Data]) WithCachedDataPurged() *CachedDataFetcher[Data] {
 	fetcher.data = nil
+	return fetcher
+}
+
+func (fetcher *CachedDataFetcher[Data]) WithLogger(logger *zap.Logger) *CachedDataFetcher[Data] {
+	fetcher.Logger = logger
 	return fetcher
 }
 
