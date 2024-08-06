@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-08-06 13:24:44
+ * Last Modified time: 2024-08-06 13:32:15
  */
 
 package queryutils
@@ -386,8 +386,11 @@ func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithComp
 	return mapping.WithHandler(name, NewSetinerHandlerFromComputedHandler(handler))
 }
 
-func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithNamedHandler(handler NamedSetinHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
-	return mapping.WithHandler(handler.name, handler.handler)
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithNamedHandler(handler *NamedSetinHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
+	if handler != nil {
+		mapping.WithHandler(handler.name, handler.handler)
+	}
+	return mapping
 }
 
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
