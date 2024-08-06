@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-07-16 09:55:48
+ * Last Modified time: 2024-08-06 13:24:44
  */
 
 package queryutils
@@ -30,6 +30,32 @@ type ClonableSetinerInterface interface {
 
 type SetinTester[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
 type SetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas) error
+
+type NamedSetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] struct {
+	name    string
+	handler SetinHandler[Datas, DataPtr, Data]
+}
+
+func NewNamedSetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any](name string, handler SetinHandler[Datas, DataPtr, Data]) *NamedSetinHandler[Datas, DataPtr, Data] {
+	return &NamedSetinHandler[Datas, DataPtr, Data]{
+		name:    name,
+		handler: handler,
+	}
+}
+
+func (handler *NamedSetinHandler[Datas, DataPtr, Data]) GetName() string {
+	if handler == nil {
+		return ""
+	}
+	return handler.name
+}
+
+func (handler *NamedSetinHandler[Datas, DataPtr, Data]) GetHandler() SetinHandler[Datas, DataPtr, Data] {
+	if handler == nil {
+		return nil
+	}
+	return handler.handler
+}
 
 func NewSetinerHandlerFromComputedHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any](handler SetinComputedHandler[Datas, DataPtr, Data]) SetinHandler[Datas, DataPtr, Data] {
 	return func(ctx context.Context, datas Datas) error {
@@ -358,6 +384,10 @@ func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithHand
 
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithComputedHandler(name string, handler SetinComputedHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
 	return mapping.WithHandler(name, NewSetinerHandlerFromComputedHandler(handler))
+}
+
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithNamedHandler(handler NamedSetinHandler[Datas, DataPtr, Data]) SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
+	return mapping.WithHandler(handler.name, handler.handler)
 }
 
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-07-31 13:54:57
+ * Last Modified time: 2024-08-05 13:03:49
  */
 
 package stl
@@ -375,6 +375,13 @@ func PurgeValue[Data comparable, Datas ~[]Data](datas Datas, value Data) Datas {
 func PurgeZero[Data comparable, Datas ~[]Data](datas Datas) Datas {
 	var zero Data
 	return PurgeValue(datas, zero)
+}
+
+func PurgeZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Datas {
+	var zeroKey Key
+	return Purge(datas, func(data Data) bool {
+		return key(data) == zeroKey
+	})
 }
 
 func Map[Data any, Datas ~[]Data, Result any](datas Datas, mapper func(Data) Result) []Result {
