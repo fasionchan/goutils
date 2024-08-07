@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-08-05 13:03:49
+ * Last Modified time: 2024-08-07 10:38:57
  */
 
 package stl
@@ -56,10 +56,14 @@ func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
 	return false
 }
 
-func CountByKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) map[Key]int {
-	result := map[Key]int{}
+func Count[Datas ~[]Data, Data comparable](datas Datas) Counter[Data] {
+	return CountByKey(datas, Echo[Data])
+}
+
+func CountByKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Counter[Key] {
+	result := NewCounter[Key]()
 	for _, data := range datas {
-		result[key(data)] += 1
+		result.Increase(key(data))
 	}
 	return result
 }

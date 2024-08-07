@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-07-17 13:47:44
+ * Last Modified time: 2024-08-07 10:36:32
  */
 
 package stl
@@ -290,4 +290,34 @@ func PurgeMapKeys[Map ~map[Key]Value, Key comparable, Value any](m Map, keys ...
 func PurgeMapZeroKey[Map ~map[Key]Value, Key comparable, Value any](m Map) Map {
 	var zeroKey Key
 	return PurgeMapKeys(m, zeroKey)
+}
+
+type Counter[Key comparable] map[Key]int
+
+func NewCounter[Key comparable]() Counter[Key] {
+	return Counter[Key]{}
+}
+
+func (counter Counter[Key]) Decrease(key Key) Counter[Key] {
+	return counter.IncreaseValue(key, -1)
+}
+
+func (counter Counter[Key]) Increase(key Key) Counter[Key] {
+	return counter.IncreaseValue(key, 1)
+}
+
+func (counter Counter[Key]) IncreaseValue(key Key, value int) Counter[Key] {
+	counter[key] += value
+	return counter
+}
+
+func (counter Counter[Key]) NativeMap() map[Key]int {
+	return counter
+}
+
+func (counter Counter[Key]) SumKeys(keys ...Key) (total int) {
+	for _, key := range keys {
+		total += counter[key]
+	}
+	return
 }

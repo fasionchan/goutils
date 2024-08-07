@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-06-25 10:05:07
+ * Last Modified time: 2024-08-07 10:42:38
  */
 
 package types
@@ -50,6 +50,10 @@ func (strs Strings) Native() StringSlice {
 
 func (strs Strings) ToSet() StringSet {
 	return stl.NewSet(strs...)
+}
+
+func (strs Strings) Count() stl.Counter[string] {
+	return stl.Count(strs)
 }
 
 func (strs Strings) Dup() Strings {
