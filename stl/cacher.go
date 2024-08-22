@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2024-07-29 11:16:37
+ * Last Modified time: 2024-08-08 16:35:02
  */
 
 package stl
@@ -127,6 +127,12 @@ func NewCachedDataFetcherLite[Data any](fetcher CachedDataFetcherFetchFuncLite[D
 	})
 }
 
+func (fetcher *CachedDataFetcher[Data]) BuildGetter() *cachedDataFetcherGetter[Data] {
+	return &cachedDataFetcherGetter[Data]{
+		fetcher: fetcher,
+	}
+}
+
 func (fetcher *CachedDataFetcher[Data]) Dup() *CachedDataFetcher[Data] {
 	return &CachedDataFetcher[Data]{
 		fetcher:         fetcher.fetcher,
@@ -234,8 +240,23 @@ func (fetcher *CachedDataFetcher[Data]) GetWithExpires(expiresDuration time.Dura
 	return fetcher.getWithExpires(expiresDuration)
 }
 
+func (fetcher *CachedDataFetcher[Data]) GetWithExpiresWarn(expiresDuration time.Duration) (Data, bool) {
+	return fetcher.BuildGetter().WithExpiresDuration(expiresDuration).WithLogExpired(true).Get()
+}
+
 func (fetcher *CachedDataFetcher[Data]) GetWithSince(since time.Time) (Data, time.Time, bool) {
 	return fetcher.getWithSince(since)
+}
+
+func (fetcher *CachedDataFetcher[Data]) GetWithSinceWarn(since time.Time) (data Data, ok bool) {
+	data, fetchingTime, ok := fetcher.getWithSince(since)
+	if !ok {
+		fetcher.Warn("GetWithSinceWarn",
+			zap.Time("FetchingTime", fetchingTime),
+			zap.Time("Since", since),
+		)
+	}
+	return
 }
 
 func (fetcher *CachedDataFetcher[Data]) GetFetchLite() func(ctx context.Context) (Data, error) {
@@ -342,4 +363,70 @@ func (fetcher *CachedDataFetcher[Data]) getWithSince(since time.Time) (data Data
 
 func (fetcher *CachedDataFetcher[Data]) getCached() (data Data, t time.Time) {
 	return fetcher.data.ValueAndTime()
+}
+
+type cachedDataFetcherGetter[Data any] struct {
+	fetcher         *CachedDataFetcher[Data]
+	expiresDuration time.Duration
+	logger          *zap.Logger
+	logExpired      bool
+}
+
+func (getter *cachedDataFetcherGetter[Data]) Get() (data Data, ok bool) {
+	if getter == nil {
+		return
+	}
+
+	data, fetchingTime, ok := getter.fetcher.GetWithExpires(getter.expiresDuration)
+	if !ok {
+		if getter.logExpired {
+			getter.GetLogger().Warn("GetWithExpires",
+				zap.Time("FetchingTime", fetchingTime),
+				zap.Duration("ExpiresDuration", getter.expiresDuration),
+			)
+		}
+		return
+	}
+
+	return
+}
+
+func (getter *cachedDataFetcherGetter[Data]) GetLogger() *zap.Logger {
+	if getter == nil {
+		return zap.NewNop()
+	}
+
+	logger := getter.logger
+	if logger != nil {
+		return logger
+	}
+
+	return getter.fetcher.Logger
+}
+
+func (getter *cachedDataFetcherGetter[Data]) WithExpiresDuration(expiresDuration time.Duration) *cachedDataFetcherGetter[Data] {
+	if getter == nil {
+		return nil
+	}
+
+	getter.expiresDuration = expiresDuration
+	return getter
+}
+
+func (getter *cachedDataFetcherGetter[Data]) WithLogExpired(logExpired bool) *cachedDataFetcherGetter[Data] {
+	if getter == nil {
+		return nil
+	}
+
+	getter.logExpired = logExpired
+	return getter
+}
+
+func (getter *cachedDataFetcherGetter[Data]) WithLogger(logger *zap.Logger) *cachedDataFetcherGetter[Data] {
+	if getter == nil {
+		return nil
+	}
+
+	getter.logger = logger
+	return getter
 }

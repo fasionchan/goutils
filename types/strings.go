@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-08-07 10:42:38
+ * Last Modified time: 2024-08-21 08:33:35
  */
 
 package types
@@ -129,6 +129,14 @@ func (strs Strings) MapWithSprintf(format string) Strings {
 	})
 }
 
+func (strs Strings) ReverseInplace() Strings {
+	return stl.Reverse(strs)
+}
+
+func (strs Strings) ReverseDup() Strings {
+	return stl.Reverse(strs.Dup())
+}
+
 func (strs Strings) TrimSpace() Strings {
 	return strs.Map(strings.TrimSpace)
 }
@@ -164,6 +172,10 @@ func (strs Strings) Join(sep string) string {
 
 func (strs Strings) JoinByComma() string {
 	return strs.Join(",")
+}
+
+func (strs Strings) JoinByDot() string {
+	return strs.Join(".")
 }
 
 func (strs Strings) Equal(other Strings) bool {

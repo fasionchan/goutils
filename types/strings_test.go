@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-15 15:59:37
  * Last Modified by: fasion
- * Last Modified time: 2024-08-07 10:43:28
+ * Last Modified time: 2024-08-14 13:41:09
  */
 
 package types
@@ -20,4 +20,18 @@ func TestString(t *testing.T) {
 
 func TestCountStrings(t *testing.T) {
 	fmt.Println(NewStrings("a", "b", "c", "a", "c", "a").Count())
+}
+
+func TestReverse(t *testing.T) {
+	fmt.Println(NewStrings().ReverseInplace())
+	fmt.Println(NewStrings().ReverseDup())
+
+	fmt.Println(NewStrings("a").ReverseInplace())
+	fmt.Println(NewStrings("a").ReverseDup())
+
+	fmt.Println(NewStrings("a", "b").ReverseInplace())
+	fmt.Println(NewStrings("a", "b").ReverseDup())
+
+	fmt.Println(NewStrings("a", "b", "c").ReverseInplace())
+	fmt.Println(NewStrings("a", "b", "c").ReverseDup())
 }

@@ -2,15 +2,17 @@
  * Author: fasion
  * Created time: 2024-06-08 01:03:36
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 08:24:52
+ * Last Modified time: 2024-08-21 08:34:23
  */
 
 package queryutils
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fasionchan/goutils/baseutils"
+	"github.com/fasionchan/goutils/types"
 )
 
 func parseSetinExpression(setin string) (result []string, err error) {
@@ -56,4 +58,12 @@ Start:
 
 func ParseSetinExpression(setin string) ([]string, error) {
 	return parseSetinExpression(strings.TrimSpace(setin))
+}
+
+func NewSubdataSetinExpression(names types.Strings, setin string) string {
+	return fmt.Sprintf(".%s-%s", names.JoinByDot(), setin)
+}
+
+func NewSubdataSetinExpressionX(setin string, names ...string) string {
+	return fmt.Sprintf(".%s-%s", types.Strings(names).JoinByDot(), setin)
 }

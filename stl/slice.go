@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-08-07 10:38:57
+ * Last Modified time: 2024-08-19 13:15:05
  */
 
 package stl
@@ -47,6 +47,19 @@ func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bo
 	return
 }
 
+func BatchAssertType[Dst any, Source any, Sources ~[]Source](sources Sources) (result []Dst, allOk bool) {
+	result = Map(sources, func(source Source) (result Dst) {
+		v, ok := any(source).(Dst)
+		if ok {
+			result = v
+		} else {
+			allOk = false
+		}
+		return v
+	})
+	return
+}
+
 func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
 	for _, data := range datas {
 		if data == target {
@@ -54,6 +67,18 @@ func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
 		}
 	}
 	return false
+}
+
+func ContainAll[Datas ~[]Data, Data comparable](datas Datas, targets ...Data) bool {
+	return AllMatch(targets, func(target Data) bool {
+		return Contain(datas, target)
+	})
+}
+
+func ContainAny[Datas ~[]Data, Data comparable](datas Datas, targets ...Data) bool {
+	return AnyMatch(targets, func(target Data) bool {
+		return Contain(datas, target)
+	})
 }
 
 func Count[Datas ~[]Data, Data comparable](datas Datas) Counter[Data] {
@@ -429,6 +454,11 @@ func MapAndJoinWithError[Datas ~[]Data, Results ~[]Result, Data any, Result any]
 	return JoinSlices(sep, slices...), nil
 }
 
+func MapToAssertedType[Dst any, Source any, Sources ~[]Source](sources Sources) (result []Dst) {
+	result, _ = BatchAssertType[Dst](sources)
+	return
+}
+
 func MapUtilError[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) (Result, error)) ([]Result, error) {
 	results, errs := MapWithError(datas, true, mapper)
 	return results, errs.FirstError()
@@ -468,6 +498,14 @@ func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Resul
 		result = reducer(result, data)
 	}
 	return
+}
+
+func Reverse[Datas ~[]Data, Data any](datas Datas) Datas {
+	n := len(datas)
+	for i := 0; i < n/2; i++ {
+		datas[i], datas[n-i-1] = datas[n-i-1], datas[i]
+	}
+	return datas
 }
 
 func Sort[Data any, Datas ~[]Data](datas Datas, less func(a, b Data) bool) Datas {
@@ -627,7 +665,7 @@ func ZipToPairs[Key any, Value any](keys []Key, values []Value) KeyValuePairs[Ke
 	pairs := make(KeyValuePairs[Key, Value], n)
 
 	for i := 0; i < n; i++ {
-		pairs = append(pairs, KeyValuePair[Key, Value]{
+		pairs = pairs.Append(KeyValuePair[Key, Value]{
 			Key:   keys[i],
 			Value: values[i],
 		})

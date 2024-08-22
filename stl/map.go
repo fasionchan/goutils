@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-08-07 10:36:32
+ * Last Modified time: 2024-08-19 11:07:48
  */
 
 package stl
@@ -17,6 +17,26 @@ func FilterMap[Map ~map[Key]Value, Key comparable, Value any](m Map, tester func
 	result := Map{}
 	for key, value := range m {
 		if tester(key, value, m) {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func FilterMapByKey[Map ~map[Key]Value, Key comparable, Value any](m Map, f func(Key) bool) Map {
+	result := Map{}
+	for key, value := range m {
+		if f(key) {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func FilterMapByValue[Map ~map[Key]Value, Key comparable, Value any](m Map, f func(Value) bool) Map {
+	result := Map{}
+	for key, value := range m {
+		if f(value) {
 			result[key] = value
 		}
 	}
@@ -206,7 +226,7 @@ func ConcatMapInplace[Map ~map[Key]Value, Key comparable, Value any](dst, src Ma
 }
 
 func ConcatMap[Key comparable, Value any, Map ~map[Key]Value](dst, src Map) Map {
-	return ConcatMap(DupMap(dst), src)
+	return ConcatMapInplace(DupMap(dst), src)
 }
 
 func ConcatMapsTo[Map ~map[Key]Value, Key comparable, Value any](dst Map, maps ...Map) Map {

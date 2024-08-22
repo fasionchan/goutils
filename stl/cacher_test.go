@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-12-22 13:09:37
  * Last Modified by: fasion
- * Last Modified time: 2023-12-22 18:16:14
+ * Last Modified time: 2024-08-08 16:33:56
  */
 
 package stl
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestAutoRefresh(t *testing.T) {
@@ -123,4 +124,18 @@ func TestCachedFetcherSubscribeOthersCompile(t *testing.T) {
 
 		NewCachedDataFetcher[bool](nil).WithOthersSubscribed(0, &a, &b, &c)
 	}
+}
+
+func TestCachedDataFetcherGetter(t *testing.T) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
+		fmt.Println("fetch data")
+		return nil, time.Now(), nil
+	}).WithExpiresDuration(time.Second * 10)
+
+	time.Sleep(time.Second * 2)
+
+	fmt.Println(fetcher.GetWithExpiresWarn(time.Second))
+
+	getter := fetcher.BuildGetter().WithLogger(zap.L()).WithExpiresDuration(time.Second * 1).WithLogExpired(true).Get
+	fmt.Println(getter())
 }

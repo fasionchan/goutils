@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-07-17 14:25:06
+ * Last Modified time: 2024-08-19 11:30:22
  */
 
 package stl
@@ -106,6 +106,11 @@ func ToTypeless[Data any](data Data) any {
 
 func ToTypelessSlice[Datas ~[]Data, Data any](datas Datas) []any {
 	return Map(datas, ToTypeless[Data])
+}
+
+func TypeAsserter[Dst any, Src any](src Src) (dst Dst, ok bool) {
+	dst, ok = any(src).(Dst)
+	return
 }
 
 func ReflectType[T any]() reflect.Type {
