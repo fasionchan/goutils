@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-08-06 13:32:15
+ * Last Modified time: 2024-08-27 18:11:11
  */
 
 package queryutils
@@ -578,7 +578,7 @@ func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx contex
 	subDataSetiner := setiner.subDataSetiner
 	if subDataSetiner != nil {
 		if strings.ContainsAny(setin, ".-(") {
-			return subDataSetiner.setinOne(ctx, datas, setin)
+			return subDataSetiner.SetinOne(ctx, datas, setin)
 		}
 	}
 

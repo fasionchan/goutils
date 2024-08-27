@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2024-06-08 01:00:31
  * Last Modified by: fasion
- * Last Modified time: 2024-06-08 12:36:56
+ * Last Modified time: 2024-08-27 18:10:39
  */
 
 package queryutils
@@ -60,16 +60,16 @@ func (registry TypelessSetinHandlerRegistry) HandlerByData(data any) (TypelessSe
 	return handler, nil
 }
 
-func (registry TypelessSetinHandlerRegistry) setin(ctx context.Context, dataX any, setins []string) error {
+func (registry TypelessSetinHandlerRegistry) Setin(ctx context.Context, dataX any, setins []string) error {
 	for _, setin := range setins {
-		if err := registry.setinOne(ctx, dataX, setin); err != nil {
+		if err := registry.SetinOne(ctx, dataX, setin); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (registry TypelessSetinHandlerRegistry) setinOne(ctx context.Context, dataX any, setin string) error {
+func (registry TypelessSetinHandlerRegistry) SetinOne(ctx context.Context, dataX any, setin string) error {
 Start:
 	setin = strings.TrimSpace(setin)
 
@@ -99,7 +99,7 @@ Start:
 			goto Start
 			// return registry.setinOne(ctx, dataX, setins[0])
 		default:
-			return registry.setin(ctx, dataX, setins)
+			return registry.Setin(ctx, dataX, setins)
 		}
 	}
 

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-08-21 08:33:35
+ * Last Modified time: 2024-08-27 13:16:11
  */
 
 package types
@@ -148,6 +148,10 @@ func (strs Strings) Split(seps ...string) Strings {
 			return strings.Split(str, sep)
 		})
 	}, strs)
+}
+
+func (strs Strings) Unique() Strings {
+	return strs.UniqueBySet()
 }
 
 func (strs Strings) UniqueBySet() Strings {
