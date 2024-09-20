@@ -83,7 +83,24 @@ func NewEmailClientFromDefaultEnv() (*EmailClient, error) {
 	return NewEmailClientFromEnvPro(EnvNameSmtpServerLoc, EnvNameEmailAccount, EnvNameEmailPassword, os.Getenv)
 }
 
+func (client *EmailClient) Addr() string {
+	if client == nil {
+		return ""
+	}
+	return client.addr
+}
+
+func (client *EmailClient) Port() int {
+	if client == nil {
+		return 0
+	}
+	return client.port
+}
+
 func (client *EmailClient) Account() string {
+	if client == nil {
+		return ""
+	}
 	return client.accout
 }
 
@@ -92,17 +109,26 @@ func (client *EmailClient) Dup() *EmailClient {
 }
 
 func (client *EmailClient) WithAccount(account, password string) *EmailClient {
+	if client == nil {
+		return nil
+	}
 	client.accout = account
 	client.password = password
 	return client
 }
 
 func (client *EmailClient) WithTlsConfig(config *tls.Config) *EmailClient {
+	if client == nil {
+		return nil
+	}
 	client.tlsConfig = config
 	return client
 }
 
 func (client *EmailClient) ForkWithAccount(account, password string) *EmailClient {
+	if client == nil {
+		return nil
+	}
 	return client.Dup().WithAccount(account, password)
 }
 

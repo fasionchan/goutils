@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-08-19 13:15:05
+ * Last Modified time: 2024-09-19 15:54:48
  */
 
 package stl
@@ -58,6 +58,29 @@ func BatchAssertType[Dst any, Source any, Sources ~[]Source](sources Sources) (r
 		return v
 	})
 	return
+}
+
+func Bisect[Datas ~[]Data, Data any](datas Datas, tester func(Data) bool) (trues Datas, falses Datas) {
+	trues = make(Datas, 0, len(datas))
+	falses = make(Datas, 0, len(datas))
+
+	for _, data := range datas {
+		if tester(data) {
+			trues = append(trues, data)
+		} else {
+			falses = append(falses, data)
+		}
+	}
+
+	return
+}
+
+func BisectByKeyAmbiguity[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) (unambiguous, ambiguous Datas) {
+	groups := MapValues(SliceMappingByKey(datas, key))
+	unambiguousGroups, ambiguousGroups := Bisect(groups, func(datas Datas) bool {
+		return len(datas) < 2
+	})
+	return ConcatSlices(unambiguousGroups...), ConcatSlices(ambiguousGroups...)
 }
 
 func Contain[Datas ~[]Data, Data comparable](datas Datas, target Data) bool {
@@ -346,6 +369,13 @@ func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas 
 		}
 	}
 	return result
+}
+
+func FilterZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Datas {
+	var zeroKey Key
+	return Filter(datas, func(data Data) bool {
+		return key(data) == zeroKey
+	})
 }
 
 func Headmost[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data) {
