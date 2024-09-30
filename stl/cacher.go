@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2024-08-08 16:35:02
+ * Last Modified time: 2024-09-30 11:22:24
  */
 
 package stl
@@ -13,6 +13,10 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+)
+
+var (
+	NopLogger = zap.NewNop()
 )
 
 type CachedDataFetcherFetchFunc[Data any] func(ctx context.Context, expires time.Duration) (Data, time.Time, error)
@@ -127,8 +131,8 @@ func NewCachedDataFetcherLite[Data any](fetcher CachedDataFetcherFetchFuncLite[D
 	})
 }
 
-func (fetcher *CachedDataFetcher[Data]) BuildGetter() *cachedDataFetcherGetter[Data] {
-	return &cachedDataFetcherGetter[Data]{
+func (fetcher *CachedDataFetcher[Data]) BuildAccessor() *CachedDataFetcherAccessor[Data] {
+	return &CachedDataFetcherAccessor[Data]{
 		fetcher: fetcher,
 	}
 }
@@ -241,7 +245,7 @@ func (fetcher *CachedDataFetcher[Data]) GetWithExpires(expiresDuration time.Dura
 }
 
 func (fetcher *CachedDataFetcher[Data]) GetWithExpiresWarn(expiresDuration time.Duration) (Data, bool) {
-	return fetcher.BuildGetter().WithExpiresDuration(expiresDuration).WithLogExpired(true).Get()
+	return fetcher.BuildAccessor().WithExpiresDuration(expiresDuration).WithLogExpired(true).Get()
 }
 
 func (fetcher *CachedDataFetcher[Data]) GetWithSince(since time.Time) (Data, time.Time, bool) {
@@ -278,6 +282,29 @@ func (fetcher *CachedDataFetcher[Data]) Fetch(ctx context.Context) (Data, time.T
 
 func (fetcher *CachedDataFetcher[Data]) FetchWithExpires(ctx context.Context, expiresDuration time.Duration) (data Data, t time.Time, err error) {
 	return fetcher.FetchWithSince(ctx, fetcher.SinceTimeFromExpiresDuration(expiresDuration))
+}
+
+func (fetcher *CachedDataFetcher[Data]) FetchWithExpiresPro(ctx context.Context, expiresDuration, fallbackDuration time.Duration, logger *zap.Logger) (data Data, ok bool) {
+	data, t, _ := fetcher.FetchWithExpires(ctx, expiresDuration)
+
+	if logger == nil {
+		logger = NopLogger
+	}
+
+	if fallbackDuration < 0 {
+		fallbackDuration = expiresDuration
+	}
+
+	if time.Since(t) > fallbackDuration {
+		logger.Warn("FetchDataExpired",
+			zap.Duration("FallbackDuration", fallbackDuration),
+			zap.Time("FetchingTime", t),
+		)
+
+		return
+	}
+
+	return data, true
 }
 
 func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, since time.Time) (data Data, t time.Time, err error) {
@@ -365,14 +392,20 @@ func (fetcher *CachedDataFetcher[Data]) getCached() (data Data, t time.Time) {
 	return fetcher.data.ValueAndTime()
 }
 
-type cachedDataFetcherGetter[Data any] struct {
-	fetcher         *CachedDataFetcher[Data]
-	expiresDuration time.Duration
-	logger          *zap.Logger
-	logExpired      bool
+type CachedDataFetcherAccessor[Data any] struct {
+	fetcher          *CachedDataFetcher[Data]
+	expiresDuration  time.Duration
+	fallbackDuration time.Duration
+	logger           *zap.Logger
+	logExpired       bool
+	ctx              context.Context
 }
 
-func (getter *cachedDataFetcherGetter[Data]) Get() (data Data, ok bool) {
+func (getter *CachedDataFetcherAccessor[Data]) Dup() *CachedDataFetcherAccessor[Data] {
+	return Dup(getter)
+}
+
+func (getter *CachedDataFetcherAccessor[Data]) Get() (data Data, ok bool) {
 	if getter == nil {
 		return
 	}
@@ -385,13 +418,20 @@ func (getter *cachedDataFetcherGetter[Data]) Get() (data Data, ok bool) {
 				zap.Duration("ExpiresDuration", getter.expiresDuration),
 			)
 		}
+
+		if getter.fallbackDuration > 0 {
+			if time.Since(fetchingTime) < getter.expiresDuration {
+				ok = true
+			}
+		}
+
 		return
 	}
 
 	return
 }
 
-func (getter *cachedDataFetcherGetter[Data]) GetLogger() *zap.Logger {
+func (getter *CachedDataFetcherAccessor[Data]) GetLogger() *zap.Logger {
 	if getter == nil {
 		return zap.NewNop()
 	}
@@ -404,7 +444,7 @@ func (getter *cachedDataFetcherGetter[Data]) GetLogger() *zap.Logger {
 	return getter.fetcher.Logger
 }
 
-func (getter *cachedDataFetcherGetter[Data]) WithExpiresDuration(expiresDuration time.Duration) *cachedDataFetcherGetter[Data] {
+func (getter *CachedDataFetcherAccessor[Data]) WithExpiresDuration(expiresDuration time.Duration) *CachedDataFetcherAccessor[Data] {
 	if getter == nil {
 		return nil
 	}
@@ -413,7 +453,16 @@ func (getter *cachedDataFetcherGetter[Data]) WithExpiresDuration(expiresDuration
 	return getter
 }
 
-func (getter *cachedDataFetcherGetter[Data]) WithLogExpired(logExpired bool) *cachedDataFetcherGetter[Data] {
+func (getter *CachedDataFetcherAccessor[Data]) WithFallbackDuration(fallbackDuration time.Duration) *CachedDataFetcherAccessor[Data] {
+	if getter == nil {
+		return nil
+	}
+
+	getter.fallbackDuration = fallbackDuration
+	return getter
+}
+
+func (getter *CachedDataFetcherAccessor[Data]) WithLogExpired(logExpired bool) *CachedDataFetcherAccessor[Data] {
 	if getter == nil {
 		return nil
 	}
@@ -422,7 +471,7 @@ func (getter *cachedDataFetcherGetter[Data]) WithLogExpired(logExpired bool) *ca
 	return getter
 }
 
-func (getter *cachedDataFetcherGetter[Data]) WithLogger(logger *zap.Logger) *cachedDataFetcherGetter[Data] {
+func (getter *CachedDataFetcherAccessor[Data]) WithLogger(logger *zap.Logger) *CachedDataFetcherAccessor[Data] {
 	if getter == nil {
 		return nil
 	}

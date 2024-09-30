@@ -2,17 +2,14 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2024-05-23 09:45:19
+ * Last Modified time: 2024-09-20 15:21:51
  */
 
 package email
 
 import (
-	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io"
-	"net/smtp"
 	"os"
 
 	"gopkg.in/gomail.v2"
@@ -132,21 +129,30 @@ func (client *EmailClient) ForkWithAccount(account, password string) *EmailClien
 	return client.Dup().WithAccount(account, password)
 }
 
-func (client *EmailClient) SendMail(to []string, msg []byte) error {
-	auth := smtp.PlainAuth("", client.accout, client.password, "")
-	return smtp.SendMail(fmt.Sprintf("%s:%d", client.addr, client.port), auth, client.accout, to, msg)
+func (client *EmailClient) NetLoc() string {
+	if client == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", client.addr, client.port)
 }
 
-func (client *EmailClient) SendMailSmart(to []string, subject, body string) error {
-	var b bytes.Buffer
-	w := io.Writer(&b)
-	fmt.Fprintf(w, "To: %s\r\n", to)
-	fmt.Fprintf(w, "Subject: %s\r\n", subject)
-	fmt.Fprintf(w, "\r\n")
-	fmt.Fprintf(w, "%s\r\n", body)
+// Deprecated
+// func (client *EmailClient) SendMail(to []string, msg []byte) error {
+// 	auth := smtp.PlainAuth("", client.accout, client.password, client.Addr())
+// 	return smtp.SendMail(client.NetLoc(), auth, client.accout, to, msg)
+// }
 
-	return client.SendMail(to, b.Bytes())
-}
+// Deprecated
+// func (client *EmailClient) SendMailSmart(to []string, subject, body string) error {
+// 	var b bytes.Buffer
+// 	w := io.Writer(&b)
+// 	fmt.Fprintf(w, "To: %s\r\n", to)
+// 	fmt.Fprintf(w, "Subject: %s\r\n", subject)
+// 	fmt.Fprintf(w, "\r\n")
+// 	fmt.Fprintf(w, "%s\r\n", body)
+
+// 	return client.SendMail(to, b.Bytes())
+// }
 
 func (client *EmailClient) SendMessage(m *gomail.Message) error {
 	d := gomail.NewDialer(client.addr, client.port, client.accout, client.password)
