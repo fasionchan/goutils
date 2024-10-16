@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-09-19 15:54:48
+ * Last Modified time: 2024-10-11 10:58:59
  */
 
 package stl
@@ -550,6 +550,20 @@ func SortFast[Data constraints.Ordered, Datas ~[]Data](datas Datas) Datas {
 		return datas[i] < datas[j]
 	})
 	return datas
+}
+
+func StableUniqueBySet[Datas ~[]Data, Data comparable](datas Datas) Datas {
+	result := make(Datas, 0, len(datas))
+
+	seen := NewSet[Data]()
+	for _, data := range datas {
+		if !seen.Contain(data) {
+			result = append(result, data)
+			seen.Add(data)
+		}
+	}
+
+	return result
 }
 
 func Unique[Data comparable, Datas ~[]Data](datas Datas, equal func(Data, Data) bool) Datas {
