@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2024-06-08 01:00:31
  * Last Modified by: fasion
- * Last Modified time: 2024-08-27 18:10:39
+ * Last Modified time: 2024-10-22 09:21:14
  */
 
 package queryutils
@@ -83,7 +83,7 @@ Start:
 		goto Start
 		// return registry.setinOne(ctx, dataX, setin[1:])
 	case '-':
-		return registry.setinOneWithDataHandler(ctx, dataX, setin[1:])
+		return registry.SetinOneWithDataHandler(ctx, dataX, setin[1:])
 	case '(':
 		// todo
 		setins, err := parseSetinExpression(setin)
@@ -109,7 +109,7 @@ Start:
 
 	indexes := stl.PurgeValue([]int{dotIndex, minusIndex, bracketIndex}, -1)
 	if len(indexes) == 0 {
-		return registry.setinOneWithDataHandler(ctx, dataX, setin)
+		return registry.SetinOneWithDataHandler(ctx, dataX, setin)
 	}
 
 	index := stl.Min(indexes, 0)
@@ -132,12 +132,16 @@ Start:
 	// return registry.setinOne(ctx, subdata, setin)
 }
 
-func (registry TypelessSetinHandlerRegistry) setinOneWithDataHandler(ctx context.Context, dataX any, setin string) error {
+func (registry TypelessSetinHandlerRegistry) SetinOneWithDataHandler(ctx context.Context, dataX any, setin string) error {
+	return registry.SetinWithDataHandler(ctx, dataX, []string{setin})
+}
+
+func (registry TypelessSetinHandlerRegistry) SetinWithDataHandler(ctx context.Context, dataX any, setins []string) error {
 	handler, err := registry.HandlerByData(dataX)
 	if err != nil {
 		return err
 	}
-	return handler(ctx, dataX, []string{setin})
+	return handler(ctx, dataX, setins)
 }
 
 type TypelessSetinHandlerMappingByString map[string]TypelessSetinHandler
