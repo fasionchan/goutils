@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-10-11 10:58:59
+ * Last Modified time: 2024-11-07 08:42:52
  */
 
 package stl
@@ -298,6 +298,28 @@ func FindFirstOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	return data
 }
 
+func FindFirstByKey[Datas ~[]Data, Key comparable, Data any](datas Datas, keyFunc func(Data) Key, key Key) (result Data, ok bool) {
+	for _, data := range datas {
+		if keyFunc(data) == key {
+			return data, true
+		}
+	}
+	return
+}
+
+func FindFirstOrDefaultByKey[Datas ~[]Data, Key comparable, Data any](datas Datas, keyFunc func(Data) Key, key Key, default_ Data) Data {
+	data, ok := FindFirstByKey(datas, keyFunc, key)
+	if !ok {
+		return default_
+	}
+	return data
+}
+
+func FindFirstOrZeroByKey[Datas ~[]Data, Key comparable, Data any](datas Datas, keyFunc func(Data) Key, key Key) Data {
+	var default_ Data
+	return FindFirstOrDefaultByKey(datas, keyFunc, key, default_)
+}
+
 func FindFirstNotZero[Data comparable](datas []Data) Data {
 	var zero Data
 	return FindFirstOrZero(datas, func(data Data) bool {
@@ -369,6 +391,13 @@ func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas 
 		}
 	}
 	return result
+}
+
+func FilterByKeys[Datas ~[]Data, Data any, Key comparable](datas Datas, dataKey func(Data) Key, keys ...Key) Datas {
+	set := NewSet(keys...)
+	return Filter(datas, func(data Data) bool {
+		return set.Contain(dataKey(data))
+	})
 }
 
 func FilterZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Datas {

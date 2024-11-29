@@ -2,12 +2,13 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-08-27 13:16:11
+ * Last Modified time: 2024-11-29 10:42:02
  */
 
 package types
 
 import (
+	"encoding/csv"
 	"fmt"
 	"strings"
 
@@ -196,4 +197,21 @@ func (strs Strings) ItemsUnique() bool {
 
 func StringComparer(a, b string) bool {
 	return a < b
+}
+
+type CsvRecord = CommaSeparatedValueRecord
+
+type CommaSeparatedValueRecord string
+
+func (s CommaSeparatedValueRecord) Native() string {
+	return string(s)
+}
+
+func (s CommaSeparatedValueRecord) Values() Strings {
+	values, _ := csv.NewReader(strings.NewReader(string(s))).Read()
+	return values
+}
+
+func (s CommaSeparatedValueRecord) ValidValues() Strings {
+	return s.Values().PurgeZero()
 }

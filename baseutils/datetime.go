@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 11:59:31
  * Last Modified by: fasion
- * Last Modified time: 2024-08-02 15:00:30
+ * Last Modified time: 2024-11-29 10:52:01
  */
 
 package baseutils
@@ -15,6 +15,14 @@ import (
 	"time"
 
 	"github.com/fasionchan/goutils/stl"
+)
+
+const (
+	DurationDay      = time.Hour * 24
+	DurationMonth    = DurationDay * 30
+	MaxDurationMonth = DurationDay * 31
+	DurationYear     = DurationDay * 365
+	MaxDurationYear  = DurationDay * 366
 )
 
 func AlignNextTime(base time.Time, interval time.Duration, offset time.Duration) time.Time {

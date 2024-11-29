@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2024-09-30 11:22:24
+ * Last Modified time: 2024-11-29 08:33:50
  */
 
 package stl
@@ -478,4 +478,18 @@ func (getter *CachedDataFetcherAccessor[Data]) WithLogger(logger *zap.Logger) *C
 
 	getter.logger = logger
 	return getter
+}
+
+func NewCachedDataFetcherFromAnother[Data any, BasedData any](basedFetcher *CachedDataFetcher[BasedData], newDataFromBased func(BasedData) Data) *CachedDataFetcher[Data] {
+	return NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (data Data, t time.Time, err error) {
+		var basedData BasedData
+		basedData, t, err = basedFetcher.FetchWithExpires(ctx, expires)
+		if err != nil {
+			return
+		}
+
+		data = newDataFromBased(basedData)
+
+		return
+	}).WithOthersSubscribed(0, basedFetcher)
 }

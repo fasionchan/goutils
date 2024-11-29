@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-12-22 13:09:37
  * Last Modified by: fasion
- * Last Modified time: 2024-08-08 16:33:56
+ * Last Modified time: 2024-11-07 08:44:09
  */
 
 package stl
@@ -136,6 +136,6 @@ func TestCachedDataFetcherGetter(t *testing.T) {
 
 	fmt.Println(fetcher.GetWithExpiresWarn(time.Second))
 
-	getter := fetcher.BuildGetter().WithLogger(zap.L()).WithExpiresDuration(time.Second * 1).WithLogExpired(true).Get
+	getter := fetcher.BuildAccessor().WithLogger(zap.L()).WithExpiresDuration(time.Second * 1).WithLogExpired(true).Get
 	fmt.Println(getter())
 }
