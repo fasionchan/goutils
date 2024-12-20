@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-11-07 08:42:52
+ * Last Modified time: 2024-12-02 10:14:07
  */
 
 package stl
@@ -394,9 +394,12 @@ func Filter[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas 
 }
 
 func FilterByKeys[Datas ~[]Data, Data any, Key comparable](datas Datas, dataKey func(Data) Key, keys ...Key) Datas {
-	set := NewSet(keys...)
+	return FilterByKeySet(datas, dataKey, NewSet(keys...))
+}
+
+func FilterByKeySet[Datas ~[]Data, Data any, Key comparable](datas Datas, dataKey func(Data) Key, keySet Set[Key]) Datas {
 	return Filter(datas, func(data Data) bool {
-		return set.Contain(dataKey(data))
+		return keySet.Contain(dataKey(data))
 	})
 }
 

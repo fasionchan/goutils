@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-08-19 11:30:22
+ * Last Modified time: 2024-12-20 10:44:02
  */
 
 package stl
@@ -72,6 +72,10 @@ func GetContextValue[Value any, Key any](ctx context.Context, key Key) (value Va
 
 func New[Data any]() (data Data) {
 	return
+}
+
+func NewAsAny[T any]() any {
+	return new(T)
 }
 
 func NewPtr[Ptr ~*Data, Data any]() Ptr {

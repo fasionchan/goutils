@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2024-09-20 15:21:51
+ * Last Modified time: 2024-12-20 10:44:24
  */
 
 package email
@@ -136,24 +136,6 @@ func (client *EmailClient) NetLoc() string {
 	return fmt.Sprintf("%s:%d", client.addr, client.port)
 }
 
-// Deprecated
-// func (client *EmailClient) SendMail(to []string, msg []byte) error {
-// 	auth := smtp.PlainAuth("", client.accout, client.password, client.Addr())
-// 	return smtp.SendMail(client.NetLoc(), auth, client.accout, to, msg)
-// }
-
-// Deprecated
-// func (client *EmailClient) SendMailSmart(to []string, subject, body string) error {
-// 	var b bytes.Buffer
-// 	w := io.Writer(&b)
-// 	fmt.Fprintf(w, "To: %s\r\n", to)
-// 	fmt.Fprintf(w, "Subject: %s\r\n", subject)
-// 	fmt.Fprintf(w, "\r\n")
-// 	fmt.Fprintf(w, "%s\r\n", body)
-
-// 	return client.SendMail(to, b.Bytes())
-// }
-
 func (client *EmailClient) SendMessage(m *gomail.Message) error {
 	d := gomail.NewDialer(client.addr, client.port, client.accout, client.password)
 	if client.tlsConfig != nil {
@@ -164,7 +146,8 @@ func (client *EmailClient) SendMessage(m *gomail.Message) error {
 }
 
 func (client *EmailClient) SendMessageSmart(to []string, subject, body string) error {
-	msg := gomail.NewMessage()
+	// todo: make encoding configurable
+	msg := gomail.NewMessage(gomail.SetEncoding(gomail.Base64))
 	msg.SetHeader("From", client.accout)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
