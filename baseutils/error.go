@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2024-07-22 13:17:44
+ * Last Modified time: 2025-01-02 11:08:50
  */
 
 package baseutils
@@ -10,6 +10,7 @@ package baseutils
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/fasionchan/goutils/stl"
@@ -147,6 +148,46 @@ func NewNilErrorFromNames(names ...string) NilError {
 
 func (err NilError) Error() string {
 	return fmt.Sprintf("%s is nil", err.name)
+}
+
+type PanicError struct {
+	exception any
+	stack     string
+}
+
+func NewPanicError(exception any, stack string) *PanicError {
+	return &PanicError{
+		exception: exception,
+		stack:     stack,
+	}
+}
+
+func (err *PanicError) Error() string {
+	if err == nil {
+		return "panic: PanicError=nil"
+	}
+	return fmt.Sprintf("panic: exception=%v || stack=\n%s", err.exception, err.stack)
+}
+
+func PanicRecover(panicError *error, onPanicErrors ...func(*PanicError)) error {
+	if exception := recover(); exception != nil {
+		var stackBuffer [1024000]byte
+		n := runtime.Stack(stackBuffer[:], false)
+		stackTrace := string(stackBuffer[:n])
+
+		err := NewPanicError(exception, stackTrace)
+		if panicError != nil {
+			*panicError = err
+		}
+
+		for _, onPanicError := range onPanicErrors {
+			onPanicError(err)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 type Errors = stl.Errors

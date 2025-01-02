@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2024-12-20 10:44:24
+ * Last Modified time: 2024-12-20 10:50:32
  */
 
 package email
@@ -147,7 +147,10 @@ func (client *EmailClient) SendMessage(m *gomail.Message) error {
 
 func (client *EmailClient) SendMessageSmart(to []string, subject, body string) error {
 	// todo: make encoding configurable
-	msg := gomail.NewMessage(gomail.SetEncoding(gomail.Base64))
+	msg := gomail.NewMessage(
+		gomail.SetCharset("UTF-8"),
+		gomail.SetEncoding(gomail.Base64),
+	)
 	msg.SetHeader("From", client.accout)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)

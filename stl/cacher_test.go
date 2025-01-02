@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-12-22 13:09:37
  * Last Modified by: fasion
- * Last Modified time: 2024-11-07 08:44:09
+ * Last Modified time: 2025-01-02 10:42:16
  */
 
 package stl
@@ -18,7 +18,7 @@ import (
 )
 
 func TestAutoRefresh(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, since time.Time) (result any, t time.Time, err error) {
 		fmt.Println("fetch data")
 		return nil, time.Now(), nil
 	}).WithExpiresDuration(time.Second * 2)
@@ -61,7 +61,7 @@ func TestAutoRefresh(t *testing.T) {
 }
 
 func TestCachedFetcherWithExpires(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, since time.Time) (result any, t time.Time, err error) {
 		return nil, time.Now(), nil
 	}).WithExpiresDuration(time.Second * 2)
 
@@ -94,7 +94,7 @@ func TestCachedFetcherWithExpires(t *testing.T) {
 }
 
 func TestCacherFetcherCallback(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, since time.Time) (result any, t time.Time, err error) {
 		return nil, time.Now(), nil
 	})
 
@@ -109,7 +109,7 @@ func TestCacherFetcherCallback(t *testing.T) {
 		two = true
 	}, time.Hour)
 
-	fetcher.TriggerRefresh(nil)
+	fetcher.TriggerRefreshLowerCache(nil)
 
 	time.Sleep(time.Second)
 	assert.True(t, one)
@@ -127,7 +127,7 @@ func TestCachedFetcherSubscribeOthersCompile(t *testing.T) {
 }
 
 func TestCachedDataFetcherGetter(t *testing.T) {
-	fetcher := NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (result any, t time.Time, err error) {
+	fetcher := NewCachedDataFetcher(func(ctx context.Context, since time.Time) (result any, t time.Time, err error) {
 		fmt.Println("fetch data")
 		return nil, time.Now(), nil
 	}).WithExpiresDuration(time.Second * 10)
@@ -138,4 +138,44 @@ func TestCachedDataFetcherGetter(t *testing.T) {
 
 	getter := fetcher.BuildAccessor().WithLogger(zap.L()).WithExpiresDuration(time.Second * 1).WithLogExpired(true).Get
 	fmt.Println(getter())
+}
+
+func TestCustomExpireDuration(t *testing.T) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	basic := NewCachedDataFetcher(func(ctx context.Context, since time.Time) (time.Time, time.Time, error) {
+		now := time.Now()
+		return now, now, nil
+	}).
+		WithExpiresDuration(time.Second * 3).
+		WithLogger(logger.Named("basic"))
+
+	cacher := NewCachedDataFetcherFromAnother(basic, Echo[time.Time]).
+		WithExpiresDuration(time.Second * 3).
+		WithLogger(logger.Named("cacher"))
+
+	data1, ok := cacher.FetchWithExpiresPro(nil, time.Second, time.Second*3, logger)
+	fmt.Println("data1", data1)
+	assert.Equal(t, ok, true)
+	assert.Less(t, time.Since(data1), time.Millisecond)
+
+	time.Sleep(time.Millisecond * 100)
+	fmt.Println("data1", data1)
+
+	data2, ok := cacher.FetchWithExpiresPro(nil, time.Second, time.Second*3, logger)
+	fmt.Println("data2", data2)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, data1, data2)
+
+	time.Sleep(time.Second)
+	fmt.Println("before data3", time.Now())
+
+	data3, ok := cacher.FetchWithExpiresPro(nil, time.Second, time.Second*3, logger)
+	fmt.Println("data3", data3)
+	assert.Equal(t, ok, true)
+	assert.NotEqual(t, data3, data2)
 }

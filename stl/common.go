@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2024-12-20 10:44:02
+ * Last Modified time: 2025-01-02 11:05:13
  */
 
 package stl
@@ -120,4 +120,8 @@ func TypeAsserter[Dst any, Src any](src Src) (dst Dst, ok bool) {
 func ReflectType[T any]() reflect.Type {
 	var value T
 	return reflect.TypeOf(value)
+}
+
+func Zero[Data any]() (_ Data) {
+	return
 }

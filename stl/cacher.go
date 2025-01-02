@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-11-24 14:46:12
  * Last Modified by: fasion
- * Last Modified time: 2024-11-29 08:33:50
+ * Last Modified time: 2025-01-02 11:01:03
  */
 
 package stl
@@ -19,7 +19,7 @@ var (
 	NopLogger = zap.NewNop()
 )
 
-type CachedDataFetcherFetchFunc[Data any] func(ctx context.Context, expires time.Duration) (Data, time.Time, error)
+type CachedDataFetcherFetchFunc[Data any] func(ctx context.Context, sinceTime time.Time) (Data, time.Time, error)
 type CachedDataFetcherFetchFuncLite[Data any] func(ctx context.Context) (Data, error)
 type CachedDataFetcherCallbackFunc[Data any] func(context.Context, Data, time.Time)
 
@@ -121,7 +121,7 @@ func NewCachedDataFetcher[Data any](fetcher CachedDataFetcherFetchFunc[Data]) *C
 }
 
 func NewCachedDataFetcherLite[Data any](fetcher CachedDataFetcherFetchFuncLite[Data]) *CachedDataFetcher[Data] {
-	return NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (data Data, t time.Time, err error) {
+	return NewCachedDataFetcher(func(ctx context.Context, sinceTime time.Time) (data Data, t time.Time, err error) {
 		fetchingTime := time.Now()
 		data, err = fetcher(ctx)
 		if err == nil {
@@ -201,7 +201,7 @@ func (fetcher *CachedDataFetcher[Data]) WithOthersSubscribed(timeout time.Durati
 	RegisterCallbackFuncLite(func(context.Context), time.Duration)
 }) *CachedDataFetcher[Data] {
 	for _, other := range others {
-		other.RegisterCallbackFuncLite(fetcher.TriggerRefresh, timeout)
+		other.RegisterCallbackFuncLite(fetcher.TriggerRefreshLowerCache, timeout)
 	}
 	return fetcher
 }
@@ -214,6 +214,10 @@ func (fetcher *CachedDataFetcher[Data]) NewCallbackLite(callback func(context.Co
 	return fetcher.RegisterCallback(NewCachedDataFetcherCallback(func(ctx context.Context, data Data, t time.Time) {
 		callback(ctx)
 	}, timeout))
+}
+
+func (fetcher *CachedDataFetcher[Data]) RegisterCallbackFunc(callback CachedDataFetcherCallbackFunc[Data], timeout time.Duration) {
+	fetcher.NewCallback(callback, timeout)
 }
 
 func (fetcher *CachedDataFetcher[Data]) NewCallback(callback CachedDataFetcherCallbackFunc[Data], timeout time.Duration) *CachedDataFetcherCallback[Data] {
@@ -321,7 +325,7 @@ func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, sinc
 		return
 	}
 
-	data, t, err = fetcher.refetch(ctx)
+	data, t, err = fetcher.refetch(ctx, since)
 	if err == nil {
 		return
 	}
@@ -330,39 +334,47 @@ func (fetcher *CachedDataFetcher[Data]) FetchWithSince(ctx context.Context, sinc
 	return
 }
 
-func (fetcher *CachedDataFetcher[Data]) TriggerRefresh(ctx context.Context) {
-	fetcher.Refresh(ctx)
-}
-
 func (fetcher *CachedDataFetcher[Data]) GetRefresh() func(ctx context.Context) (Data, time.Time, error) {
 	return fetcher.Refresh
 }
 
 func (fetcher *CachedDataFetcher[Data]) Refresh(ctx context.Context) (data Data, t time.Time, err error) {
+	return fetcher.RefreshWithSinceTime(ctx, time.Now())
+}
+
+func (fetcher *CachedDataFetcher[Data]) RefreshLowerCache(ctx context.Context) (data Data, t time.Time, err error) {
+	return fetcher.RefreshWithSinceTime(ctx, time.Time{})
+}
+
+func (fetcher *CachedDataFetcher[Data]) RefreshWithSinceTime(ctx context.Context, since time.Time) (data Data, t time.Time, err error) {
 	fetcher.mutex.Lock()
 	defer fetcher.mutex.Unlock()
 
-	return fetcher.refetch(ctx)
+	return fetcher.refetch(ctx, since)
 }
 
-func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context) (data Data, t time.Time, err error) {
-	fetcher.Info("Referching",
-		zap.Duration("ExpiresDuration", fetcher.expiresDuration),
-		zap.Time("LastFetchedTime", fetcher.data.Time()),
+func (fetcher *CachedDataFetcher[Data]) TriggerRefreshLowerCache(ctx context.Context) {
+	fetcher.RefreshLowerCache(ctx)
+}
+
+func (fetcher *CachedDataFetcher[Data]) refetch(ctx context.Context, sinceTime time.Time) (data Data, t time.Time, err error) {
+	logger := fetcher.With(
+		zap.Time("SinceTime", sinceTime),
+		zap.Time("CurrentDataTime", fetcher.data.Time()),
 	)
-	data, t, err = fetcher.fetcher(ctx, fetcher.expiresDuration)
+
+	logger.Info("Refetching")
+
+	data, t, err = fetcher.fetcher(ctx, sinceTime)
 	if err != nil {
-		fetcher.Error("ReferchFailed",
+		logger.Error("RefetchFailed",
 			zap.Error(err),
-			zap.Duration("ExpiresDuration", fetcher.expiresDuration),
-			zap.Time("LastFetchedTime", fetcher.data.Time()),
 		)
 		return
 	}
-	fetcher.Info("Referched",
+
+	logger.Info("Refetched",
 		zap.Time("FetchedTime", t),
-		zap.Duration("ExpiresDuration", fetcher.expiresDuration),
-		zap.Time("LastFetchedTime", fetcher.data.Time()),
 	)
 
 	if t.IsZero() {
@@ -481,9 +493,9 @@ func (getter *CachedDataFetcherAccessor[Data]) WithLogger(logger *zap.Logger) *C
 }
 
 func NewCachedDataFetcherFromAnother[Data any, BasedData any](basedFetcher *CachedDataFetcher[BasedData], newDataFromBased func(BasedData) Data) *CachedDataFetcher[Data] {
-	return NewCachedDataFetcher(func(ctx context.Context, expires time.Duration) (data Data, t time.Time, err error) {
+	return NewCachedDataFetcher(func(ctx context.Context, since time.Time) (data Data, t time.Time, err error) {
 		var basedData BasedData
-		basedData, t, err = basedFetcher.FetchWithExpires(ctx, expires)
+		basedData, t, err = basedFetcher.FetchWithSince(ctx, since)
 		if err != nil {
 			return
 		}
