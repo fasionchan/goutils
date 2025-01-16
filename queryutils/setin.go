@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2024-08-27 18:11:11
+ * Last Modified time: 2025-01-16 08:58:24
  */
 
 package queryutils
@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/fasionchan/goutils/stl"
+	"github.com/fasionchan/goutils/types"
 )
 
 var BadDataTypeError = errors.New("bad data type")
@@ -28,7 +29,21 @@ type ClonableSetinerInterface interface {
 	Clone() ClonableSetinerInterface
 }
 
-type SetinTester[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
+type SetinTesterFunc[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas, setin string) (matched bool, err error)
+
+func (fn SetinTesterFunc[Datas, DataPtr, Data]) Setins() types.Strings {
+	return nil
+}
+
+func (fn SetinTesterFunc[Datas, DataPtr, Data]) TrySetin(ctx context.Context, datas Datas, setin string) (matched bool, err error) {
+	return fn(ctx, datas, setin)
+}
+
+type SetinTester[Datas ~[]DataPtr, DataPtr ~*Data, Data any] interface {
+	TrySetin(ctx context.Context, datas Datas, setin string) (matched bool, err error)
+	Setins() types.Strings
+}
+
 type SetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas) error
 
 type NamedSetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] struct {
@@ -373,6 +388,10 @@ func NewSetinHandlerMapping[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*D
 	return SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]{}
 }
 
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Keys() types.Strings {
+	return stl.MapKeys(mapping)
+}
+
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Self() SetinHandlerMapping[Datas, DataInstances, DataPtr, Data] {
 	return mapping
 }
@@ -393,7 +412,7 @@ func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) WithName
 	return mapping
 }
 
-func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) (bool, error) {
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) TrySetin(ctx context.Context, datas Datas, setin string) (bool, error) {
 	handler, ok := mapping[setin]
 	if !ok {
 		return false, nil
@@ -408,7 +427,7 @@ func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) SetinOne
 
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Setin(ctx context.Context, datas Datas, setins []string) error {
 	for _, setin := range setins {
-		if ok, err := mapping.SetinOne(ctx, datas, setin); err != nil {
+		if ok, err := mapping.TrySetin(ctx, datas, setin); err != nil {
 			return err
 		} else if !ok {
 			return NewUnknownSetinError(setin)
@@ -418,8 +437,12 @@ func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Setin(ct
 	return nil
 }
 
+func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) Setins() types.Strings {
+	return mapping.Keys()
+}
+
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) NewTesters() SetinTesters[Datas, DataInstances, DataPtr, Data] {
-	return NewSetinTesters[Datas, DataInstances](mapping.SetinOne)
+	return NewSetinTesters[Datas, DataInstances](SetinTester[Datas, DataPtr, Data](mapping))
 }
 
 func (mapping SetinHandlerMapping[Datas, DataInstances, DataPtr, Data]) NewSetiner() *Setiner[Datas, DataInstances, DataPtr, Data] {
@@ -451,12 +474,30 @@ func (e UnknownSetinError) WithSetiner(setiner string) UnknownSetinError {
 
 type SetinTesters[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] []SetinTester[Datas, DataPtr, Data]
 
+func NewSetinTestersFromFuncs[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](fns ...SetinTesterFunc[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
+	return stl.Map(fns, func(fn SetinTesterFunc[Datas, DataPtr, Data]) SetinTester[Datas, DataPtr, Data] {
+		return fn
+	})
+}
+
 func NewSetinTesters[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any](testers ...SetinTester[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
 	return testers
 }
 
-func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Append(more ...SetinTester[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Append(fns ...SetinTesterFunc[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
+	return testers.AppendFunc(fns...)
+}
+
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) AppendFunc(fns ...SetinTesterFunc[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
+	return testers.AppendTester(NewSetinTestersFromFuncs[Datas, DataInstances](fns...)...)
+}
+
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) AppendTester(more ...SetinTester[Datas, DataPtr, Data]) SetinTesters[Datas, DataInstances, DataPtr, Data] {
 	return append(testers, more...)
+}
+
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Setins() types.Strings {
+	return stl.MapAndConcat(testers, SetinTester[Datas, DataPtr, Data].Setins)
 }
 
 func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx context.Context, datas Datas, setin string) error {
@@ -474,7 +515,7 @@ func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) SetinOne(ctx co
 
 func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) TestSetinOne(ctx context.Context, datas Datas, setin string) (matched bool, err error) {
 	for _, tester := range testers {
-		matched, err = tester(ctx, datas, setin)
+		matched, err = tester.TrySetin(ctx, datas, setin)
 		if err != nil {
 			break
 		}

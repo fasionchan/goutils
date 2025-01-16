@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-02 21:47:37
  * Last Modified by: fasion
- * Last Modified time: 2025-01-02 11:08:50
+ * Last Modified time: 2025-01-02 11:31:49
  */
 
 package baseutils
@@ -181,7 +181,9 @@ func PanicRecover(panicError *error, onPanicErrors ...func(*PanicError)) error {
 		}
 
 		for _, onPanicError := range onPanicErrors {
-			onPanicError(err)
+			if onPanicError != nil {
+				onPanicError(err)
+			}
 		}
 
 		return err
