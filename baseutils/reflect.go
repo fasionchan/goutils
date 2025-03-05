@@ -2,13 +2,15 @@
  * Author: fasion
  * Created time: 2023-12-21 14:28:34
  * Last Modified by: fasion
- * Last Modified time: 2023-12-21 17:12:23
+ * Last Modified time: 2025-03-05 15:06:26
  */
 
 package baseutils
 
 import (
 	"reflect"
+
+	"fmt"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -33,6 +35,93 @@ func DereferenceReflectPointerWithError(ptr reflect.Value) (result reflect.Value
 	if !ok {
 		err = NewBadTypeError("nonpointer", "").WithGivenReflectType(ptr.Type())
 	}
+	return
+}
+
+// ReflectMap traverses elements in datas, calls the specified method on each element,
+// and returns the results as a slice.
+//
+// Parameters:
+// - datas: a slice or array of data to process
+// - methodName: the name of the method to call on each element
+// - methodOutValueIndex: the index of the value returned by the method
+// - methodOutErrorIndex: the index of the error returned by the method
+// - args: additional arguments to pass to the method (can be empty)
+// - stopWhenError: whether to stop processing when an error occurs
+//
+// Returns:
+// - values: a slice containing the values returned by the method calls
+// - error: the first error encountered, or nil if no errors occurred
+func ReflectMap(datas any, methodName string, methodOutValueIndex, methodOutErrorIndex int, args []reflect.Value, stopWhenError bool) (values any, errs Errors, err error) {
+	datasValue := reflect.ValueOf(datas)
+
+	// Dereference pointer if necessary
+	datasValue, _ = DereferenceReflectPointer(datasValue)
+
+	// Check if datas is a slice or array
+	switch datasValue.Kind() {
+	case reflect.Array, reflect.Slice:
+		// Valid types
+	default:
+		return nil, nil, NewBlankBadTypeError().WithExpected("slice/array").WithGivenReflectType(datasValue.Type())
+	}
+
+	dataType := datasValue.Type().Elem()
+	methodType, ok := dataType.MethodByName(methodName)
+	if !ok {
+		return nil, nil, NewGenericNotFoundError(methodName, dataType.String())
+	}
+
+	funcType := methodType.Func.Type()
+	funcNumOut := funcType.NumOut()
+	if methodOutValueIndex >= funcNumOut || methodOutErrorIndex >= funcNumOut {
+		return nil, nil, fmt.Errorf("method %s on type %s has wrong return values: %d", methodName, dataType.String(), funcNumOut)
+	}
+
+	// Check if the error type is correct
+	if methodOutErrorIndex >= 0 {
+		errorType := funcType.Out(methodOutErrorIndex)
+		if errorType != stl.ReflectType[error]() {
+			return nil, nil, NewBlankBadTypeError().WithExpected("error").WithGivenReflectType(errorType)
+		}
+	}
+
+	length := datasValue.Len()
+
+	// Initialize result slice
+	var valuesValue reflect.Value
+	if methodOutValueIndex >= 0 {
+		valueType := funcType.Out(methodOutValueIndex)
+		valuesValue = reflect.MakeSlice(reflect.SliceOf(valueType), 0, length)
+	}
+
+	args = append(make([]reflect.Value, 1, len(args)+1), args...)
+
+	// Process each element
+	for i := 0; i < length; i++ {
+		elem := datasValue.Index(i)
+
+		// Call the method with provided arguments
+		args[0] = elem
+		results := methodType.Func.Call(args)
+
+		if methodOutValueIndex >= 0 {
+			// Get the value
+			value := results[methodOutValueIndex]
+			valuesValue = reflect.Append(valuesValue, value)
+		}
+
+		if methodOutErrorIndex >= 0 {
+			err = results[methodOutErrorIndex].Interface().(error)
+			errs = append(errs, err)
+			if err != nil {
+				break
+			}
+		}
+	}
+
+	values = valuesValue.Interface()
+
 	return
 }
 
