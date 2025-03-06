@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-01-11 14:53:49
  * Last Modified by: fasion
- * Last Modified time: 2023-01-12 15:12:11
+ * Last Modified time: 2025-03-06 13:47:27
  */
 
 package baseutils
@@ -38,3 +38,25 @@ func Base64Decode(enc *base64.Encoding, data []byte) ([]byte, error) {
 		return result[:n], nil
 	}
 }
+
+func StdBase64Encode(data []byte) []byte {
+	return Base64Encode(base64.StdEncoding, data)
+}
+
+func StdBase64Decode(data []byte) ([]byte, error) {
+	return Base64Decode(base64.StdEncoding, data)
+}
+
+func UrlBase64Encode(data []byte) []byte {
+	return Base64Encode(base64.URLEncoding, data)
+}
+
+func UrlBase64Decode(data []byte) ([]byte, error) {
+	return Base64Decode(base64.URLEncoding, data)
+}
+
+var StdBase64EncodeToString = base64.StdEncoding.EncodeToString
+var StdBase64DecodeString = base64.StdEncoding.DecodeString
+
+var UrlBase64EncodeToString = base64.URLEncoding.EncodeToString
+var UrlBase64DecodeString = base64.URLEncoding.DecodeString
