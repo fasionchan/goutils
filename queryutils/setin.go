@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2025-01-16 08:58:24
+ * Last Modified time: 2025-04-02 09:21:01
  */
 
 package queryutils
@@ -496,6 +496,10 @@ func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) AppendTester(mo
 	return append(testers, more...)
 }
 
+func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Self() SetinTesters[Datas, DataInstances, DataPtr, Data] {
+	return testers
+}
+
 func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Setins() types.Strings {
 	return stl.MapAndConcat(testers, SetinTester[Datas, DataPtr, Data].Setins)
 }
@@ -539,7 +543,7 @@ func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) Setin(ctx conte
 }
 
 func (testers SetinTesters[Datas, DataInstances, DataPtr, Data]) NewSetiner() *Setiner[Datas, DataInstances, DataPtr, Data] {
-	return NewSetiner[Datas, DataInstances, DataPtr, Data](testers)
+	return NewSetiner(testers)
 }
 
 type Setiner[Datas ~[]DataPtr, DataInstances ~[]Data, DataPtr ~*Data, Data any] struct {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-04-01 21:28:04
  * Last Modified by: fasion
- * Last Modified time: 2025-04-01 22:43:33
+ * Last Modified time: 2025-04-02 09:20:23
  */
 
 package types
@@ -99,6 +99,10 @@ func (vectors Float32Vectors) Float64() Float64Vectors {
 	return stl.Map(vectors, Float32Vector.Float64)
 }
 
+func (vectors Float32Vectors) Native() [][]float32 {
+	return stl.Map(vectors, Float32Vector.Native)
+}
+
 func (vectors Float32Vectors) PurgeEmpty() Float32Vectors {
 	return stl.Purge(vectors, Float32Vector.Empty)
 }
@@ -123,6 +127,10 @@ func (vectors Float64Vectors) Float32() Float32Vectors {
 
 func (vectors Float64Vectors) Float64() Float64Vectors {
 	return vectors
+}
+
+func (vectors Float64Vectors) Native() [][]float64 {
+	return stl.Map(vectors, Float64Vector.Native)
 }
 
 func (vectors Float64Vectors) PurgeEmpty() Float64Vectors {
