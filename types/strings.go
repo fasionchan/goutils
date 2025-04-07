@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2024-11-29 10:42:02
+ * Last Modified time: 2025-04-07 13:38:14
  */
 
 package types
@@ -181,6 +181,18 @@ func (strs Strings) JoinByComma() string {
 
 func (strs Strings) JoinByDot() string {
 	return strs.Join(".")
+}
+
+func (strs Strings) JoinByEmptyLine() string {
+	return strs.Join("\n\n")
+}
+
+func (strs Strings) JoinByNewLine() string {
+	return strs.Join("\n")
+}
+
+func (strs Strings) JoinByMarkdownSplitLine() string {
+	return strs.Join("\n---\n")
 }
 
 func (strs Strings) Equal(other Strings) bool {
