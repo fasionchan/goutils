@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2025-04-02 09:21:01
+ * Last Modified time: 2025-04-28 08:46:16
  */
 
 package queryutils
@@ -563,6 +563,26 @@ func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) BindingDefaultSubDa
 
 func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) BindingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Datas, DataInstances, DataPtr, Data] {
 	return setiner.ProvidingSubDataSetiner(subDataSetiner).UsingSubDataSetiner(subDataSetiner)
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) DataPipeX(ctx context.Context, setins ...string) func(*Data) (*Data, error) {
+	return setiner.DataPipe(ctx, setins)
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) DataPipe(ctx context.Context, setins types.Strings) func(*Data) (*Data, error) {
+	return func(data *Data) (*Data, error) {
+		return data, setiner.SetinForData(ctx, data, setins)
+	}
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) DatasPipeX(ctx context.Context, setins ...string) func(Datas) (Datas, error) {
+	return setiner.DatasPipe(ctx, setins)
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) DatasPipe(ctx context.Context, setins types.Strings) func(Datas) (Datas, error) {
+	return func(datas Datas) (Datas, error) {
+		return datas, setiner.SetinForDatas(ctx, datas, setins)
+	}
 }
 
 func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ProvidingSubDataSetiner(subDataSetiner SubDataSetiner) *Setiner[Datas, DataInstances, DataPtr, Data] {

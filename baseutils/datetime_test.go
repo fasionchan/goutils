@@ -2,12 +2,14 @@
  * Author: fasion
  * Created time: 2023-12-20 08:58:01
  * Last Modified by: fasion
- * Last Modified time: 2024-04-11 15:24:31
+ * Last Modified time: 2025-04-28 09:05:22
  */
 
 package baseutils
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -69,4 +71,22 @@ func TestWrapTimeFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, timeMap[""].Hour(), localHour)
+}
+
+func TestUnmarshalTime(t *testing.T) {
+	var data DateTime
+	if err := json.Unmarshal([]byte(`"2024-09-26 15:44:09"`), &data); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	fmt.Println(data.Native())
+
+	_json, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	fmt.Println(string(_json))
 }

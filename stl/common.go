@@ -2,13 +2,14 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2025-01-02 11:05:13
+ * Last Modified time: 2025-04-28 09:08:39
  */
 
 package stl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -96,6 +97,12 @@ func Echo[Data any](data Data) Data {
 	return data
 }
 
+func Echoer[T any](data T) func() T {
+	return func() T {
+		return data
+	}
+}
+
 func Reference[Data any](data Data) *Data {
 	return &data
 }
@@ -120,6 +127,11 @@ func TypeAsserter[Dst any, Src any](src Src) (dst Dst, ok bool) {
 func ReflectType[T any]() reflect.Type {
 	var value T
 	return reflect.TypeOf(value)
+}
+
+func UnmarshalJson[T any](raw []byte) (result T, err error) {
+	err = json.Unmarshal(raw, &result)
+	return
 }
 
 func Zero[Data any]() (_ Data) {

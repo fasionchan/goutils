@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 11:59:31
  * Last Modified by: fasion
- * Last Modified time: 2024-11-29 10:52:01
+ * Last Modified time: 2025-04-28 09:05:15
  */
 
 package baseutils
@@ -239,6 +239,32 @@ func WrapTimeFieldsByReflectValue(value reflect.Value, wrapper func(time.Time) t
 			}
 		}
 	}
+
+	return nil
+}
+
+type DateTime time.Time
+
+func (t DateTime) Native() time.Time {
+	return time.Time(t)
+}
+
+func (t DateTime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(t).Format(time.DateTime))
+}
+
+func (t *DateTime) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+
+	_time, err := time.ParseInLocation(time.DateTime, str, time.Local)
+	if err != nil {
+		return err
+	}
+
+	*t = DateTime(_time)
 
 	return nil
 }

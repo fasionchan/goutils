@@ -2,16 +2,26 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2024-12-02 10:14:07
+ * Last Modified time: 2025-04-28 09:12:12
  */
 
 package stl
 
 import (
+	"io"
 	"sort"
 
 	"golang.org/x/exp/constraints"
 )
+
+func AllEqual[Datas ~[]Data, Data comparable](datas Datas, value Data) bool {
+	for _, data := range datas {
+		if data != value {
+			return false
+		}
+	}
+	return true
+}
 
 func AnyMatch[Data any](datas []Data, test func(Data) bool) bool {
 	for _, data := range datas {
@@ -272,6 +282,12 @@ func LastOneOrZero[Datas ~[]Data, Data any](datas Datas) (data Data) {
 		data = datas[len(datas)-1]
 	}
 	return
+}
+
+func FilterByKey[Datas ~[]Data, Data any, Key comparable](datas Datas, keyFunc func(Data) Key, key Key) Datas {
+	return Filter(datas, func(data Data) bool {
+		return keyFunc(data) == key
+	})
 }
 
 func FindFirst[Datas ~[]Data, Data any](datas Datas, test func(Data) bool) (Data, bool) {
@@ -545,6 +561,15 @@ func MapWithError[Datas ~[]Data, Result any, Data any](datas Datas, stopWhenErro
 	return
 }
 
+func MapWithErrorSimplified[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) (Result, error)) ([]Result, error) {
+	results, errs := MapWithError(datas, true, mapper)
+	if err := errs.Simplify(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Data) error) error {
 	for _, data := range datas {
 		if err := f(data); err != nil {
@@ -552,6 +577,24 @@ func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Da
 		}
 	}
 	return nil
+}
+
+func ReadAll[Datas ~[]Data, Data any](read func() (Data, error)) (Datas, error) {
+	var datas Datas
+
+	for {
+		data, err := read()
+		datas = append(datas, data)
+		if err == nil {
+			continue
+		}
+
+		if err == io.EOF {
+			return datas, nil
+		} else {
+			return datas, err
+		}
+	}
 }
 
 func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {
