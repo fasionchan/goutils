@@ -2,14 +2,16 @@
  * Author: fasion
  * Created time: 2023-06-29 10:12:44
  * Last Modified by: fasion
- * Last Modified time: 2023-06-29 10:52:36
+ * Last Modified time: 2025-05-06 10:30:58
  */
 
 package logging
 
 import (
+	"strings"
 	"testing"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -26,6 +28,14 @@ func TestLogging(t *testing.T) {
 	creator.WithLevel(zapcore.DebugLevel)
 	creator.NewLogger().Debug("debug should shown")
 	logger.Debug("debug should not shown")
+}
+
+func TestLengthLimit(t *testing.T) {
+	container := NewLoggerCreator().NewLoggerContainer()
+	container.DynamicEncoder.WithEntryLengthLimit(100)
+	container.GetLogger().Error("TestLengthLimit", zap.Any(
+		"As", strings.Repeat("a", 1024),
+	))
 }
 
 func TestCompile(t *testing.T) {

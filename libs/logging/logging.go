@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-06-29 09:46:29
  * Last Modified by: fasion
- * Last Modified time: 2023-06-29 10:55:11
+ * Last Modified time: 2025-05-06 10:42:46
  */
 
 package logging
@@ -13,10 +13,17 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/fasionchan/goutils/baseutils"
 	"github.com/fasionchan/goutils/stl"
 	"go.uber.org/zap"
+	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+const (
+	DefaultEntryLengthLimit = 1024 * 512
+	DefaultFieldLengthLimit = DefaultEntryLengthLimit / 2
 )
 
 var defaultEncoderConfig = zapcore.EncoderConfig{
@@ -33,16 +40,85 @@ var defaultEncoderConfig = zapcore.EncoderConfig{
 
 type DynamicEncoder struct {
 	zapcore.Encoder
+	EntryLengthLimit int
+	FieldLengthLimit int
 }
 
 func NewDynamicEncoder() *DynamicEncoder {
 	return &DynamicEncoder{
-		Encoder: zapcore.NewJSONEncoder(defaultEncoderConfig),
+		Encoder:          zapcore.NewJSONEncoder(defaultEncoderConfig),
+		EntryLengthLimit: DefaultEntryLengthLimit,
+		FieldLengthLimit: DefaultFieldLengthLimit,
 	}
 }
 
 func (dynamic *DynamicEncoder) Dup() *DynamicEncoder {
 	return stl.Dup(dynamic)
+}
+
+func (dynamic *DynamicEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (buf *buffer.Buffer, err error) {
+	if dynamic == nil {
+		return nil, baseutils.NewNilError("DynamicEncoder")
+	}
+
+	// for i, field := range fields {
+	// 	switch field.Type {
+	// 	case zapcore.ReflectType:
+	// 		if dynamic.FieldLengthLimit <= 0 {
+	// 			continue
+	// 		}
+
+	// 		result, err := json.Marshal(field.Interface)
+	// 		if err != nil {
+	// 			continue
+	// 		}
+
+	// 		if len(result) <= dynamic.FieldLengthLimit {
+	// 			continue
+	// 		}
+
+	// 		fields[i].Interface = json.RawMessage(result[:dynamic.FieldLengthLimit-1])
+	// 	default:
+	// 		continue
+	// 	}
+	// }
+
+	buf, err = dynamic.Encoder.EncodeEntry(entry, fields)
+	if buf == nil {
+		return
+	}
+
+	entryLengthLimit := dynamic.EntryLengthLimit
+	if entryLengthLimit <= 0 {
+		return
+	}
+
+	if buf.Len() > entryLengthLimit {
+		bytes := buf.Bytes()
+		buf.Reset()
+		buf.Write(bytes[:entryLengthLimit-1])
+		buf.WriteByte('\n')
+	}
+
+	return
+}
+
+func (dynamic *DynamicEncoder) WithEntryLengthLimit(limit int) *DynamicEncoder {
+	if dynamic == nil {
+		return nil
+	}
+
+	dynamic.EntryLengthLimit = limit
+	return dynamic
+}
+
+func (dynamic *DynamicEncoder) WithFieldLengthLimit(limit int) *DynamicEncoder {
+	if dynamic == nil {
+		return nil
+	}
+
+	dynamic.FieldLengthLimit = limit
+	return dynamic
 }
 
 type CloserFunc func() error
