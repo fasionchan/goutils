@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-04-07 13:38:14
+ * Last Modified time: 2025-05-13 14:24:42
  */
 
 package types
@@ -14,6 +14,16 @@ import (
 
 	"github.com/fasionchan/goutils/stl"
 )
+
+type String string
+
+func (s String) IsPrefixOf(str string) bool {
+	return strings.HasPrefix(str, string(s))
+}
+
+func (s String) IsSuffixOf(str string) bool {
+	return strings.HasSuffix(str, string(s))
+}
 
 type StringSet = stl.Set[string]
 
@@ -86,6 +96,14 @@ func (strs Strings) InplaceSort() Strings {
 
 func (strs Strings) Sort() Strings {
 	return stl.Sort(strs.Dup(), StringComparer)
+}
+
+func (strs Strings) AnyHasPrefix(prefix string) bool {
+	return strs.AnyMatch(String(prefix).IsPrefixOf)
+}
+
+func (strs Strings) AnyHasSuffix(suffix string) bool {
+	return strs.AnyMatch(String(suffix).IsSuffixOf)
 }
 
 func (strs Strings) AnyMatch(test func(string) bool) bool {
