@@ -2,12 +2,13 @@
  * Author: fasion
  * Created time: 2023-06-29 10:12:44
  * Last Modified by: fasion
- * Last Modified time: 2025-05-06 10:30:58
+ * Last Modified time: 2025-05-15 09:26:07
  */
 
 package logging
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -36,6 +37,19 @@ func TestLengthLimit(t *testing.T) {
 	container.GetLogger().Error("TestLengthLimit", zap.Any(
 		"As", strings.Repeat("a", 1024),
 	))
+}
+
+func TestLogger(t *testing.T) {
+	logger := GetLogger()
+	logger.Info("hello")
+
+	named := logger.Named("bar")
+	logger.Info("has bar?")
+	named.Info("has bar!")
+
+	named = named.Named("foo")
+	named.Info("has bar.foo!")
+	fmt.Println(named.Name())
 }
 
 func TestCompile(t *testing.T) {
