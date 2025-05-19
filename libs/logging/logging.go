@@ -2,19 +2,23 @@
  * Author: fasion
  * Created time: 2023-06-29 09:46:29
  * Last Modified by: fasion
- * Last Modified time: 2025-05-06 10:42:46
+ * Last Modified time: 2025-05-19 09:22:03
  */
 
 package logging
 
 import (
+	"crypto/md5"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/fasionchan/goutils/baseutils"
 	"github.com/fasionchan/goutils/stl"
+	"github.com/fasionchan/goutils/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
@@ -258,3 +262,66 @@ var defaultLoggerContainer = defaultLoggerCreator.NewLoggerContainer()
 
 var GetLogger = defaultLoggerContainer.GetLogger
 var SetLoggerLevel = defaultLoggerContainer.SetLevel
+
+func WarnDeprecatedCode(scene string) {
+	GetLogger().Warn("DeprecatedCode",
+		zap.String("Scene", scene),
+		GetBigFieldCompacter().CompactField(zap.StackSkip("Stack", 1)),
+	)
+}
+
+type LogFunc = func(msg string, fields ...zap.Field)
+
+type BigFieldCompacter struct {
+	logFunc LogFunc
+	seens   types.StringSet
+}
+
+func NewBigFieldCompacter(logFunc LogFunc) *BigFieldCompacter {
+	return &BigFieldCompacter{
+		logFunc: logFunc,
+		seens:   types.StringSet{},
+	}
+}
+
+func (compacter *BigFieldCompacter) Compact(name, value string) zap.Field {
+	digest := fmt.Sprintf("%x", md5.Sum([]byte(value)))
+	key := fmt.Sprintf("BigFieldCompacter.%s=%s", name, digest)
+
+	if !compacter.seens.Contain(digest) {
+		compacter.logFunc(key,
+			zap.String("Digest", digest),
+			zap.String("Value", value),
+		)
+
+		compacter.seens.Add(digest)
+	}
+
+	return zap.String(name, key)
+}
+
+func (compacter *BigFieldCompacter) CompactField(field zap.Field) zap.Field {
+	return compacter.Compact(field.Key, field.String)
+}
+
+func (compacter *BigFieldCompacter) Reset() *BigFieldCompacter {
+	compacter.seens = types.StringSet{}
+	return compacter
+}
+
+func (compacter *BigFieldCompacter) ResetPeriodically(period time.Duration) {
+	for {
+		time.Sleep(period)
+		compacter.Reset()
+	}
+}
+
+func (compacter *BigFieldCompacter) ResetPeriodicallyAsync(period time.Duration) {
+	go compacter.ResetPeriodically(period)
+}
+
+var bigFieldCompacter = NewBigFieldCompacter(GetLogger().Info)
+
+func GetBigFieldCompacter() *BigFieldCompacter {
+	return bigFieldCompacter
+}
