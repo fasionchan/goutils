@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-05-15 09:21:53
  * Last Modified by: fasion
- * Last Modified time: 2025-05-15 15:32:58
+ * Last Modified time: 2025-05-27 11:11:42
  */
 
 package logging
@@ -18,7 +18,7 @@ import (
 func TestLoggerRef(t *testing.T) {
 	ctx := context.Background()
 
-	ref, ctx := LoggerRefFromContextPro(ctx, true, true, GetLogger().Named("top"))
+	ref, ctx := LoggerRefFromContextPro(ctx, true, true, "top", GetLogger())
 	logger := ref.With(zap.String("TOP", "TOP")).
 		GetLogger().
 		With(zap.String("top", "top"))
@@ -30,7 +30,7 @@ func TestLoggerRef(t *testing.T) {
 }
 
 func Upper(ctx context.Context) {
-	ref, ctx := LoggerRefFromContextPro(ctx, true, true, GetLogger().Named("upper"))
+	ref, ctx := LoggerRefFromContextPro(ctx, true, true, "upper", GetLogger())
 	logger := ref.With(zap.String("upper", "upper"))
 	logger.Info("upper")
 
@@ -38,7 +38,7 @@ func Upper(ctx context.Context) {
 }
 
 func Middle(ctx context.Context) {
-	ref, ctx := LoggerRefFromContextPro(ctx, true, true, GetLogger().Named("middle"))
+	ref, ctx := LoggerRefFromContextPro(ctx, true, true, "middle", GetLogger())
 	defer ref.Reset()()
 
 	ref.Info("middle")
@@ -47,13 +47,13 @@ func Middle(ctx context.Context) {
 }
 
 func Lower(ctx context.Context) {
-	LoggerFromContextWithFallbacksX(ctx, GetLogger().Named("lower")).
+	LoggerFromContextWithFallbacksX(ctx, "lower", GetLogger()).
 		With(zap.String("lower", "lower")).
 		Info("lowner")
 }
 
 func Last(ctx context.Context) {
-	LoggerFromContextWithFallbacksX(ctx, GetLogger().Named("last")).
+	LoggerFromContextWithFallbacksX(ctx, "last", GetLogger()).
 		With(zap.String("last", "last")).
 		Info("last")
 }

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-05-15 08:59:45
  * Last Modified by: fasion
- * Last Modified time: 2025-05-15 09:18:54
+ * Last Modified time: 2025-05-27 11:10:02
  */
 
 package logging
@@ -29,12 +29,17 @@ func NewLoggerRef(logger *zap.Logger) *LoggerRef {
 	}
 }
 
-func LoggerFromContextWithFallbacksX(ctx context.Context, fallbacks ...*zap.Logger) (logger *zap.Logger) {
-	return LoggerRefFromContext(ctx).GetLoggerWithFallbacksX(fallbacks...)
+func LoggerFromContextWithFallbacksX(ctx context.Context, named string, fallbacks ...*zap.Logger) (logger *zap.Logger) {
+	loggerRef, _ := LoggerRefFromContextPro(ctx, true, false, named, fallbacks...)
+	return loggerRef.GetLoggerWithFallbacksX(GetNopLogger())
 }
 
-func LoggerRefFromContextPro(ctx context.Context, create, wrapContext bool, fallbacks ...*zap.Logger) (*LoggerRef, context.Context) {
+func LoggerRefFromContextPro(ctx context.Context, create, wrapContext bool, named string, fallbacks ...*zap.Logger) (*LoggerRef, context.Context) {
 	ref := LoggerRefFromContext(ctx)
+	defer func() {
+		ref.NamedOnce(named)
+	}()
+
 	if ref != nil {
 		return ref, ctx
 	}
@@ -107,6 +112,10 @@ func (ref *LoggerRef) Named(name string) *LoggerRef {
 func (ref *LoggerRef) NamedOnce(name string) *LoggerRef {
 	if ref == nil {
 		return nil
+	}
+
+	if name == "" {
+		return ref
 	}
 
 	current := ref.Name()
