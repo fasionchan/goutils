@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-05-15 09:21:53
  * Last Modified by: fasion
- * Last Modified time: 2025-05-27 11:11:42
+ * Last Modified time: 2025-05-28 13:35:03
  */
 
 package logging
@@ -26,7 +26,10 @@ func TestLoggerRef(t *testing.T) {
 	logger.Info("top")
 
 	Upper(ctx)
+
 	Last(ctx)
+
+	logger.Info("done")
 }
 
 func Upper(ctx context.Context) {
