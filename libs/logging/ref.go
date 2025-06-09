@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-05-15 08:59:45
  * Last Modified by: fasion
- * Last Modified time: 2025-06-09 16:04:37
+ * Last Modified time: 2025-06-09 16:59:33
  */
 
 package logging
@@ -31,10 +31,6 @@ func NewLoggerRef(logger *zap.Logger) *LoggerRef {
 
 func (ref *LoggerRef) Dup() *LoggerRef {
 	return stl.Dup(ref)
-}
-
-func (ref *LoggerRef) WrapContext(ctx context.Context) context.Context {
-	return ContextWithLoggerRef(ctx, ref)
 }
 
 func LoggerFromContextWithFallbacksX(ctx context.Context, named string, fallbacks ...*zap.Logger) (logger *zap.Logger) {
