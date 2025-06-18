@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2024-08-19 11:07:48
+ * Last Modified time: 2025-06-18 14:18:22
  */
 
 package stl
@@ -11,6 +11,14 @@ type Mapping[Key comparable, Value any] map[Key]Value
 
 func NewMapping[Key comparable, Value any]() Mapping[Key, Value] {
 	return Mapping[Key, Value]{}
+}
+
+func (mapping Mapping[Key, Value]) Native() map[Key]Value {
+	return mapping
+}
+
+func (mapping Mapping[Key, Value]) KeyValuePairs() KeyValuePairs[Key, Value] {
+	return MapKeyValuePairs(mapping)
 }
 
 func FilterMap[Map ~map[Key]Value, Key comparable, Value any](m Map, tester func(Key, Value, Map) bool) Map {
@@ -68,6 +76,25 @@ func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyV
 
 func (pairs KeyValuePairs[Key, Value]) Append(others ...KeyValuePair[Key, Value]) KeyValuePairs[Key, Value] {
 	return append(pairs, others...)
+}
+
+func (pairs KeyValuePairs[Key, Value]) Sort(less func(a, b KeyValuePair[Key, Value]) bool) KeyValuePairs[Key, Value] {
+	Sort(pairs, less)
+	return pairs
+}
+
+func (pairs KeyValuePairs[Key, Value]) SortByKey(less func(a, b Key) bool) KeyValuePairs[Key, Value] {
+	Sort(pairs, func(a, b KeyValuePair[Key, Value]) bool {
+		return less(a.Key, b.Key)
+	})
+	return pairs
+}
+
+func (pairs KeyValuePairs[Key, Value]) SortByValue(less func(a, b Value) bool) KeyValuePairs[Key, Value] {
+	Sort(pairs, func(a, b KeyValuePair[Key, Value]) bool {
+		return less(a.Value, b.Value)
+	})
+	return pairs
 }
 
 func (pairs KeyValuePairs[Key, Value]) ToTypelessSlice() []any {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-05-15 08:59:45
  * Last Modified by: fasion
- * Last Modified time: 2025-06-09 16:59:33
+ * Last Modified time: 2025-06-13 14:25:07
  */
 
 package logging
@@ -13,6 +13,7 @@ import (
 
 	"github.com/fasionchan/goutils/stl"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -31,6 +32,10 @@ func NewLoggerRef(logger *zap.Logger) *LoggerRef {
 
 func (ref *LoggerRef) Dup() *LoggerRef {
 	return stl.Dup(ref)
+}
+
+func (ref *LoggerRef) RecoverPanicAndLog(level zapcore.Level, msg string, fields ...zap.Field) {
+	RecoverPanicAndLog(ref.zapLogger, level, msg, fields...)
 }
 
 func LoggerFromContextWithFallbacksX(ctx context.Context, named string, fallbacks ...*zap.Logger) (logger *zap.Logger) {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-05-13 14:24:42
+ * Last Modified time: 2025-06-18 14:31:46
  */
 
 package types
@@ -244,4 +244,38 @@ func (s CommaSeparatedValueRecord) Values() Strings {
 
 func (s CommaSeparatedValueRecord) ValidValues() Strings {
 	return s.Values().PurgeZero()
+}
+
+type StringsMappingByString stl.Mapping[string, Strings]
+
+func (mapping StringsMappingByString) KeyValuePairs() KeyStringsPairs[string] {
+	return (KeyStringsPairs[string])(stl.MapKeyValuePairs(mapping))
+}
+
+type StringsMapping[Key comparable] stl.Mapping[Key, Strings]
+
+func (mapping StringsMapping[Key]) KeyPairs() stl.KeyValuePairs[Key, Strings] {
+	return mapping.KeyPairs()
+}
+
+type KeyStringPair[Key any] stl.KeyValuePair[Key, Strings]
+
+type KeyStringsPairs[Key any] stl.KeyValuePairs[Key, Strings]
+
+func (pairs KeyStringsPairs[Key]) Native() stl.KeyValuePairs[Key, Strings] {
+	return (stl.KeyValuePairs[Key, Strings])(pairs)
+}
+
+func (pairs KeyStringsPairs[Key]) SortByValueLen() KeyStringsPairs[Key] {
+	pairs.Native().SortByValue(func(a, b Strings) bool {
+		return len(a) < len(b)
+	})
+	return pairs
+}
+
+func (pairs KeyStringsPairs[Key]) SortByValueLenDesc() KeyStringsPairs[Key] {
+	pairs.Native().SortByValue(func(a, b Strings) bool {
+		return len(a) > len(b)
+	})
+	return pairs
 }

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-06-29 10:12:44
  * Last Modified by: fasion
- * Last Modified time: 2025-05-15 09:26:07
+ * Last Modified time: 2025-06-13 14:22:17
  */
 
 package logging
@@ -50,6 +50,18 @@ func TestLogger(t *testing.T) {
 	named = named.Named("foo")
 	named.Info("has bar.foo!")
 	fmt.Println(named.Name())
+}
+
+func TestArgsX(t *testing.T) {
+	datas := []int{1, 2, 3}
+	dups := func(numbers ...int) []int {
+		return numbers
+	}(datas...)
+
+	datas[0] = 0
+
+	fmt.Println(datas)
+	fmt.Println(dups)
 }
 
 func TestCompile(t *testing.T) {
