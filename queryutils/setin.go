@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2025-04-28 08:46:16
+ * Last Modified time: 2025-07-31 14:20:46
  */
 
 package queryutils
@@ -660,7 +660,19 @@ func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) Action() *SetinActi
 }
 
 func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ActionFor(datas Datas) *SetinAction[Datas, DataInstances, DataPtr, Data] {
+	return setiner.ActionForDatas(datas)
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ActionForDatas(datas Datas) *SetinAction[Datas, DataInstances, DataPtr, Data] {
 	return NewSetinAction(setiner, datas)
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ActionForDatasX(datas ...DataPtr) *SetinAction[Datas, DataInstances, DataPtr, Data] {
+	return setiner.ActionForDatas(Datas(datas))
+}
+
+func (setiner *Setiner[Datas, DataInstances, DataPtr, Data]) ActionForData(data *Data) *SetinAction[Datas, DataInstances, DataPtr, Data] {
+	return setiner.ActionForDatas(Datas{data})
 }
 
 // A SetinAction is A Setiner with datas, it can Dup, Clone, WithData and finally Setin.

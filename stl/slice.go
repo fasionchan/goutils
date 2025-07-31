@@ -2,14 +2,16 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2025-04-28 09:12:12
+ * Last Modified time: 2025-07-31 14:27:02
  */
 
 package stl
 
 import (
 	"io"
+	"math/rand"
 	"sort"
+	"time"
 
 	"golang.org/x/exp/constraints"
 )
@@ -369,6 +371,14 @@ func FindLastOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	return data
 }
 
+func FindOneRandomly[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) Data {
+	if rand_ == nil {
+		rand_ = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
+
+	return datas[rand.Intn(len(datas))]
+}
+
 func Index[Data any](datas []Data, i int) (data Data, ok bool) {
 	ok = i >= 0 && i < len(datas)
 	if ok {
@@ -613,11 +623,43 @@ func Reverse[Datas ~[]Data, Data any](datas Datas) Datas {
 	return datas
 }
 
+func Shuffle[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) Datas {
+	if rand_ == nil {
+		rand_ = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
+
+	rand_.Shuffle(len(datas), func(i, j int) {
+		datas[i], datas[j] = datas[j], datas[i]
+	})
+
+	return datas
+}
+
 func Sort[Data any, Datas ~[]Data](datas Datas, less func(a, b Data) bool) Datas {
 	sort.Slice(datas, func(i, j int) bool {
 		return less(datas[i], datas[j])
 	})
 	return datas
+}
+
+func SortByKey[Datas ~[]Data, Data any, Key constraints.Ordered](datas Datas, key func(Data) Key, desc bool) Datas {
+	if desc {
+		return Sort(datas, func(a, b Data) bool {
+			return key(a) > key(b)
+		})
+	} else {
+		return Sort(datas, func(a, b Data) bool {
+			return key(a) < key(b)
+		})
+	}
+}
+
+func SortByKeyAsc[Datas ~[]Data, Data any, Key constraints.Ordered](datas Datas, key func(Data) Key) Datas {
+	return SortByKey(datas, key, false)
+}
+
+func SortByKeyDesc[Datas ~[]Data, Data any, Key constraints.Ordered](datas Datas, key func(Data) Key) Datas {
+	return SortByKey(datas, key, true)
 }
 
 func SortFast[Data constraints.Ordered, Datas ~[]Data](datas Datas) Datas {

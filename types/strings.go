@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-06-18 14:31:46
+ * Last Modified time: 2025-07-07 10:07:03
  */
 
 package types
@@ -154,6 +154,10 @@ func (strs Strings) ReverseInplace() Strings {
 
 func (strs Strings) ReverseDup() Strings {
 	return stl.Reverse(strs.Dup())
+}
+
+func (strs Strings) SliceOfAny() []any {
+	return stl.ToTypelessSlice(strs)
 }
 
 func (strs Strings) TrimSpace() Strings {
