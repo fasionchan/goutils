@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 11:59:31
  * Last Modified by: fasion
- * Last Modified time: 2025-04-28 09:05:15
+ * Last Modified time: 2025-08-21 10:58:21
  */
 
 package baseutils
@@ -33,34 +33,41 @@ func AlignNextTime(base time.Time, interval time.Duration, offset time.Duration)
 	return result
 }
 
-var year2050 = time.Date(2050, 1, 1, 0, 0, 0, 0, time.Now().Local().Location())
-var year3000 = time.Date(3000, 1, 1, 0, 0, 0, 0, time.Now().Local().Location())
-var year5000 = time.Date(5000, 1, 1, 0, 0, 0, 0, time.Now().Local().Location())
+var year2050 = time.Date(2050, 1, 1, 0, 0, 0, 0, time.Local)
+var year3000 = time.Date(3000, 1, 1, 0, 0, 0, 0, time.Local)
+var year5000 = time.Date(5000, 1, 1, 0, 0, 0, 0, time.Local)
 
+// 2050年1月1日
 func GetYear2050() time.Time {
 	return year2050
 }
 
+// 3000年1月1日
 func GetYear3000() time.Time {
 	return year3000
 }
 
+// 5000年1月1日
 func GetYear5000() time.Time {
 	return year5000
 }
 
+// 获取日期
 func DayOf(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
+// 今天
 func Today() time.Time {
 	return DayOf(time.Now().Local())
 }
 
+// 明天
 func Tomorrow() time.Time {
 	return Today().Add(time.Hour * 24)
 }
 
+// 昨天
 func Yesterday() time.Time {
 	return Today().Add(-time.Hour * 24)
 }

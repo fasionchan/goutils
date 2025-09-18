@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-15 15:59:37
  * Last Modified by: fasion
- * Last Modified time: 2024-11-29 10:41:10
+ * Last Modified time: 2025-08-06 14:20:06
  */
 
 package types
@@ -42,4 +42,10 @@ func TestCommaSeparatedValueLine(t *testing.T) {
 	fmt.Println(CommaSeparatedValueRecord(`"a,",b,c`).Values())
 	fmt.Println(CommaSeparatedValueRecord(`a,b,c,"a,b`).Values())
 	fmt.Println(CommaSeparatedValueRecord(`a,b,c,"a,b"`).Values())
+}
+
+func TestStringsRandomOne(t *testing.T) {
+	fmt.Println(NewStrings().RandomOneOrZero())
+	fmt.Println(NewStrings("a").RandomOneOrZero())
+	fmt.Println(NewStrings("a", "b", "c").RandomOneOrZero())
 }

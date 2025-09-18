@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-01-12 15:04:53
  * Last Modified by: fasion
- * Last Modified time: 2025-05-12 14:26:26
+ * Last Modified time: 2025-09-18 15:54:25
  */
 
 package baseutils
@@ -15,6 +15,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"io"
 
 	"github.com/fasionchan/goutils/stl"
 )
@@ -120,6 +121,20 @@ func (hasher Hasher) SumStob(data string) []byte {
 
 func (hasher Hasher) SumStos(data string) string {
 	return hasher.SumBtos([]byte(data))
+}
+
+func (hasher Hasher) SumReader(reader io.Reader) []byte {
+	h := hasher()
+	io.Copy(h, reader)
+	return h.Sum(nil)
+}
+
+func (hasher Hasher) SumRtob(reader io.Reader) []byte {
+	return hasher.SumReader(reader)
+}
+
+func (hasher Hasher) SumRtos(reader io.Reader) string {
+	return fmt.Sprintf("%x", hasher.SumReader(reader))
 }
 
 func HashSum(hash hash.Hash, data []byte) []byte {

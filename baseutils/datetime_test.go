@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-12-20 08:58:01
  * Last Modified by: fasion
- * Last Modified time: 2025-04-28 09:05:22
+ * Last Modified time: 2025-08-12 10:50:05
  */
 
 package baseutils
@@ -15,6 +15,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGetYear2050(t *testing.T) {
+	fmt.Println(GetYear2050())
+}
 
 func TestTimeNow(t *testing.T) {
 	for i := 0; i < 100000000; i++ {

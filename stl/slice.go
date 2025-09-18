@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2025-07-31 14:27:02
+ * Last Modified time: 2025-09-18 16:00:00
  */
 
 package stl
@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/exp/constraints"
 )
+
+var defaultRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func AllEqual[Datas ~[]Data, Data comparable](datas Datas, value Data) bool {
 	for _, data := range datas {
@@ -371,9 +373,15 @@ func FindLastOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	return data
 }
 
-func FindOneRandomly[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) Data {
+func RandomOneOrZero[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) (data Data) {
 	if rand_ == nil {
-		rand_ = rand.New(rand.NewSource(time.Now().UnixNano()))
+		rand_ = defaultRand
+	}
+
+	if len(datas) == 0 {
+		return
+	} else if len(datas) == 1 {
+		return datas[0]
 	}
 
 	return datas[rand.Intn(len(datas))]
@@ -589,6 +597,10 @@ func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Da
 	return nil
 }
 
+func BatchProcessUntilFirstErrorX[Data any](f func(Data) error, datas ...Data) error {
+	return BatchProcessUntilFirstError(datas, f)
+}
+
 func ReadAll[Datas ~[]Data, Data any](read func() (Data, error)) (Datas, error) {
 	var datas Datas
 
@@ -625,7 +637,7 @@ func Reverse[Datas ~[]Data, Data any](datas Datas) Datas {
 
 func Shuffle[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) Datas {
 	if rand_ == nil {
-		rand_ = rand.New(rand.NewSource(time.Now().UnixNano()))
+		rand_ = defaultRand
 	}
 
 	rand_.Shuffle(len(datas), func(i, j int) {

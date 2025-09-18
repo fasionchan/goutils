@@ -2,12 +2,13 @@
  * Author: fasion
  * Created time: 2024-08-07 17:31:50
  * Last Modified by: fasion
- * Last Modified time: 2025-05-12 14:27:02
+ * Last Modified time: 2025-09-18 15:56:39
  */
 
 package baseutils
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,9 @@ func TestMd5Hasher(t *testing.T) {
 	} {
 		sum := hasher.SumStos(testCase.data)
 		assert.Equal(t, testCase.sum, sum, "data: %s", testCase.data)
+
+		sum2 := hasher.SumRtos(bytes.NewBufferString(testCase.data))
+		assert.Equal(t, testCase.sum, sum2, "data: %s", testCase.data)
 	}
 
 	for _, testCase := range []struct {

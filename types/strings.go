@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-07-07 10:07:03
+ * Last Modified time: 2025-08-06 14:18:37
  */
 
 package types
@@ -10,6 +10,7 @@ package types
 import (
 	"encoding/csv"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/fasionchan/goutils/stl"
@@ -90,6 +91,14 @@ func (strs Strings) Concat(others ...Strings) Strings {
 	return stl.ConcatSlicesTo(strs, others...)
 }
 
+func (strs Strings) InplaceShuffle() Strings {
+	return stl.Shuffle(strs, nil)
+}
+
+func (strs Strings) InplaceShufflePro(rand_ *rand.Rand) Strings {
+	return stl.Shuffle(strs, rand_)
+}
+
 func (strs Strings) InplaceSort() Strings {
 	return stl.Sort(strs, StringComparer)
 }
@@ -146,6 +155,14 @@ func (strs Strings) MapWithSprintf(format string) Strings {
 	return strs.Map(func(s string) string {
 		return fmt.Sprintf(format, s)
 	})
+}
+
+func (strs Strings) RandomOneOrZero() string {
+	return stl.RandomOneOrZero(strs, nil)
+}
+
+func (strs Strings) RandomOneOrZeroPro(rand_ *rand.Rand) string {
+	return stl.RandomOneOrZero(strs, rand_)
 }
 
 func (strs Strings) ReverseInplace() Strings {
