@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-08-06 14:18:37
+ * Last Modified time: 2025-09-23 13:45:49
  */
 
 package types
@@ -179,6 +179,14 @@ func (strs Strings) SliceOfAny() []any {
 
 func (strs Strings) TrimSpace() Strings {
 	return strs.Map(strings.TrimSpace)
+}
+
+func (strs Strings) ToLower() Strings {
+	return strs.Map(strings.ToLower)
+}
+
+func (strs Strings) ToUpper() Strings {
+	return strs.Map(strings.ToUpper)
 }
 
 // go example

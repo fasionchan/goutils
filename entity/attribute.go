@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2025-12-07 12:36:44
  * Last Modified by: fasion
- * Last Modified time: 2025-12-08 00:50:46
+ * Last Modified time: 2025-12-08 13:27:30
  */
 
 package entity
@@ -58,6 +58,20 @@ func (attr *Attribute) String() string {
 	return fmt.Sprintf("%s: %+v", attr.Name, attr.Value)
 }
 
+func (attr *Attribute) WithNamePrefix(prefix string) *Attribute {
+	if attr == nil {
+		return nil
+	}
+
+	if name := attr.Name; name == "" {
+		attr.Name = prefix
+	} else {
+		attr.Name = prefix + "." + name
+	}
+
+	return attr
+}
+
 type Attributes []*Attribute
 
 func NewAttributes(attrs ...*Attribute) Attributes {
@@ -81,7 +95,18 @@ func (attrs Attributes) AppendFromValue(prefix string, value reflect.Value) Attr
 	// fmt.Println("AppendFromValue", prefix, value.Kind())
 	// fmt.Println()
 
-	switch value.Kind() {
+	valueType := value.Type()
+
+	if stl.Contain(atomicAttrTypes, valueType) {
+		return append(attrs, &Attribute{Name: prefix, Value: value.Interface()})
+	}
+
+	fn, ok := data2attrs[valueType]
+	if ok {
+		return append(attrs, fn(value.Interface()).WithNamePrefix(prefix)...)
+	}
+
+	switch valueType.Kind() {
 	case reflect.Pointer:
 		return attrs.AppendFromPointerValue(prefix, value)
 	case reflect.Slice, reflect.Array:
@@ -145,6 +170,13 @@ func (attrs Attributes) SortByName() Attributes {
 
 func (attrs Attributes) Print() {
 	stl.ForEach(attrs, AttributePtr.Print)
+}
+
+func (attrs Attributes) WithNamePrefix(prefix string) Attributes {
+	stl.ForEach(attrs, func(attr *Attribute) {
+		attr.WithNamePrefix(prefix)
+	})
+	return attrs
 }
 
 func ParseAttrTag(tag string) (name string, options types.Strings) {
@@ -232,4 +264,34 @@ func parseStructType(t reflect.Type) attrFieldInfos {
 	}
 
 	return fields
+}
+
+var atomicAttrTypes = []reflect.Type{}
+
+func RegisterAtomicAttrType(data any) {
+	atomicAttrTypes = append(atomicAttrTypes, reflect.TypeOf(data))
+}
+
+var data2attrs = map[reflect.Type]func(data any) Attributes{}
+
+func RegisterData2AttrTypeless(typ reflect.Type, fn func(data any) *Attribute) {
+	RegisterData2AttrsTypeless(typ, func(data any) Attributes {
+		return NewAttributes(fn(data))
+	})
+}
+
+func RegisterData2AttrsTypeless(t reflect.Type, fn func(data any) Attributes) {
+	data2attrs[t] = fn
+}
+
+func RegisterData2Attr[T any](fn func(data T) *Attribute) {
+	RegisterData2AttrsTypeless(stl.ReflectType[T](), func(data any) Attributes {
+		return NewAttributes(fn(data.(T)))
+	})
+}
+
+func RegisterData2Attrs[T any](fn func(data T) Attributes) {
+	RegisterData2AttrsTypeless(stl.ReflectType[T](), func(data any) Attributes {
+		return fn(data.(T))
+	})
 }

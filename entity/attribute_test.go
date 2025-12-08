@@ -2,14 +2,17 @@
  * Author: fasion
  * Created time: 2025-12-07 13:22:36
  * Last Modified by: fasion
- * Last Modified time: 2025-12-08 00:52:53
+ * Last Modified time: 2025-12-08 13:24:21
  */
 
 package entity
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestFlattenDataAttributes(t *testing.T) {
@@ -30,6 +33,7 @@ func TestFlattenDataAttributes(t *testing.T) {
 			OmitZero: 0,
 			H:        9,
 		},
+		"o": primitive.NewObjectID(),
 		"x": []struct {
 			Y int
 			Z int
@@ -44,8 +48,18 @@ func TestFlattenDataAttributes(t *testing.T) {
 			},
 		},
 	})
+
 	attrs.SortByName().Print()
+	fmt.Println()
+
 	for _, attr := range attrs {
 		fmt.Println(attr.Name, IndexPattern.ReplaceAllString(attr.Name, ""))
 	}
+}
+
+func init() {
+	RegisterAtomicAttrType(primitive.NilObjectID)
+	RegisterData2Attr(func(data primitive.ObjectID) *Attribute {
+		return &Attribute{Value: strings.ToUpper(data.Hex())}
+	})
 }

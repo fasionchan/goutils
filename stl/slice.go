@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2025-09-18 16:00:00
+ * Last Modified time: 2025-12-08 14:23:53
  */
 
 package stl
@@ -476,7 +476,7 @@ func JoinSlicesTo[Slice ~[]Data, Data any](slice Slice, sep Slice, keepFirstSep 
 	}, slice)
 }
 
-func Purge[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas {
+func Purge[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 	result := make(Datas, 0, len(datas))
 	for _, data := range datas {
 		if !filter(data) {
@@ -486,7 +486,7 @@ func Purge[Data any, Datas ~[]Data](datas Datas, filter func(Data) bool) Datas {
 	return result
 }
 
-func PurgeValue[Data comparable, Datas ~[]Data](datas Datas, value Data) Datas {
+func PurgeValue[Datas ~[]Data, Data comparable](datas Datas, value Data) Datas {
 	result := make(Datas, 0, len(datas))
 	for _, data := range datas {
 		if data != value {
@@ -497,7 +497,7 @@ func PurgeValue[Data comparable, Datas ~[]Data](datas Datas, value Data) Datas {
 
 }
 
-func PurgeZero[Data comparable, Datas ~[]Data](datas Datas) Datas {
+func PurgeZero[Datas ~[]Data, Data comparable](datas Datas) Datas {
 	var zero Data
 	return PurgeValue(datas, zero)
 }
@@ -743,7 +743,7 @@ func DupSlice[Data any, Slice ~[]Data](slice Slice) Slice {
 	return append(make(Slice, 0, len(slice)), slice...)
 }
 
-func ConcatSlices[Data any, Slice ~[]Data](slices ...Slice) Slice {
+func ConcatSlices[Slice ~[]Data, Data any](slices ...Slice) Slice {
 	return ConcatSlicesTo(nil, slices...)
 }
 
