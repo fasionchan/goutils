@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-09-23 13:45:49
+ * Last Modified time: 2025-12-19 15:15:09
  */
 
 package types
@@ -179,6 +179,18 @@ func (strs Strings) SliceOfAny() []any {
 
 func (strs Strings) TrimSpace() Strings {
 	return strs.Map(strings.TrimSpace)
+}
+
+func (strs Strings) TrimPrefix(prefix string) Strings {
+	return strs.Map(func(s string) string {
+		return strings.TrimPrefix(s, prefix)
+	})
+}
+
+func (strs Strings) TrimSuffix(suffix string) Strings {
+	return strs.Map(func(s string) string {
+		return strings.TrimSuffix(s, suffix)
+	})
 }
 
 func (strs Strings) ToLower() Strings {
