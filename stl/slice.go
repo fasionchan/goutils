@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2025-12-08 14:23:53
+ * Last Modified time: 2026-01-21 19:11:00
  */
 
 package stl
@@ -53,7 +53,7 @@ func Backmost[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool)
 func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bool) (result Data, index int) {
 	index = -1
 	for i, data := range datas {
-		if index == 0 || !before(data, result) {
+		if i == 0 || !before(data, result) {
 			result = data
 			index = i
 		}
@@ -61,17 +61,20 @@ func BackmostPro[Datas ~[]Data, Data any](datas Datas, before func(a, b Data) bo
 	return
 }
 
-func BatchAssertType[Dst any, Source any, Sources ~[]Source](sources Sources) (result []Dst, allOk bool) {
-	result = Map(sources, func(source Source) (result Dst) {
+func BatchAssertType[Dst any, Source any, Sources ~[]Source](sources Sources) ([]Dst, bool) {
+	results := make([]Dst, len(sources))
+	allOk := true
+
+	for i, source := range sources {
 		v, ok := any(source).(Dst)
 		if ok {
-			result = v
+			results[i] = v
 		} else {
 			allOk = false
 		}
-		return v
-	})
-	return
+	}
+
+	return results, allOk
 }
 
 func Bisect[Datas ~[]Data, Data any](datas Datas, tester func(Data) bool) (trues Datas, falses Datas) {
@@ -347,7 +350,7 @@ func FindFirstNotZero[Data comparable](datas []Data) Data {
 	})
 }
 
-func FindLast[Data any](datas []Data, test func(Data) bool) (Data, bool) {
+func FindLast[Datas ~[]Data, Data any](datas Datas, test func(Data) bool) (Data, bool) {
 	for i := len(datas) - 1; i >= 0; i-- {
 		data := datas[i]
 		if test(data) {
@@ -384,7 +387,7 @@ func RandomOneOrZero[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) (da
 		return datas[0]
 	}
 
-	return datas[rand.Intn(len(datas))]
+	return datas[rand_.Intn(len(datas))]
 }
 
 func Index[Data any](datas []Data, i int) (data Data, ok bool) {
@@ -510,9 +513,9 @@ func PurgeZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func
 }
 
 func Map[Data any, Datas ~[]Data, Result any](datas Datas, mapper func(Data) Result) []Result {
-	results := make([]Result, 0, len(datas))
-	for _, data := range datas {
-		results = append(results, mapper(data))
+	results := make([]Result, len(datas))
+	for i, data := range datas {
+		results[i] = mapper(data)
 	}
 	return results
 }
@@ -555,7 +558,7 @@ func MapToAssertedType[Dst any, Source any, Sources ~[]Source](sources Sources) 
 	return
 }
 
-func MapUtilError[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) (Result, error)) ([]Result, error) {
+func MapUntilError[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) (Result, error)) ([]Result, error) {
 	results, errs := MapWithError(datas, true, mapper)
 	return results, errs.FirstError()
 }
@@ -606,8 +609,8 @@ func ReadAll[Datas ~[]Data, Data any](read func() (Data, error)) (Datas, error) 
 
 	for {
 		data, err := read()
-		datas = append(datas, data)
 		if err == nil {
+			datas = append(datas, data)
 			continue
 		}
 
@@ -748,7 +751,9 @@ func ConcatSlices[Slice ~[]Data, Data any](slices ...Slice) Slice {
 }
 
 func GetSliceElemPointers[Data any, Datas ~[]Data](datas Datas) []*Data {
-	return Map(datas, func(data Data) *Data { return &data })
+	return MapPro(datas, func(i int, _ Data, datas Datas) *Data {
+		return &datas[i]
+	})
 }
 
 func ConcatSlicesTo[Data any, Slice ~[]Data](slice Slice, slices ...Slice) Slice {

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-05-14 11:34:25
  * Last Modified by: fasion
- * Last Modified time: 2024-12-20 10:50:32
+ * Last Modified time: 2026-01-21 19:54:06
  */
 
 package email
@@ -30,7 +30,7 @@ const (
 type EmailClient struct {
 	addr      string
 	port      int
-	accout    string
+	account   string
 	password  string
 	tlsConfig *tls.Config
 }
@@ -44,7 +44,7 @@ func NewEmailClient(loc, account, password string) (*EmailClient, error) {
 	return &EmailClient{
 		addr:     addr,
 		port:     port,
-		accout:   account,
+		account:  account,
 		password: password,
 	}, nil
 }
@@ -98,18 +98,30 @@ func (client *EmailClient) Account() string {
 	if client == nil {
 		return ""
 	}
-	return client.accout
+	return client.account
 }
 
 func (client *EmailClient) Dup() *EmailClient {
 	return stl.Dup(client)
 }
 
+func (client *EmailClient) Ping() error {
+	dialer := client.NewDialer()
+
+	sender, err := dialer.Dial()
+	if err != nil {
+		return err
+	}
+	defer sender.Close()
+
+	return nil
+}
+
 func (client *EmailClient) WithAccount(account, password string) *EmailClient {
 	if client == nil {
 		return nil
 	}
-	client.accout = account
+	client.account = account
 	client.password = password
 	return client
 }
@@ -136,22 +148,29 @@ func (client *EmailClient) NetLoc() string {
 	return fmt.Sprintf("%s:%d", client.addr, client.port)
 }
 
-func (client *EmailClient) SendMessage(m *gomail.Message) error {
-	d := gomail.NewDialer(client.addr, client.port, client.accout, client.password)
+func (client *EmailClient) NewDialer() *gomail.Dialer {
+	d := gomail.NewDialer(client.addr, client.port, client.account, client.password)
 	if client.tlsConfig != nil {
 		d.TLSConfig = client.tlsConfig
 	}
-	m.SetHeader("From", client.accout)
-	return d.DialAndSend(m)
+	return d
 }
 
-func (client *EmailClient) SendMessageSmart(to []string, subject, body string) error {
-	// todo: make encoding configurable
-	msg := gomail.NewMessage(
+func (client *EmailClient) SendMessage(m *gomail.Message) error {
+	dialer := client.NewDialer()
+	m.SetHeader("From", client.account)
+	return dialer.DialAndSend(m)
+}
+
+func (client *EmailClient) SendMessageSmart(to []string, subject, body string, settings ...gomail.MessageSetting) error {
+	settings = stl.NewSlice(
 		gomail.SetCharset("UTF-8"),
 		gomail.SetEncoding(gomail.Base64),
-	)
-	msg.SetHeader("From", client.accout)
+	).Append(settings...).
+		Native()
+
+	msg := gomail.NewMessage(settings...)
+	msg.SetHeader("From", client.account)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 
