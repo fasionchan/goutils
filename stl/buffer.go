@@ -2,12 +2,14 @@
  * Author: fasion
  * Created time: 2026-01-25 23:06:46
  * Last Modified by: fasion
- * Last Modified time: 2026-01-26 00:06:21
+ * Last Modified time: 2026-01-26 23:07:47
  */
 
 package stl
 
-import "bufio"
+import (
+	"bufio"
+)
 
 type BoundedBuffer[Datas ~[]Data, Data any] struct {
 	buffer Datas
@@ -52,6 +54,14 @@ func (lb *BoundedBuffer[Datas, Data]) Write(datas Datas) (n int, err error) {
 	return freeBytes, nil
 }
 
+func (lb *BoundedBuffer[Datas, Data]) TotalWritten() int64 {
+	return int64(len(lb.buffer))
+}
+
+func (lb *BoundedBuffer[Datas, Data]) IsTruncated() bool {
+	return false
+}
+
 func (lb *BoundedBuffer[Datas, Data]) Reset() {
 	lb.buffer = lb.buffer[:0]
 }
@@ -68,28 +78,28 @@ func NewTruncatedBuffer[Datas ~[]Data, Data any](size int) *TruncatedBuffer[Data
 	}
 }
 
-func (tb *TruncatedBuffer[Datas, Data]) Write(datas Datas) (int64, error) {
-	totalWritten := int64(0)
+func (tb *TruncatedBuffer[Datas, Data]) Write(datas Datas) (int, error) {
+	totalWritten := 0
 	var err error
 
 	for len(datas) > 0 {
 		var written int
 		written, err = tb.BoundedBuffer.Write(datas)
 
-		totalWritten += int64(written)
+		totalWritten += written
 		datas = datas[written:]
 
 		if err == nil {
 			continue
 		} else if err == bufio.ErrBufferFull {
-			totalWritten += int64(len(datas))
+			totalWritten += len(datas)
 			break
 		} else {
 			break
 		}
 	}
 
-	tb.totalWritten += totalWritten
+	tb.totalWritten += int64(totalWritten)
 
 	return totalWritten, err
 }
