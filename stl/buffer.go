@@ -89,7 +89,7 @@ func (tb *TruncatedBuffer[Datas, Data]) Write(datas Datas) (int64, error) {
 		}
 	}
 
-	tb.totalWritten = totalWritten
+	tb.totalWritten += totalWritten
 
 	return totalWritten, err
 }
