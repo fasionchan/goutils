@@ -397,7 +397,7 @@ func TestBytesTruncatedBuffer_Basic(t *testing.T) {
 	if err != nil {
 		t.Errorf("写入失败: %v", err)
 	}
-	if n != int64(len(data)) {
+	if n != len(data) {
 		t.Errorf("写入字节数不匹配，期望: %d, 实际: %d", len(data), n)
 	}
 	if string(buf.Datas()) != "hello" {
@@ -505,7 +505,7 @@ func TestBytesTruncatedBuffer_LargeWrite(t *testing.T) {
 	if err != bufio.ErrBufferFull {
 		t.Errorf("应该返回 ErrBufferFull，实际: %v", err)
 	}
-	if n != int64(len(data)) {
+	if n != len(data) {
 		t.Errorf("写入字节数不匹配，期望: %d, 实际: %d", len(data), n)
 	}
 	// 缓冲区应该只包含前5字节
@@ -621,7 +621,7 @@ func TestBytesTruncatedBuffer_ZeroSize(t *testing.T) {
 	if err != bufio.ErrBufferFull {
 		t.Errorf("应该返回 ErrBufferFull，实际: %v", err)
 	}
-	if n != int64(len(data)) {
+	if n != len(data) {
 		t.Errorf("应该记录写入所有字节，期望: %d, 实际: %d", len(data), n)
 	}
 	if buf.Datas() != nil {

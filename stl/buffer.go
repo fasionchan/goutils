@@ -93,6 +93,7 @@ func (tb *TruncatedBuffer[Datas, Data]) Write(datas Datas) (int, error) {
 			continue
 		} else if err == bufio.ErrBufferFull {
 			totalWritten += len(datas)
+			err = nil
 			break
 		} else {
 			break
