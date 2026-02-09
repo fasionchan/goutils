@@ -33,10 +33,33 @@ func TestLogging(t *testing.T) {
 
 func TestLengthLimit(t *testing.T) {
 	container := NewLoggerCreator().NewLoggerContainer()
-	container.DynamicEncoder.WithEntryLengthLimit(100)
-	container.GetLogger().Error("TestLengthLimit", zap.Any(
+	container.DynamicEncoder.WithEntryLengthLimit(200)
+
+	logger := container.GetLogger()
+	logger = logger.With(zap.String("test", "test"))
+
+	logger.Error("TestLengthLimit", zap.Any(
 		"As", strings.Repeat("a", 1024),
 	))
+}
+
+func TestDefaultLengthLimit(t *testing.T) {
+	logger := GetLogger()
+	logger.Error("TestDefaultLengthLimit", zap.Any(
+		"As", strings.Repeat("a", 10240),
+	))
+}
+
+func TestDuplidatedWith(t *testing.T) {
+	container := NewLoggerCreator().NewLoggerContainer()
+	container.DynamicEncoder.WithEntryLengthLimit(100)
+
+	logger := container.GetLogger()
+	for range 100 {
+		logger = logger.With(zap.String("test", "test"))
+	}
+
+	logger.Info("done")
 }
 
 func TestLogger(t *testing.T) {

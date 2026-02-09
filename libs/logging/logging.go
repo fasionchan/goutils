@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	DefaultEntryLengthLimit = 1024 * 512
+	DefaultEntryLengthLimit = 1024 * 64
 	DefaultFieldLengthLimit = DefaultEntryLengthLimit / 2
 )
 
@@ -58,6 +58,10 @@ func NewDynamicEncoder() *DynamicEncoder {
 
 func (dynamic *DynamicEncoder) Dup() *DynamicEncoder {
 	return stl.Dup(dynamic)
+}
+
+func (dynamic *DynamicEncoder) Clone() zapcore.Encoder {
+	return dynamic.Dup()
 }
 
 func (dynamic *DynamicEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (buf *buffer.Buffer, err error) {
