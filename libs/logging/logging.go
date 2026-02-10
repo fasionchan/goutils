@@ -60,8 +60,16 @@ func (dynamic *DynamicEncoder) Dup() *DynamicEncoder {
 	return stl.Dup(dynamic)
 }
 
+func (dynamic *DynamicEncoder) DeepDup() *DynamicEncoder {
+	return &DynamicEncoder{
+		Encoder:          dynamic.Encoder.Clone(),
+		EntryLengthLimit: dynamic.EntryLengthLimit,
+		FieldLengthLimit: dynamic.FieldLengthLimit,
+	}
+}
+
 func (dynamic *DynamicEncoder) Clone() zapcore.Encoder {
-	return dynamic.Dup()
+	return dynamic.DeepDup()
 }
 
 func (dynamic *DynamicEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (buf *buffer.Buffer, err error) {
