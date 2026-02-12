@@ -72,6 +72,54 @@ func Yesterday() time.Time {
 	return Today().Add(-time.Hour * 24)
 }
 
+func WeekdayOf(t time.Time, weekday time.Weekday) time.Time {
+	if t.IsZero() {
+		t = time.Now()
+	}
+
+	return DayOf(t).AddDate(0, 0, int(weekday-t.Weekday()))
+}
+
+func NextWeekday(t time.Time, weekday time.Weekday) time.Time {
+	if t.IsZero() {
+		t = time.Now()
+	}
+
+	result := WeekdayOf(t, weekday)
+	if result.Before(t) {
+		result = result.AddDate(0, 0, 7)
+	}
+
+	return result
+}
+
+func Monday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Monday)
+}
+
+func Tuesday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Tuesday)
+}
+func Wednesday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Wednesday)
+}
+
+func Thursday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Thursday)
+}
+
+func Friday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Friday)
+}
+
+func Saturday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Saturday)
+}
+
+func Sunday(t time.Time) time.Time {
+	return WeekdayOf(t, time.Sunday)
+}
+
 type IntraDayTime time.Duration
 
 func ParseIntraDayTime(s string) (IntraDayTime, error) {

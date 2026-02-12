@@ -138,19 +138,20 @@ func (hasher Hasher) SumRtos(reader io.Reader) string {
 }
 
 func HashSum(hash hash.Hash, data []byte) []byte {
-	return hash.Sum(data)
+	return HashSumBtob(hash, data)
 }
 
 func HashSumBtob(hash hash.Hash, data []byte) []byte {
-	return hash.Sum(data)
+	hash.Write(data)
+	return hash.Sum(nil)
 }
 
 func HashSumBtos(hash hash.Hash, data []byte) string {
-	return fmt.Sprintf("%x", hash.Sum(data))
+	return fmt.Sprintf("%x", HashSumBtob(hash, data))
 }
 
 func HashSumStob(hash hash.Hash, data string) []byte {
-	return hash.Sum([]byte(data))
+	return HashSumBtob(hash, []byte(data))
 }
 
 func HashSumStos(hash hash.Hash, data string) string {
