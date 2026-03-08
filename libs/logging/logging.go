@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-06-29 09:46:29
  * Last Modified by: fasion
- * Last Modified time: 2025-05-19 09:22:03
+ * Last Modified time: 2026-03-07 08:39:36
  */
 
 package logging
@@ -287,6 +287,7 @@ type LogFunc = func(msg string, fields ...zap.Field)
 type BigFieldCompacter struct {
 	logFunc LogFunc
 	seens   types.StringSet
+	mutex   sync.RWMutex
 }
 
 func NewBigFieldCompacter(logFunc LogFunc) *BigFieldCompacter {
@@ -299,6 +300,17 @@ func NewBigFieldCompacter(logFunc LogFunc) *BigFieldCompacter {
 func (compacter *BigFieldCompacter) Compact(name, value string) zap.Field {
 	digest := fmt.Sprintf("%x", md5.Sum([]byte(value)))
 	key := fmt.Sprintf("BigFieldCompacter.%s=%s", name, digest)
+
+	compacter.mutex.RLock()
+	seen := compacter.seens.Contain(digest)
+	compacter.mutex.RUnlock()
+
+	if seen {
+		return zap.String(name, key)
+	}
+
+	compacter.mutex.Lock()
+	defer compacter.mutex.Unlock()
 
 	if !compacter.seens.Contain(digest) {
 		compacter.logFunc(key,
