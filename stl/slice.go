@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2026-01-21 19:11:00
+ * Last Modified time: 2026-03-21 14:07:00
  */
 
 package stl
@@ -843,10 +843,10 @@ func ZipToPairs[Key any, Value any](keys []Key, values []Value) KeyValuePairs[Ke
 	pairs := make(KeyValuePairs[Key, Value], n)
 
 	for i := 0; i < n; i++ {
-		pairs = pairs.Append(KeyValuePair[Key, Value]{
+		pairs[i] = KeyValuePair[Key, Value]{
 			Key:   keys[i],
 			Value: values[i],
-		})
+		}
 	}
 
 	return pairs

@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:31:44
  * Last Modified by: fasion
- * Last Modified time: 2023-12-18 10:26:45
+ * Last Modified time: 2026-03-21 14:06:06
  */
 
 package stl
@@ -131,4 +131,11 @@ func (configs Configs) Filter(filter func(*Config) bool) Configs {
 		}
 	}
 	return result
+}
+
+func TestZipToPairs(t *testing.T) {
+	keys := []string{"a", "b", "c"}
+	values := []int{1, 2, 3}
+	pairs := ZipToPairs(keys, values)
+	fmt.Println(pairs)
 }

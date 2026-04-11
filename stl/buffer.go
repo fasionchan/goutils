@@ -1,249 +1,223 @@
 /*
- * Author: fasion
- * Created time: 2026-01-25 23:06:46
- * Last Modified by: fasion
- * Last Modified time: 2026-01-26 23:07:47
+ * 参考 Go 标准库 bytes.Buffer（buf/off 模型、grow/ReadFrom 等），提供基于切片类型 Datas ~[]Data 的泛型缓冲区。
  */
 
 package stl
 
 import (
-	"bufio"
+	"errors"
+	"io"
 )
 
-type BoundedBuffer[Datas ~[]Data, Data any] struct {
-	buffer Datas
-	size   int
+const smallBufferSize = 64
+
+// MinRead 与 bytes.Buffer 一致：ReadFrom 单次至少向 r 预留这么多容量，减少扩容次数。
+const MinRead = 512
+
+const maxInt = int(^uint(0) >> 1)
+
+// ErrTooLarge 在无法为缓冲区分配足够内存时由 grow 触发 panic 的值（与 bytes.Buffer 语义一致）。
+var ErrTooLarge = errors.New("stl.Buffer: too large")
+
+var errNegativeRead = errors.New("stl.Buffer: reader returned negative count from Read")
+
+// Buffer 为可变长度切片缓冲，语义对齐标准库 bytes.Buffer，元素类型为 Data，底层切片类型为 Datas（须 ~[]Data）。
+// 零值为空缓冲，可直接使用。
+type Buffer[Datas ~[]Data, Data any] struct {
+	buf Datas // 内容为 buf[off : len(buf)] 中未读部分
+	off int   // 读从 &buf[off] 起，写从 len(buf) 起
 }
 
-func NewBoundedBuffer[Datas ~[]Data, Data any](size int) *BoundedBuffer[Datas, Data] {
-	return &BoundedBuffer[Datas, Data]{
-		buffer: nil,
-		size:   size,
+func (b *Buffer[Datas, Data]) empty() bool { return len(b.buf) <= b.off }
+
+// Datas 返回长度等于 Len() 的切片，指向当前未读数据；下一次读写/Reset/Truncate 前有效。
+func (b *Buffer[Datas, Data]) Datas() Datas { return b.buf[b.off:] }
+
+// Len 返回未读元素个数。
+func (b *Buffer[Datas, Data]) Len() int { return len(b.buf) - b.off }
+
+// Cap 返回底层切片总容量。
+func (b *Buffer[Datas, Data]) Cap() int { return cap(b.buf) }
+
+// Available 返回 buf 尾部尚未使用的容量（cap-len）。
+func (b *Buffer[Datas, Data]) Available() int { return cap(b.buf) - len(b.buf) }
+
+// AvailableBuffer 返回 len 为 0、指向 buf 空闲尾部的切片，供追加后立即 Write 使用（与 bytes.Buffer.AvailableBuffer 一致）。
+func (b *Buffer[Datas, Data]) AvailableBuffer() Datas { return b.buf[len(b.buf):] }
+
+// Truncate 保留未读的前 n 个元素，仍复用已分配空间；n 非法时 panic。
+func (b *Buffer[Datas, Data]) Truncate(n int) {
+	if n == 0 {
+		b.Reset()
+		return
 	}
-}
-
-func (lb *BoundedBuffer[Datas, Data]) Datas() Datas {
-	return lb.buffer
-}
-
-func (lb *BoundedBuffer[Datas, Data]) IsFull() bool {
-	return len(lb.buffer) >= lb.size
-}
-
-func (lb *BoundedBuffer[Datas, Data]) Write(datas Datas) (n int, err error) {
-	if len(datas) == 0 {
-		return 0, nil
+	if n < 0 || n > b.Len() {
+		panic("stl.Buffer: truncation out of range")
 	}
+	b.buf = b.buf[:b.off+n]
+}
 
-	if lb.size <= 0 {
-		return 0, bufio.ErrBufferFull
+// Reset 清空缓冲，保留底层数组供后续写入复用。
+func (b *Buffer[Datas, Data]) Reset() {
+	b.buf = b.buf[:0]
+	b.off = 0
+}
+
+func (b *Buffer[Datas, Data]) tryGrowByReslice(n int) (int, bool) {
+	if l := len(b.buf); n <= cap(b.buf)-l {
+		b.buf = b.buf[:l+n]
+		return l, true
 	}
+	return 0, false
+}
 
-	freeBytes := lb.size - len(lb.buffer)
-	if freeBytes <= 0 {
-		return 0, bufio.ErrBufferFull
+// grow 保证至少还能写入 n 个元素，返回新写入应开始的下标。
+func (b *Buffer[Datas, Data]) grow(n int) int {
+	m := b.Len()
+	if m == 0 && b.off != 0 {
+		b.Reset()
 	}
-
-	if n := len(datas); n <= freeBytes {
-		lb.buffer = append(lb.buffer, datas...)
-		return n, nil
+	if i, ok := b.tryGrowByReslice(n); ok {
+		return i
 	}
-
-	lb.buffer = append(lb.buffer, datas[:freeBytes]...)
-	return freeBytes, nil
-}
-
-func (lb *BoundedBuffer[Datas, Data]) TotalWritten() int64 {
-	return int64(len(lb.buffer))
-}
-
-func (lb *BoundedBuffer[Datas, Data]) IsTruncated() bool {
-	return false
-}
-
-func (lb *BoundedBuffer[Datas, Data]) Reset() {
-	lb.buffer = lb.buffer[:0]
-}
-
-type TruncatedBuffer[Datas ~[]Data, Data any] struct {
-	BoundedBuffer[Datas, Data]
-	totalWritten int64
-}
-
-func NewTruncatedBuffer[Datas ~[]Data, Data any](size int) *TruncatedBuffer[Datas, Data] {
-	return &TruncatedBuffer[Datas, Data]{
-		BoundedBuffer: *NewBoundedBuffer[Datas, Data](size),
-		totalWritten:  0,
+	if b.buf == nil && n <= smallBufferSize {
+		b.buf = make(Datas, n, smallBufferSize)
+		return 0
 	}
+	c := cap(b.buf)
+	if n <= c/2-m {
+		copy(b.buf, b.buf[b.off:])
+	} else if c > maxInt-c-n {
+		panic(ErrTooLarge)
+	} else {
+		b.buf = bufferGrowSlice(b.buf[b.off:], b.off+n)
+	}
+	b.off = 0
+	b.buf = b.buf[:m+n]
+	return m
 }
 
-func (tb *TruncatedBuffer[Datas, Data]) Write(datas Datas) (int, error) {
-	totalWritten := 0
-	var err error
+// Grow 将容量至少再扩大 n；n 为负时 panic。
+func (b *Buffer[Datas, Data]) Grow(n int) {
+	if n < 0 {
+		panic("stl.Buffer.Grow: negative count")
+	}
+	m := b.grow(n)
+	b.buf = b.buf[:m]
+}
 
-	for len(datas) > 0 {
-		var written int
-		written, err = tb.BoundedBuffer.Write(datas)
+// Write 追加 datas，必要时扩容；过大时 panic(ErrTooLarge)。
+func (b *Buffer[Datas, Data]) Write(datas Datas) (n int, err error) {
+	m, ok := b.tryGrowByReslice(len(datas))
+	if !ok {
+		m = b.grow(len(datas))
+	}
+	return copy(b.buf[m:], datas), nil
+}
 
-		totalWritten += written
-		datas = datas[written:]
-
-		if err == nil {
-			continue
-		} else if err == bufio.ErrBufferFull {
-			totalWritten += len(datas)
-			err = nil
-			break
-		} else {
-			break
+// Read 从缓冲读出数据到 p；无数据可读且 len(p)>0 时返回 io.EOF。
+func (b *Buffer[Datas, Data]) Read(p []Data) (n int, err error) {
+	if b.empty() {
+		b.Reset()
+		if len(p) == 0 {
+			return 0, nil
 		}
+		return 0, io.EOF
 	}
-
-	tb.totalWritten += int64(totalWritten)
-
-	return totalWritten, err
-}
-
-func (tb *TruncatedBuffer[Datas, Data]) TotalWritten() int64 {
-	return tb.totalWritten
-}
-
-func (tb *TruncatedBuffer[Datas, Data]) IsTruncated() bool {
-	return tb.totalWritten > int64(tb.size)
-}
-
-func (tb *TruncatedBuffer[Datas, Data]) Reset() {
-	tb.totalWritten = 0
-	tb.BoundedBuffer.Reset()
-}
-
-// CircularBuffer 循环缓冲区，实现 io.Writer 接口
-// 保留最后 size 字节的数据，新数据会覆盖旧数据
-// 采用动态扩容策略，按写入量逐步增长，避免一次性分配大内存
-type RingBuffer[Datas ~[]Data, Data any] struct {
-	BoundedBuffer[Datas, Data]
-	writePos     int
-	totalWritten int64
-}
-
-// NewRingBuffer 创建新的循环缓冲区
-// 缓冲区采用动态扩容策略，初始为空，随写入量增长
-func NewRingBuffer[Datas ~[]Data, Data any](size int) *RingBuffer[Datas, Data] {
-	if size <= 0 {
-		size = 0
-	}
-	return &RingBuffer[Datas, Data]{
-		BoundedBuffer: *NewBoundedBuffer[Datas, Data](size),
-		writePos:      0,
-		totalWritten:  0,
-	}
-}
-
-func (rb *RingBuffer[Datas, Data]) Write(datas Datas) (n int, err error) {
-	if len(datas) == 0 {
-		return 0, nil
-	}
-
-	if rb.size <= 0 {
-		return len(datas), nil
-	}
-
-	if rb.BoundedBuffer.IsFull() {
-		return rb.writeByRing(datas)
-	}
-
-	written, err := rb.BoundedBuffer.Write(datas)
-	rb.totalWritten += int64(written)
-	rb.writePos = (rb.writePos + written) % rb.size
-	if err != nil {
-		return written, err
-	}
-
-	left := len(datas) - written
-	if left <= 0 {
-		return written, nil
-	}
-
-	written2, err := rb.writeByRing(datas[written:])
-	return written + written2, err
-}
-
-func (rb *RingBuffer[Datas, Data]) writeByRing(datas Datas) (int, error) {
-	n := len(datas)
-	rb.totalWritten += int64(n)
-
-	// 如果数据长度大于等于缓冲区大小，整个缓冲区都被覆盖
-	if n >= rb.size {
-		// 先计算数据写入后，新的写入位置
-		rb.writePos = (rb.writePos + n) % rb.size
-
-		// 将数据末尾部分直接拷贝进缓冲区
-		copy(rb.buffer[rb.writePos:], datas[n-rb.size:n-rb.writePos])
-		copy(rb.buffer[:rb.writePos], datas[n-rb.writePos:])
-
-		return n, nil
-	}
-
-	// 如果数据长度小于缓冲区大小，直接将数据拷贝进缓冲区
-	for len(datas) > 0 {
-		written := copy(rb.buffer[rb.writePos:], datas)
-		if written == 0 {
-			panic("writeByCircular: written == 0")
-		}
-
-		rb.writePos = (rb.writePos + written) % rb.size
-		datas = datas[written:]
-	}
-
+	n = copy(p, []Data(b.buf[b.off:]))
+	b.off += n
 	return n, nil
 }
 
-// Datas 获取缓冲区中的数据（最后写入的字节）
-func (rb *RingBuffer[Datas, Data]) Datas() Datas {
-	if rb.size == 0 || rb.totalWritten == 0 {
-		return nil
+// Next 返回接下来至多 n 个未读元素组成的切片，并推进读指针（与 bytes.Buffer.Next 一致）。
+func (b *Buffer[Datas, Data]) Next(n int) Datas {
+	m := b.Len()
+	if n > m {
+		n = m
 	}
-
-	// 如果缓冲区还未分配，返回 nil
-	if rb.buffer == nil {
-		return nil
-	}
-
-	// 如果写入的数据少于缓冲区大小，返回实际数据
-	if rb.totalWritten < int64(rb.size) {
-		result := make(Datas, rb.writePos)
-		copy(result, rb.buffer[:rb.writePos])
-		return result
-	}
-
-	// 如果写入的数据超过缓冲区大小，返回最后 size 字节
-	// 此时 buffer 的容量应该是 size（循环模式）
-	// writePos 指向下一个写入位置，所以最后写入的数据是从 writePos 往前 size 字节
-	result := make(Datas, rb.size)
-	// 从 writePos 开始复制到 buffer 末尾
-	copy(result, rb.buffer[rb.writePos:])
-	// 从 buffer 开头复制到 writePos
-	copy(result[rb.size-rb.writePos:], rb.buffer[:rb.writePos])
-
-	return result
+	data := b.buf[b.off : b.off+n]
+	b.off += n
+	return data
 }
 
-// TotalWritten 返回总共写入的字节数
-func (rb *RingBuffer[Datas, Data]) TotalWritten() int64 {
-	return rb.totalWritten
+// ReadFrom 从 r 读到 EOF 并追加到缓冲；返回值 n 为读到的元素个数（与 io.ReaderFrom 一致用 int64）。
+func (b *Buffer[Datas, Data]) ReadFrom(r Reader[Datas, Data]) (n int64, err error) {
+	for {
+		i := b.grow(MinRead)
+		b.buf = b.buf[:i]
+		tail := []Data(b.buf[i:cap(b.buf)])
+		m, e := r.Read(tail)
+		if m < 0 {
+			panic(errNegativeRead)
+		}
+		b.buf = b.buf[:i+m]
+		n += int64(m)
+		if e == io.EOF {
+			return n, nil
+		}
+		if e != nil {
+			return n, e
+		}
+	}
 }
 
-// IsTruncated 返回是否被截断（写入的数据超过缓冲区大小）
-func (rb *RingBuffer[Datas, Data]) IsTruncated() bool {
-	return rb.totalWritten > int64(rb.size)
+// ReadnFrom 从 r 最多读取 n 个元素并追加到缓冲；用于 Peek 等场景。
+func (b *Buffer[Datas, Data]) ReadnFrom(r Reader[Datas, Data], n int) (read int, err error) {
+	if n <= 0 {
+		return 0, nil
+	}
+	for read < n {
+		need := n - read
+		growN := MinRead
+		if need > growN {
+			growN = need
+		}
+		i := b.grow(growN)
+		b.buf = b.buf[:i]
+		tail := []Data(b.buf[i:cap(b.buf)])
+		if len(tail) > need {
+			tail = tail[:need]
+		}
+		m, e := r.Read(tail)
+		if m < 0 {
+			panic(errNegativeRead)
+		}
+		b.buf = b.buf[:i+m]
+		read += m
+		if e == io.EOF {
+			return read, nil
+		}
+		if e != nil {
+			return read, e
+		}
+		if m == 0 {
+			return read, errors.New("stl.Buffer.ReadnFrom: Read returned 0 with nil error")
+		}
+	}
+	return read, nil
 }
 
-// Reset 重置缓冲区
-func (rb *RingBuffer[Datas, Data]) Reset() {
-	rb.writePos = 0
-	rb.totalWritten = 0
+// NewBuffer 创建空缓冲。
+func NewBuffer[Datas ~[]Data, Data any]() *Buffer[Datas, Data] {
+	return &Buffer[Datas, Data]{}
+}
 
-	// 可以选择释放缓冲区以节省内存，但为了性能通常保留
-	// rb.buffer = nil
+// NewBufferFrom 使用已有切片作为初始内容（取得 buf 所有权，调用后勿再使用传入的 buf）。
+func NewBufferFrom[Datas ~[]Data, Data any](buf Datas) *Buffer[Datas, Data] {
+	return &Buffer[Datas, Data]{buf: buf}
+}
+
+func bufferGrowSlice[Datas ~[]Data, Data any](b Datas, n int) Datas {
+	defer func() {
+		if recover() != nil {
+			panic(ErrTooLarge)
+		}
+	}()
+	c := len(b) + n
+	if c < 2*cap(b) {
+		c = 2 * cap(b)
+	}
+	b2 := make(Datas, c)
+	i := copy(b2, b)
+	return b2[:i]
 }
