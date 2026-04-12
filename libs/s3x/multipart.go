@@ -78,6 +78,7 @@ func (uploader *MultipartUploader) UploadResourceSegments(reader SegmentableReso
 		if err != nil {
 			return err
 		}
+		defer segment.Close()
 
 		if err = uploader.UploadPart(func(input *s3.UploadPartInput) {
 			input.Body = segment
