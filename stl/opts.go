@@ -2,6 +2,10 @@ package stl
 
 type Option[Data any] func(Data)
 
+func NewOption[Data any](opt func(Data)) Option[Data] {
+	return opt
+}
+
 func (opt Option[Data]) Apply(data Data) Data {
 	if opt != nil {
 		opt(data)
