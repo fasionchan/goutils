@@ -10,7 +10,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.10.0
 	github.com/yuin/goldmark v1.7.16
-	go.mongodb.org/mongo-driver v1.17.9
+	go.mongodb.org/mongo-driver v1.11.4
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20221114191408-850992195362
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df

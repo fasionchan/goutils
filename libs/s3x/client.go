@@ -49,6 +49,17 @@ func NewConfigFromEnvPro(
 	}
 }
 
+func NewConfig(
+	accessKey,
+	secretKey,
+	region string,
+) aws.Config {
+	return aws.Config{
+		Region:      region,
+		Credentials: NewStaticCredentialsProvider(accessKey, secretKey),
+	}
+}
+
 type Client struct {
 	*s3.Client
 }
@@ -76,4 +87,16 @@ func (provider *StaticCredentialProvider) Retrieve(ctx context.Context) (aws.Cre
 		AccessKeyID:     provider.AccessKey,
 		SecretAccessKey: provider.SecretKey,
 	}, nil
+}
+
+type BucketClient struct {
+	*Client
+	Bucket string
+}
+
+func NewBucketClient(cfg aws.Config, bucket string, opts ...func(*s3.Options)) *BucketClient {
+	return &BucketClient{
+		Client: NewClient(cfg, opts...),
+		Bucket: bucket,
+	}
 }
