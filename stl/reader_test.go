@@ -1,6 +1,7 @@
 package stl
 
 import (
+	"errors"
 	"io"
 	"testing"
 
@@ -210,4 +211,131 @@ func (r *sliceIntReader) Read(p []int) (int, error) {
 	n := copy(p, r.vals)
 	r.vals = r.vals[n:]
 	return n, nil
+}
+
+// readOneThenErr 第一次 Read 返回 1 字节与错误，用于触发 ResumeReader 续读。
+type readOneThenErr struct {
+	b   []byte
+	err error
+}
+
+func (r *readOneThenErr) Read(p []byte) (int, error) {
+	if len(r.b) == 0 {
+		return 0, io.EOF
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	p[0] = r.b[0]
+	r.b = r.b[1:]
+	if r.err != nil {
+		return 1, r.err
+	}
+	return 1, nil
+}
+
+type closeSpyReader struct {
+	*sliceReader
+	closed *int
+}
+
+func (s *closeSpyReader) Close() error {
+	if s.closed != nil {
+		*s.closed++
+	}
+	return nil
+}
+
+// immediateErrCloser 首次 Read 即返回错误，用于验证 ResumeReader 会 Close。
+type immediateErrCloser struct {
+	err    error
+	closed *int
+}
+
+func (i *immediateErrCloser) Read(p []byte) (int, error) {
+	return 0, i.err
+}
+
+func (i *immediateErrCloser) Close() error {
+	if i.closed != nil {
+		*i.closed++
+	}
+	return nil
+}
+
+func TestResumeReader_recoverSameReadCall(t *testing.T) {
+	t.Parallel()
+	full := []byte("hello")
+	errBoom := errors.New("boom")
+	var opens int
+	factory := func(offset int) (Reader[[]byte, byte], error) {
+		opens++
+		if opens == 1 {
+			require.Equal(t, 0, offset)
+			return &readOneThenErr{b: full, err: errBoom}, nil
+		}
+		require.Equal(t, 1, offset)
+		return &sliceReader{b: append([]byte(nil), full[1:]...)}, nil
+	}
+	rr := NewResumeReader[[]byte, byte](factory, 2)
+	out, err := readAllByteReader(rr)
+	require.NoError(t, err)
+	require.Equal(t, full, out)
+	require.Equal(t, 2, opens)
+}
+
+func TestResumeReader_closeOnRecoverableError(t *testing.T) {
+	t.Parallel()
+	errBoom := errors.New("boom")
+	var closes int
+	var opens int
+	factory := func(offset int) (Reader[[]byte, byte], error) {
+		opens++
+		if opens == 1 {
+			require.Equal(t, 0, offset)
+			return &immediateErrCloser{err: errBoom, closed: &closes}, nil
+		}
+		require.Equal(t, 0, offset)
+		return &sliceReader{b: []byte("ok")}, nil
+	}
+	rr := NewResumeReader[[]byte, byte](factory, 2)
+	out, err := readAllByteReader(rr)
+	require.NoError(t, err)
+	require.Equal(t, []byte("ok"), out)
+	require.Equal(t, 1, closes)
+	require.Equal(t, 2, opens)
+}
+
+func TestResumeReader_closeOnEOF(t *testing.T) {
+	t.Parallel()
+	var closes int
+	rr := NewResumeReader[[]byte, byte](func(offset int) (Reader[[]byte, byte], error) {
+		return &closeSpyReader{
+			sliceReader: &sliceReader{b: []byte("z")},
+			closed:      &closes,
+		}, nil
+	}, 2)
+	out, err := readAllByteReader(rr)
+	require.NoError(t, err)
+	require.Equal(t, []byte("z"), out)
+	require.Equal(t, 1, closes)
+}
+
+func TestResumeReader_factoryError(t *testing.T) {
+	t.Parallel()
+	errOpen := errors.New("open failed")
+	rr := NewResumeReader[[]byte, byte](func(offset int) (Reader[[]byte, byte], error) {
+		return nil, errOpen
+	}, 2)
+	_, err := rr.Read(make([]byte, 1))
+	require.ErrorIs(t, err, errOpen)
+}
+
+func TestResumeReader_factoryNilReader(t *testing.T) {
+	t.Parallel()
+	rr := NewResumeReader[[]byte, byte](func(offset int) (Reader[[]byte, byte], error) {
+		return nil, nil
+	}, 2)
+	_, err := rr.Read(make([]byte, 1))
+	require.Error(t, err)
 }

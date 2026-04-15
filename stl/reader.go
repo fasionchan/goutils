@@ -1,6 +1,23 @@
 package stl
 
-import "io"
+import (
+	"errors"
+	"io"
+)
+
+// closer 与 io.Closer 等价，避免强制工厂返回类型带 Close。
+type closer interface {
+	Close() error
+}
+
+func closeReaderIfCloser[Datas ~[]Data, Data any](r Reader[Datas, Data]) {
+	if r == nil {
+		return
+	}
+	if c, ok := any(r).(closer); ok {
+		_ = c.Close()
+	}
+}
 
 type Reader[Datas ~[]Data, Data any] interface {
 	Read(p []Data) (n int, err error)
@@ -92,4 +109,73 @@ func (r *PeekReader[Datas, Data]) Len() int {
 		return 0
 	}
 	return r.buffer.Len()
+}
+
+// ResumeReader 出错续读：底层 Read 返回非 nil 且非 io.EOF 时，若底层实现 closer 则先关闭，
+// 再以当前已成功交付给调用方的元素个数为 offset 调用 factory 创建新 Reader，并继续本次 Read（填满 p）。
+// offset 语义：从逻辑流起点算起，此前各次 Read 已累计返回给调用方的 Data 元素个数。
+type ResumeReader[Datas ~[]Data, Data any] struct {
+	factory      func(offset int) (Reader[Datas, Data], error)
+	cur          Reader[Datas, Data]
+	read         int // 已累计成功 Read 出的元素个数，作为下次 factory 的 offset
+	triesPerRead int
+}
+
+// NewResumeReader 使用 factory 延迟打开底层；factory(offset) 应返回从逻辑流第 offset 个元素起的 Reader。
+func NewResumeReader[Datas ~[]Data, Data any](factory func(offset int) (Reader[Datas, Data], error), triesPerRead int) *ResumeReader[Datas, Data] {
+	if triesPerRead <= 0 {
+		triesPerRead = 1
+	}
+	return &ResumeReader[Datas, Data]{factory: factory, triesPerRead: triesPerRead}
+}
+
+func (rr *ResumeReader[Datas, Data]) openCurrent() error {
+	r, err := rr.factory(rr.read)
+	if err != nil {
+		return err
+	}
+
+	if r == nil {
+		return errors.New("stl: ResumeReader factory returned nil reader")
+	}
+
+	rr.cur = r
+
+	return nil
+}
+
+// Read 实现 Reader；底层非 EOF 错误时会关闭并换 reader 后重试，直到成功、EOF 或 factory 失败。
+func (rr *ResumeReader[Datas, Data]) Read(p []Data) (total int, err error) {
+	if len(p) == 0 {
+		return
+	}
+
+	for tries := rr.triesPerRead; tries > 0 && len(p) > 0; tries-- {
+		if rr.cur == nil {
+			if err = rr.openCurrent(); err != nil {
+				return
+			}
+		}
+
+		var n int
+		n, err = rr.cur.Read(p)
+		if n > 0 {
+			rr.read += n
+			p = p[n:]
+			total += n
+		}
+
+		if err == nil {
+			return
+		}
+
+		closeReaderIfCloser[Datas, Data](rr.cur)
+		rr.cur = nil
+
+		if err == io.EOF {
+			return
+		}
+	}
+
+	return total, nil
 }
