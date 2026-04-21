@@ -1,13 +1,16 @@
 package mimex
 
 import (
+	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
 	"github.com/fasionchan/goutils/baseutils"
+	"gotest.tools/assert"
 )
 
 type PeekContentTypeTestCase struct {
@@ -321,4 +324,19 @@ func AssertMimeType(t *testing.T, actual *MimeType, expected *MimeType) {
 	if actual.String() != expected.String() {
 		t.Fatalf("expected string `%s` but got `%s`", expected.String(), actual.String())
 	}
+}
+
+func TestMimeType(t *testing.T) {
+	for _, ext := range []string{
+		".zip",
+		".rar",
+		".7z",
+		".tar",
+		".gz",
+		".bz2",
+		".xz",
+	} {
+		fmt.Println(mime.TypeByExtension(ext))
+	}
+	assert.Assert(t, false)
 }

@@ -85,9 +85,10 @@ func ParseConfigFromUrl(url_ string) (*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("S3BlockSizeParseFailed, err: %w", err)
 		}
-		if blockSize <= MinS3BlockSize {
-			blockSize = MinS3BlockSize
-		}
+	}
+
+	if blockSize < MinS3BlockSize {
+		blockSize = MinS3BlockSize
 	}
 
 	acl := query.Get(S3QueryNameAcl)
