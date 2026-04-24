@@ -26,6 +26,14 @@ type StaticResourceInfo struct {
 	totalLen           int64
 }
 
+func NewStaticResourceInfo(contentType, contentDisposition string, totalLen int64) *StaticResourceInfo {
+	return &StaticResourceInfo{
+		contentType: contentType,
+		contentDisposition: contentDisposition,
+		totalLen: totalLen,
+	}
+}
+
 func (info *StaticResourceInfo) GetContentType() string {
 	return info.contentType
 }
@@ -53,6 +61,14 @@ type StaticResourceSegmentInfo struct {
 	offset  int64
 	len     int64
 	hasNext bool
+}
+
+func NewStaticResourceSegmentInfo(offset, len int64, hasNext bool) *StaticResourceSegmentInfo {
+	return &StaticResourceSegmentInfo{
+		offset: offset,
+		len: len,
+		hasNext: hasNext,
+	}
 }
 
 func (info *StaticResourceSegmentInfo) GetOffset() int64 {
@@ -264,4 +280,9 @@ func (client *Client) StoreSegmentableResource(ctx context.Context, reader Segme
 	// 完成分片上传
 	_, err = uploader.Complete(ctx)
 	return nil, err
+}
+
+func (client *BucketClient) StoreSegmentableResource(ctx context.Context, reader SegmentableResourceReader, input *s3.CreateMultipartUploadInput, opts ...func(*s3.CreateMultipartUploadInput)) (any, error) {
+	input.Bucket = aws.String(client.Bucket)
+	return client.Client.StoreSegmentableResource(ctx, reader, input, opts...)
 }

@@ -1,13 +1,14 @@
-/*
- * Author: fasion
- * Created time: 2023-09-21 11:14:51
- * Last Modified by: fasion
- * Last Modified time: 2023-09-21 11:33:21
- */
-
 package stl
 
 import "golang.org/x/exp/constraints"
+
+func AlignFloor[Int constraints.Integer](value Int, base Int) Int {
+	return value / base * base
+}
+
+func AlignCeil[Int constraints.Integer](value Int, base Int) Int {
+	return (value + base - 1) / base * base
+}
 
 func Max[Datas ~[]Data, Data constraints.Ordered](datas Datas, _default Data) (result Data) {
 	if len(datas) == 0 {

@@ -7,7 +7,11 @@
 
 package types
 
-import "github.com/fasionchan/goutils/stl"
+import (
+	"fmt"
+
+	"github.com/fasionchan/goutils/stl"
+)
 
 type BytesBoundedBuffer = stl.BoundedBuffer[[]byte, byte]
 
@@ -25,4 +29,27 @@ type BytesRingBuffer = stl.RingBuffer[[]byte, byte]
 
 func NewBytesRingBuffer(size int) *BytesRingBuffer {
 	return stl.NewRingBuffer[[]byte, byte](size)
+}
+
+type ByteSize int
+
+func (b ByteSize) Native() int {
+	return int(b)
+}
+func (b ByteSize) String() string {
+	const unit = 1024
+	if b < 1 {
+		return "0B"
+	}
+
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+
+	value := float64(b)
+	i := 0
+	for value >= unit && i < len(units)-1 {
+		value /= unit
+		i++
+	}
+
+	return fmt.Sprintf("%.2f%s", value, units[i])
 }

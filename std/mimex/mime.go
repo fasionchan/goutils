@@ -13,6 +13,10 @@ import (
 
 // 智能探测 ContentType，优先根据 ContentType 和 ContentDisposition 探测，内容探测为兜底
 func PeekContentTypeSmart(contentType string, contentDisposition string, contentReader io.Reader, peekSize int) (string, io.Reader, error) {
+	if peekSize <= 0 {
+		peekSize = 8 << 10
+	}
+
 	if contentType != "" {
 		mimeType, err := ParseMimeType(contentType)
 		if err == nil && mimeType.GetType() != "application/octet-stream" {
@@ -70,6 +74,36 @@ func PeekContentType(contentType string, contentDisposition string, contentReade
 	return
 }
 
+// func DetectContentType(contentType string, contentDisposition string, contentHead []byte) (*MimeType, error) {
+// 	if contentType != "" {
+// 		mimeType, err := ParseMimeType(contentType)
+// 		if err == nil && mimeType.GetType() != "application/octet-stream" {
+// 			return mimeType, nil
+// 		}
+// 	}
+
+// 	if contentDisposition != "" {
+// 		mimeType, err := ParseDispositionMimeType(contentDisposition)
+// 		if err == nil && mimeType.GetType() != "application/octet-stream" {
+// 			return mimeType, nil
+// 		}
+// 	}
+
+// 	ftype, err := filetype.Match(contentHead)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if ftype == filetype.Unknown {
+// 		return nil, errors.New("unknown file type")
+// 	}
+
+// 	return &MimeType{
+// 		Type:    ftype.MIME.Value,
+// 		TopType: ftype.MIME.Type,
+// 		SubType: ftype.MIME.Subtype,
+// 	}, nil
+// }
+
 func ParseDispositionMimeType(contentDisposition string) (*MimeType, error) {
 	if contentDisposition == "" {
 		return nil, errors.New("content disposition is empty")
@@ -90,7 +124,7 @@ func ParseDispositionMimeType(contentDisposition string) (*MimeType, error) {
 		return nil, errors.New("content disposition extension is empty")
 	}
 
-	return ParseMimeType(mime.TypeByExtension(ext))
+	return ParseMimeTypeByExtension(ext)
 }
 
 type MimeType struct {
@@ -98,6 +132,16 @@ type MimeType struct {
 	TopType string
 	SubType string
 	Params  map[string]string
+	extension string
+}
+
+func ParseMimeTypeByExtension(ext string) (*MimeType, error) {
+	mt, err := ParseMimeType(mime.TypeByExtension(ext))
+	if err != nil {
+		return nil, err
+	}
+	mt.extension = ext
+	return mt, nil
 }
 
 func ParseMimeType(mimeType string) (*MimeType, error) {
@@ -119,6 +163,10 @@ func ParseMimeType(mimeType string) (*MimeType, error) {
 		SubType: subType,
 		Params:  params,
 	}, nil
+}
+
+func (mt *MimeType) GetExtension() string {
+	return mt.extension
 }
 
 func (mt *MimeType) GetType() string {

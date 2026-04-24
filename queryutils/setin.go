@@ -46,6 +46,21 @@ type SetinTester[Datas ~[]DataPtr, DataPtr ~*Data, Data any] interface {
 
 type SetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] func(ctx context.Context, datas Datas) error
 
+func MultiSetinHandler[
+	Datas ~[]DataPtr,
+	DataPtr ~*Data,
+	Data any,
+](handlers ...SetinHandler[Datas, DataPtr, Data]) SetinHandler[Datas, DataPtr, Data] {
+	return func(ctx context.Context, datas Datas) error {
+		for _, handler := range handlers {
+			if err := handler(ctx, datas); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
 type NamedSetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any] struct {
 	name    string
 	handler SetinHandler[Datas, DataPtr, Data]
