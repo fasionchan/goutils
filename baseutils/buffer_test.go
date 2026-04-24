@@ -16,7 +16,7 @@ import (
 )
 
 func TestNewSpillBuffer(t *testing.T) {
-	sb := NewSpillBuffer()
+	sb := NewSpillBuffer(0, false)
 	if sb == nil {
 		t.Fatal("NewSpillBuffer() returned nil")
 	}
@@ -32,7 +32,7 @@ func TestNewSpillBuffer(t *testing.T) {
 }
 
 func TestSpillBuffer_WriteRead_SmallData(t *testing.T) {
-	sb := NewSpillBuffer()
+	sb := NewSpillBuffer(0, false)
 	defer sb.Close()
 
 	const data = "hello hybrid file"
@@ -61,7 +61,7 @@ func TestSpillBuffer_WriteRead_SmallData(t *testing.T) {
 
 func TestSpillBuffer_WriteRead_OverWaterMark(t *testing.T) {
 	// 使用较小的水位线便于测试
-	sb := NewSpillBuffer().WithMemoryWaterMark(128)
+	sb := NewSpillBuffer(128, false)
 	defer sb.Close()
 
 	data := strings.Repeat("x", 256)
@@ -90,7 +90,7 @@ func TestSpillBuffer_WriteRead_OverWaterMark(t *testing.T) {
 
 func TestSpillBuffer_WriteRead_ExactWaterMark(t *testing.T) {
 	waterMark := 64
-	sb := NewSpillBuffer().WithMemoryWaterMark(waterMark)
+	sb := NewSpillBuffer(waterMark, false)
 	defer sb.Close()
 
 	// 恰好等于水位线，不应切换（> 才切换）
@@ -123,7 +123,7 @@ func TestSpillBuffer_WriteRead_ExactWaterMark(t *testing.T) {
 }
 
 func TestSpillBuffer_Read_Empty(t *testing.T) {
-	sb := NewSpillBuffer()
+	sb := NewSpillBuffer(0, false)
 	defer sb.Close()
 
 	buf := make([]byte, 8)
@@ -137,7 +137,7 @@ func TestSpillBuffer_Read_Empty(t *testing.T) {
 }
 
 func TestSpillBuffer_WriteThenRead_PartialReads(t *testing.T) {
-	sb := NewSpillBuffer()
+	sb := NewSpillBuffer(0, false)
 	defer sb.Close()
 
 	const data = "abcdefghij"
@@ -167,7 +167,7 @@ func TestSpillBuffer_WriteThenRead_PartialReads(t *testing.T) {
 
 func TestSpillBuffer_WithMemoryWaterMark(t *testing.T) {
 	waterMark := 32
-	sb := NewSpillBuffer().WithMemoryWaterMark(waterMark)
+	sb := NewSpillBuffer(waterMark, false)
 	defer sb.Close()
 
 	if sb.memoryWaterMark != waterMark {
@@ -188,7 +188,7 @@ func TestSpillBuffer_WithMemoryWaterMark(t *testing.T) {
 }
 
 func TestSpillBuffer_WithMutex(t *testing.T) {
-	sb := NewSpillBuffer().WithMutex().WithMemoryWaterMark(256)
+	sb := NewSpillBuffer(256, false)
 	defer sb.Close()
 
 	if sb.mutex == nil {
@@ -214,7 +214,7 @@ func TestSpillBuffer_WithMutex(t *testing.T) {
 }
 
 func TestSpillBuffer_Close_Idempotent(t *testing.T) {
-	sb := NewSpillBuffer()
+	sb := NewSpillBuffer(0, false)
 	_, _ = sb.Write([]byte("data"))
 
 	if err := sb.Close(); err != nil {
@@ -225,7 +225,7 @@ func TestSpillBuffer_Close_Idempotent(t *testing.T) {
 }
 
 func TestSpillBuffer_Close_AfterSwitchToFile(t *testing.T) {
-	sb := NewSpillBuffer().WithMemoryWaterMark(8)
+	sb := NewSpillBuffer(8, false)
 	_, _ = sb.Write([]byte("enough to switch"))
 
 	if err := sb.Close(); err != nil {
@@ -238,7 +238,7 @@ func TestSpillBuffer_Close_AfterSwitchToFile(t *testing.T) {
 }
 
 func TestSpillBuffer_Close_RemovesTempFileFromDisk(t *testing.T) {
-	sb := NewSpillBuffer().WithMemoryWaterMark(32)
+	sb := NewSpillBuffer(32, false)
 	_, _ = sb.Write([]byte(strings.Repeat("x", 64)))
 
 	// 已溢出到文件，拿到临时文件路径（同包可访问 sb.file）
@@ -262,7 +262,7 @@ func TestSpillBuffer_Close_RemovesTempFileFromDisk(t *testing.T) {
 }
 
 func TestSpillBuffer_WriteAfterSwitch(t *testing.T) {
-	sb := NewSpillBuffer().WithMemoryWaterMark(32)
+	sb := NewSpillBuffer(32, false)
 	defer sb.Close()
 
 	// 触发切换

@@ -8,13 +8,33 @@
 package logging
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gotest.tools/assert"
 )
+
+func TestLogLevel(t *testing.T) {
+	level := zapcore.ErrorLevel
+	jsonData, err := json.Marshal(level)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(string(jsonData))
+
+	var level2 zapcore.Level
+	if err := json.Unmarshal(jsonData, &level2); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(level2)
+
+	assert.Equal(t, level, level2)
+	assert.Assert(t, false)
+}
 
 func TestLogging(t *testing.T) {
 	GetLogger().Debug("debug should not shown")

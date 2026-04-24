@@ -1,10 +1,3 @@
-/*
- * Author: fasion
- * Created time: 2023-03-24 11:59:31
- * Last Modified by: fasion
- * Last Modified time: 2025-08-21 10:58:21
- */
-
 package baseutils
 
 import (
@@ -221,6 +214,24 @@ func (t *IntraDayTime) UnmarshalJSON(data []byte) error {
 	*t = parsed
 
 	return nil
+}
+
+type IntraDayTimes []IntraDayTime
+
+func (ts IntraDayTimes) Empty() bool {
+	return ts.Len() == 0
+}
+
+func (ts IntraDayTimes) Len() int {
+	return len(ts)
+}
+
+func (ts IntraDayTimes) Sort(less func(a, b IntraDayTime) bool) IntraDayTimes {
+	return stl.Sort(ts, less)
+}
+
+func (ts IntraDayTimes) SortAsc() IntraDayTimes {
+	return ts.Sort(func(a, b IntraDayTime) bool { return a < b })
 }
 
 func NewTimes(times ...time.Time) []time.Time {
