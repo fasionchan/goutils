@@ -3,6 +3,7 @@ package stl
 import (
 	"errors"
 	"io"
+	"iter"
 )
 
 // closer 与 io.Closer 等价，避免强制工厂返回类型带 Close。
@@ -21,6 +22,75 @@ func closeReaderIfCloser[Datas ~[]Data, Data any](r Reader[Datas, Data]) {
 
 type Reader[Datas ~[]Data, Data any] interface {
 	Read(p []Data) (n int, err error)
+}
+
+func ReaderFromSeq[Datas ~[]Data, Data any](seq iter.Seq[Data]) Reader[Datas, Data] {
+	return SeqReader[Datas, Data](seq)
+}
+
+type SeqReader[Datas ~[]Data, Data any] iter.Seq[Data]
+
+func (r SeqReader[Datas, Data]) Read(p []Data) (n int, err error) {
+	if len(p) == 0 {
+		return
+	}
+
+	for data := range r {
+		p[n] = data
+		n++
+		if n >= len(p) {
+			return
+		}
+	}
+
+	err = io.EOF
+	return
+}
+
+func SeqFromReader[Datas ~[]Data, Data any](r Reader[Datas, Data]) iter.Seq[Data] {
+	return func(yield func(Data) bool) {
+		for {
+			data := [1]Data{}
+			n, err := r.Read(data[:])
+			if n > 0 {
+				if !yield(data[0]) {
+					return
+				}
+			}
+
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				return
+			}
+		}
+	}
+}
+
+func SeqDataErrorFromReader[Datas ~[]Data, Data any](r Reader[Datas, Data]) iter.Seq2[Data, error] {
+	return func(yield func(Data, error) bool) {
+		for {
+			buf := [1]Data{}
+			n, err := r.Read(buf[:])
+
+			var data Data
+			if n > 0 {
+				data = buf[0]
+			}
+
+			if !yield(data, err) {
+				return
+			}
+
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				return
+			}
+		}
+	}
 }
 
 type multiReader[Datas ~[]Data, Data any] struct {

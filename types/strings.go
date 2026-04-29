@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-19 17:56:20
  * Last Modified by: fasion
- * Last Modified time: 2025-12-19 15:15:09
+ * Last Modified time: 2026-04-26 12:57:48
  */
 
 package types
@@ -278,8 +278,16 @@ func (s CommaSeparatedValueRecord) Native() string {
 	return string(s)
 }
 
+func (s CommaSeparatedValueRecord) Read() (Strings, error) {
+	return s.Reader().Read()
+}
+
+func (s CommaSeparatedValueRecord) Reader() *csv.Reader {
+	return csv.NewReader(strings.NewReader(string(s)))
+}
+
 func (s CommaSeparatedValueRecord) Values() Strings {
-	values, _ := csv.NewReader(strings.NewReader(string(s))).Read()
+	values, _ := s.Read()
 	return values
 }
 
@@ -296,7 +304,7 @@ func (mapping StringsMappingByString) KeyValuePairs() KeyStringsPairs[string] {
 type StringsMapping[Key comparable] stl.Mapping[Key, Strings]
 
 func (mapping StringsMapping[Key]) KeyPairs() stl.KeyValuePairs[Key, Strings] {
-	return mapping.KeyPairs()
+	return stl.MapKeyValuePairs(mapping)
 }
 
 type KeyStringPair[Key any] stl.KeyValuePair[Key, Strings]

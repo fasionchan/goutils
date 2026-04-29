@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2026-01-25 23:37:47
  * Last Modified by: fasion
- * Last Modified time: 2026-01-25 23:37:55
+ * Last Modified time: 2026-04-26 17:54:22
  */
 
 package types
@@ -747,5 +747,26 @@ func TestBytesTruncatedBuffer_TotalWritten(t *testing.T) {
 	buf.Reset()
 	if buf.TotalWritten() != 0 {
 		t.Errorf("重置后总写入数应该为0，实际: %d", buf.TotalWritten())
+	}
+}
+
+func TestByteSize_String(t *testing.T) {
+	tests := []struct {
+		bytes ByteSize
+		want  string
+	}{
+		{0, "0B"},
+		{1024, "1KB"},
+		{1024 * 1024, "1MB"},
+		{1024 * 1024 * 1024, "1GB"},
+		{1024 + 128, "1.12KB"},
+		{1024 + 256, "1.25KB"},
+		{1024 + 512, "1.5KB"},
+	}
+
+	for _, test := range tests {
+		if test.bytes.String() != test.want {
+			t.Errorf("ByteSize(%d).String() = %s, want %s", test.bytes, test.bytes.String(), test.want)
+		}
 	}
 }

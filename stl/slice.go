@@ -2,13 +2,14 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2026-03-21 14:07:00
+ * Last Modified time: 2026-04-29 21:25:43
  */
 
 package stl
 
 import (
 	"io"
+	"iter"
 	"math/rand"
 	"sort"
 	"time"
@@ -892,6 +893,36 @@ func (slice Slice[Data]) ForEach(f func(Data)) {
 
 func (slice Slice[Data]) ForEachPro(f func(int, Data, Slice[Data])) {
 	ForEachPro(slice, f)
+}
+
+func (slice Slice[Data]) IndexSeq() iter.Seq[int] {
+	return func(yield func(int) bool) {
+		for i := range slice {
+			if !yield(i) {
+				return
+			}
+		}
+	}
+}
+
+func (slice Slice[Data]) DataSeq() iter.Seq[Data] {
+	return func(yield func(Data) bool) {
+		for _, data := range slice {
+			if !yield(data) {
+				return
+			}
+		}
+	}
+}
+
+func (slice Slice[Data]) IndexDataSeq() iter.Seq2[int, Data] {
+	return func(yield func(int, Data) bool) {
+		for i, data := range slice {
+			if !yield(i, data) {
+				return
+			}
+		}
+	}
 }
 
 func (slice Slice[Data]) Map(f func(Data) Data) Slice[Data] {
