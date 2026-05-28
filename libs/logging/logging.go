@@ -276,9 +276,19 @@ var GetLogger = defaultLoggerContainer.GetLogger
 var SetLoggerLevel = defaultLoggerContainer.SetLevel
 
 func WarnDeprecatedCode(scene string) {
-	GetLogger().Warn("DeprecatedCode",
-		zap.String("Scene", scene),
-		GetBigFieldCompacter().CompactField(zap.StackSkip("Stack", 1)),
+	WarnDeprecatedCodePro(scene, nil)
+}
+
+func WarnDeprecatedCodePro(scene string, logger *zap.Logger, fields ...zap.Field) {
+	if logger == nil {
+		logger = GetLogger()
+	}
+
+	logger.Warn("DeprecatedCode",
+		stl.NewSlice(
+			zap.String("Scene", scene),
+			GetBigFieldCompacter().CompactField(zap.StackSkip("Stack", 1)),
+		).Append(fields...)...,
 	)
 }
 

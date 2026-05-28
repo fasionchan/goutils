@@ -415,9 +415,79 @@ func ForEach[Data any](datas []Data, handler func(data Data)) {
 	}
 }
 
-func ForEachByMapper[Data any, MappedData any](datas []Data, mapper func(data Data) MappedData) {
+func ForEachByMapper[Data any, Result any](datas []Data, mapper func(data Data) Result) {
 	for _, data := range datas {
 		mapper(data)
+	}
+}
+
+func ForEachUnary[
+	Datas ~[]Data,
+	Data any,
+	Arg any,
+](datas Datas, handler func(Data, Arg), arg Arg) {
+	for _, data := range datas {
+		handler(data, arg)
+	}
+}
+
+func ForEachUnaryByMapper[
+	Datas ~[]Data,
+	Data any,
+	Arg any,
+	Result any,
+](datas Datas, mapper func(Data, Arg) Result, arg Arg) {
+	for _, data := range datas {
+		mapper(data, arg)
+	}
+}
+
+func ForEachBinary[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+](datas Datas, handler func(Data, Arg1, Arg2), arg1 Arg1, arg2 Arg2) {
+	for _, data := range datas {
+		handler(data, arg1, arg2)
+	}
+}
+
+func ForEachBinaryByMapper[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+	Result any,
+](datas Datas, mapper func(Data, Arg1, Arg2) Result, arg1 Arg1, arg2 Arg2) {
+	for _, data := range datas {
+		mapper(data, arg1, arg2)
+	}
+}
+
+func ForEachTernary[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+	Arg3 any,
+](datas Datas, handler func(Data, Arg1, Arg2, Arg3), arg1 Arg1, arg2 Arg2, arg3 Arg3) {
+	for _, data := range datas {
+		handler(data, arg1, arg2, arg3)
+	}
+}
+
+func ForEachTernaryByMapper[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+	Arg3 any,
+	Result any,
+](datas Datas, mapper func(Data, Arg1, Arg2, Arg3) Result, arg1 Arg1, arg2 Arg2, arg3 Arg3) {
+	for _, data := range datas {
+
+	mapper(data, arg1, arg2, arg3)
 	}
 }
 
@@ -480,6 +550,13 @@ func JoinSlicesTo[Slice ~[]Data, Data any](slice Slice, sep Slice, keepFirstSep 
 	}, slice)
 }
 
+func NotNilSlice[Datas ~[]Data, Data any](datas Datas) Datas {
+	if datas == nil {
+		return Datas{}
+	}
+	return datas
+}
+
 func Purge[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 	result := make(Datas, 0, len(datas))
 	for _, data := range datas {
@@ -513,10 +590,56 @@ func PurgeZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func
 	})
 }
 
+// ✅ 映射
 func Map[Data any, Datas ~[]Data, Result any](datas Datas, mapper func(Data) Result) []Result {
 	results := make([]Result, len(datas))
 	for i, data := range datas {
 		results[i] = mapper(data)
+	}
+	return results
+}
+
+// ✅ 带一个参数的映射
+func MapUnary[
+	Datas ~[]Data,
+	Data any,
+	Arg any,
+	Result any,
+](datas Datas, mapper func(Data, Arg) Result, arg Arg) []Result {
+	results := make([]Result, len(datas))
+	for i, data := range datas {
+		results[i] = mapper(data, arg)
+	}
+	return results
+}
+
+// ✅ 带两个参数的映射
+func MapBinary[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+	Result any,
+](datas Datas, mapper func(Data, Arg1, Arg2) Result, arg1 Arg1, arg2 Arg2) []Result {
+	results := make([]Result, len(datas))
+	for i, data := range datas {
+		results[i] = mapper(data, arg1, arg2)
+	}
+	return results
+}
+
+// ✅ 带三个参数的映射
+func MapTernary[
+	Datas ~[]Data,
+	Data any,
+	Arg1 any,
+	Arg2 any,
+	Arg3 any,
+	Result any,
+](datas Datas, mapper func(Data, Arg1, Arg2, Arg3) Result, arg1 Arg1, arg2 Arg2, arg3 Arg3) []Result {
+	results := make([]Result, len(datas))
+	for i, data := range datas {
+		results[i] = mapper(data, arg1, arg2, arg3)
 	}
 	return results
 }
@@ -938,10 +1061,7 @@ func (slice Slice[Data]) Native() []Data {
 }
 
 func (slice Slice[Data]) NotNilSlice() Slice[Data] {
-	if slice == nil {
-		return Slice[Data]{}
-	}
-	return slice
+	return NotNilSlice(slice)
 }
 
 type ComparableSlice[Data comparable] []Data
@@ -955,10 +1075,7 @@ func (slice ComparableSlice[Data]) Native() []Data {
 }
 
 func (slice ComparableSlice[Data]) NotNilSlice() ComparableSlice[Data] {
-	if slice == nil {
-		return ComparableSlice[Data]{}
-	}
-	return slice
+	return NotNilSlice(slice)
 }
 
 func (slice ComparableSlice[Data]) Contain(data Data) bool {

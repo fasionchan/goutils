@@ -73,6 +73,10 @@ func NewNamedSetinHandler[Datas ~[]DataPtr, DataPtr ~*Data, Data any](name strin
 	}
 }
 
+func NewNamedSetinHandlerFromComputed[Datas ~[]DataPtr, DataPtr ~*Data, Data any](name string, handler SetinComputedHandler[Datas, DataPtr, Data]) *NamedSetinHandler[Datas, DataPtr, Data] {
+	return NewNamedSetinHandler(name, NewSetinerHandlerFromComputedHandler(handler))
+}
+
 func (handler *NamedSetinHandler[Datas, DataPtr, Data]) GetName() string {
 	if handler == nil {
 		return ""

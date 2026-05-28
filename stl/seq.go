@@ -22,6 +22,12 @@ func SingularIndexDataSeq[Data any](index int, data Data) iter.Seq2[int, Data] {
 	}
 }
 
+func SingularKeyValueSeq[K any, V any](key K, value V) iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		yield(key, value)
+	}
+}
+
 func EmptySeq[Data any](yield func(Data) bool) {
 }
 

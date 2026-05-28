@@ -505,3 +505,10 @@ func NewCachedDataFetcherFromAnother[Data any, BasedData any](basedFetcher *Cach
 		return
 	}).WithOthersSubscribed(0, basedFetcher)
 }
+
+func GetCachedDataFetchLite[
+	Func ~func (context.Context) (Data, error),
+	Data any,
+](cachedFetcher *CachedDataFetcher[Data]) Func {
+	return cachedFetcher.FetchLite
+}

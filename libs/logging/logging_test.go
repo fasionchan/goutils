@@ -107,5 +107,33 @@ func TestArgsX(t *testing.T) {
 	fmt.Println(dups)
 }
 
+func TestLogLevelJson(t *testing.T) {
+	level := zapcore.ErrorLevel
+	jsonData, err := json.Marshal(level)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, string(jsonData), `"error"`)
+
+	var level2 zapcore.Level
+	if err := json.Unmarshal([]byte(`"warn"`), &level2); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, zapcore.WarnLevel, level2)
+}
+
+func TestWarnDeprecatedCode(t *testing.T) {
+	WarnDeprecatedCode("TestWarnDeprecatedCode")
+}
+
+func TestWarnDeprecatedCodePro(t *testing.T) {
+	WarnDeprecatedCodePro("TestWarnDeprecatedCodePro", nil,
+		zap.String("String", "String"),
+		zap.StackSkip("Int", 1),
+	)
+}
+
 func TestCompile(t *testing.T) {
 }
