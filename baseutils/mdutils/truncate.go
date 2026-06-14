@@ -16,14 +16,35 @@ import (
 const defaultTruncateSuffix = "..."
 
 // TruncateMarkdown 将 Markdown 内容截断到 maxBytes 字节以内，在块级 AST 节点边界处截断以保持语法结构完整。
+// 仅执行截断，不追加任何后缀；maxBytes 全部用于内容预算。
 // 返回值第二个 bool 表示是否发生了截断；未截断时原样返回内容。
 func TruncateMarkdown(content string, maxBytes int) (string, bool) {
-	return TruncateMarkdownWithSuffix(content, maxBytes, defaultTruncateSuffix)
+	if maxBytes <= 0 {
+		if len(content) == 0 {
+			return "", false
+		}
+		return "", true
+	}
+
+	if len(content) <= maxBytes {
+		return content, false
+	}
+
+	truncatedContent, ok := truncateMarkdownByAST(content, maxBytes)
+	if !ok || (truncatedContent == "" && len(content) > 0 && maxBytes > 0) {
+		truncatedContent = fallbackTruncate(content, maxBytes)
+	}
+
+	return truncatedContent, true
 }
 
-// TruncateMarkdownWithSuffix 与 TruncateMarkdown 相同，但允许自定义截断后缀。
-// suffix 的字节长度计入 maxBytes 预算。
+// TruncateMarkdownWithSuffix 在 TruncateMarkdown 基础上追加省略后缀。
+// suffix 为空时使用默认后缀 ...；后缀字节长度计入 maxBytes 总预算。
 func TruncateMarkdownWithSuffix(content string, maxBytes int, suffix string) (string, bool) {
+	if suffix == "" {
+		suffix = defaultTruncateSuffix
+	}
+
 	if maxBytes <= 0 {
 		if len(content) == 0 {
 			return "", false
@@ -41,13 +62,9 @@ func TruncateMarkdownWithSuffix(content string, maxBytes int, suffix string) (st
 		contentBudget = 0
 	}
 
-	truncatedContent, ok := truncateMarkdownByAST(content, contentBudget)
-	if !ok || (truncatedContent == "" && len(content) > 0 && contentBudget > 0) {
-		truncatedContent = fallbackTruncate(content, contentBudget)
-	}
-
-	if suffixLen == 0 {
-		return truncatedContent, true
+	truncatedContent, truncated := TruncateMarkdown(content, contentBudget)
+	if !truncated {
+		return truncatedContent, false
 	}
 
 	if contentBudget == 0 {
