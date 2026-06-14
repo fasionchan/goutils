@@ -6,14 +6,14 @@ func DataSeq[Data any](datas ...Data) iter.Seq[Data] {
 	return NewSlice(datas...).DataSeq()
 }
 
+func IndexDataSeq[Data any](datas ...Data) iter.Seq2[int, Data] {
+	return NewSlice(datas...).IndexDataSeq()
+}
+
 func SingularDataSeq[Data any](data Data) iter.Seq[Data] {
 	return func(yield func(Data) bool) {
 		yield(data)
 	}
-}
-
-func IndexDataSeq[Data any](datas ...Data) iter.Seq2[int, Data] {
-	return NewSlice(datas...).IndexDataSeq()
 }
 
 func SingularIndexDataSeq[Data any](index int, data Data) iter.Seq2[int, Data] {
@@ -96,4 +96,56 @@ func (seqs Seq2s[K, V]) AsSeq2() iter.Seq2[K, V] {
 	}
 
 	return seqs.Seq2
+}
+
+func WriteSeq[Datas ~[]Data, Data any](dst Writer[Datas, Data], seq iter.Seq[Data]) (int64, error) {
+	var total int64
+	for data := range seq {
+		n, err := dst.Write(Datas{data})
+		total += int64(n)
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+func WriteSeq2Key[Datas ~[]Data, Data any](dst Writer[Datas, Data], seq iter.Seq2[Data, any]) (int64, error) {
+	var total int64
+	for key := range seq {
+		n, err := dst.Write(Datas{key})
+		total += int64(n)
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+func WriteSeq2Value[Datas ~[]Data, Data any](dst Writer[Datas, Data], seq iter.Seq2[any, Data]) (int64, error) {
+	var total int64
+	for _, data := range seq {
+		n, err := dst.Write(Datas{data})
+		total += int64(n)
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+func WriteSeq2DataError[Datas ~[]Data, Data any](dst Writer[Datas, Data], seq iter.Seq2[Data, error]) (int64, error) {
+	var total int64
+	for data, err := range seq {
+		if err != nil {
+			return total, err
+		}
+
+		n, err := dst.Write(Datas{data})
+		total += int64(n)
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
 }

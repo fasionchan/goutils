@@ -6,20 +6,6 @@ import (
 	"iter"
 )
 
-// closer 与 io.Closer 等价，避免强制工厂返回类型带 Close。
-type closer interface {
-	Close() error
-}
-
-func closeReaderIfCloser[Datas ~[]Data, Data any](r Reader[Datas, Data]) {
-	if r == nil {
-		return
-	}
-	if c, ok := any(r).(closer); ok {
-		_ = c.Close()
-	}
-}
-
 type Reader[Datas ~[]Data, Data any] interface {
 	Read(p []Data) (n int, err error)
 }
@@ -239,7 +225,7 @@ func (rr *ResumeReader[Datas, Data]) Read(p []Data) (total int, err error) {
 			return
 		}
 
-		closeReaderIfCloser[Datas, Data](rr.cur)
+		Close(rr.cur)
 		rr.cur = nil
 
 		if err == io.EOF {

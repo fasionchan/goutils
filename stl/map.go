@@ -2,10 +2,12 @@
  * Author: fasion
  * Created time: 2022-11-19 17:43:35
  * Last Modified by: fasion
- * Last Modified time: 2025-06-18 14:18:22
+ * Last Modified time: 2026-06-14 18:08:23
  */
 
 package stl
+
+import "iter"
 
 type Mapping[Key comparable, Value any] map[Key]Value
 
@@ -63,6 +65,13 @@ func (pair *KeyValuePair[Key, Value]) GetKey() (key Key) {
 	return
 }
 
+func (pair *KeyValuePair[Key, Value]) GetValue() (value Value) {
+	if pair != nil {
+		return pair.Value
+	}
+	return
+}
+
 type KeyValuePairs[Key any, Value any] []KeyValuePair[Key, Value]
 
 func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairs[Key, Value] {
@@ -76,6 +85,26 @@ func MapKeyValuePairs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyV
 
 func (pairs KeyValuePairs[Key, Value]) Append(others ...KeyValuePair[Key, Value]) KeyValuePairs[Key, Value] {
 	return append(pairs, others...)
+}
+
+func (pairs KeyValuePairs[Key, Value]) KeySeq() iter.Seq[Key] {
+	return func(yield func(Key) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.Key) {
+				return
+			}
+		}
+	}
+}
+
+func (pairs KeyValuePairs[Key, Value]) KeyValueSeq() iter.Seq2[Key, Value] {
+	return func(yield func(Key, Value) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.Key, pair.Value) {
+				return
+			}
+		}
+	}
 }
 
 func (pairs KeyValuePairs[Key, Value]) Sort(less func(a, b KeyValuePair[Key, Value]) bool) KeyValuePairs[Key, Value] {
@@ -101,6 +130,16 @@ func (pairs KeyValuePairs[Key, Value]) ToTypelessSlice() []any {
 	return ToTypelessSlice(pairs)
 }
 
+func (pairs KeyValuePairs[Key, Value]) ValueSeq() iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.Value) {
+				return
+			}
+		}
+	}
+}
+
 type KeyValuePairPtrs[Key any, Value any] []*KeyValuePair[Key, Value]
 
 func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) KeyValuePairPtrs[Key, Value] {
@@ -110,6 +149,36 @@ func MapKeyValuePairPtrs[Map ~map[Key]Value, Key comparable, Value any](m Map) K
 			Value: value,
 		}
 	})
+}
+
+func (pairs KeyValuePairPtrs[Key, Value]) KeySeq() iter.Seq[Key] {
+	return func(yield func(Key) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.GetKey()) {
+				return
+			}
+		}
+	}
+}
+
+func (pairs KeyValuePairPtrs[Key, Value]) KeyValueSeq() iter.Seq2[Key, Value] {
+	return func(yield func(Key, Value) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.GetKey(), pair.GetValue()) {
+				return
+			}
+		}
+	}
+}
+
+func (pairs KeyValuePairPtrs[Key, Value]) ValueSeq() iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		for _, pair := range pairs {
+			if !yield(pair.GetValue()) {
+				return
+			}
+		}
+	}
 }
 
 func (pairs KeyValuePairPtrs[Key, Value]) ToTypelessSlice() []any {

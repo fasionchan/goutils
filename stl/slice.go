@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-14 11:27:56
  * Last Modified by: fasion
- * Last Modified time: 2026-04-29 21:25:43
+ * Last Modified time: 2026-05-01 10:21:25
  */
 
 package stl
@@ -982,6 +982,14 @@ func NewSlice[Data any](datas ...Data) Slice[Data] {
 	return datas
 }
 
+func NewSliceFromSeq[Data any](seq iter.Seq[Data]) Slice[Data] {
+	var result Slice[Data]
+	for data := range seq {
+		result = append(result, data)
+	}
+	return result
+}
+
 func (slice Slice[Data]) AnyMatch(f func(Data) bool) bool {
 	return AnyMatch(slice, f)
 }
@@ -1000,6 +1008,10 @@ func (slice Slice[Data]) Concat(others ...Slice[Data]) Slice[Data] {
 
 func (slice Slice[Data]) Dup() Slice[Data] {
 	return DupSlice(slice)
+}
+
+func (slice Slice[Data]) Empty() bool {
+	return slice.Len() == 0
 }
 
 func (slice Slice[Data]) Filter(f func(Data) bool) Slice[Data] {
@@ -1026,6 +1038,10 @@ func (slice Slice[Data]) IndexSeq() iter.Seq[int] {
 			}
 		}
 	}
+}
+
+func (slice Slice[Data]) Len() int {
+	return len(slice)
 }
 
 func (slice Slice[Data]) DataSeq() iter.Seq[Data] {
