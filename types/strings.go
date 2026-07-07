@@ -143,6 +143,14 @@ func (strs Strings) Purge(filter func(string) bool) Strings {
 	return stl.Purge(strs, filter)
 }
 
+func (strs Strings) PurgeStrings(others Strings) Strings {
+	return strs.Purge(others.ToSet().Contain)
+}
+
+func (strs Strings) PurgeStringSet(set StringSet) Strings {
+	return strs.Purge(set.Contain)
+}
+
 func (strs Strings) PurgeZero() Strings {
 	return stl.PurgeZero(strs)
 }
@@ -218,6 +226,10 @@ func (strs Strings) UniqueBySet() Strings {
 	return stl.UniqueBySet(strs)
 }
 
+func (strs Strings) StableUniqueBySet() Strings {
+	return stl.StableUniqueBySet(strs)
+}
+
 func (strs Strings) UniqueByInplaceSort() Strings {
 	return strs.InplaceSort().UniqueSorteds()
 }
@@ -252,6 +264,10 @@ func (strs Strings) JoinByNewLine() string {
 
 func (strs Strings) JoinByMarkdownSplitLine() string {
 	return strs.Join("\n---\n")
+}
+
+func (strs Strings) LastOneOrZero() string {
+	return stl.LastOneOrZero(strs)
 }
 
 func (strs Strings) Equal(other Strings) bool {

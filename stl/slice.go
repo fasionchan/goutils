@@ -591,7 +591,7 @@ func PurgeZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func
 }
 
 // ✅ 映射
-func Map[Data any, Datas ~[]Data, Result any](datas Datas, mapper func(Data) Result) []Result {
+func Map[Datas ~[]Data, Result any, Data any](datas Datas, mapper func(Data) Result) []Result {
 	results := make([]Result, len(datas))
 	for i, data := range datas {
 		results[i] = mapper(data)

@@ -29,6 +29,18 @@ func (vector Float32Vector) Empty() bool {
 	return len(vector) == 0
 }
 
+func (vector Float32Vector) EnsureDim(dim int) Float32Vector {
+	if n := vector.Len(); n == 0 {
+		return make(Float32Vector, dim)
+	} else if n < dim {
+		return append(vector, make(Float32Vector, dim-n)...)
+	} else if n > dim {
+		return vector[:dim]
+	} else {
+		return vector
+	}
+}
+
 func (vector Float32Vector) Len() int {
 	return len(vector)
 }
@@ -59,6 +71,18 @@ func (vector Float64Vector) Empty() bool {
 	return len(vector) == 0
 }
 
+func (vector Float64Vector) EnsureDim(dim int) Float64Vector {
+	if n := vector.Len(); n == 0 {
+		return make(Float64Vector, dim)
+	} else if n < dim {
+		return append(vector, make(Float64Vector, dim-n)...)
+	} else if n > dim {
+		return vector[:dim]
+	} else {
+		return vector
+	}
+}
+
 func (vector Float64Vector) Len() int {
 	return len(vector)
 }
@@ -85,6 +109,10 @@ type Float32Vectors []Float32Vector
 
 func (vectors Float32Vectors) Len() int {
 	return len(vectors)
+}
+
+func (vectors Float32Vectors) EnsureDim(dim int) Float32Vectors {
+	return stl.MapUnary(vectors, Float32Vector.EnsureDim, dim)
 }
 
 func (vectors Float32Vectors) FirstOneOrNil() Float32Vector {
@@ -115,6 +143,10 @@ type Float64Vectors []Float64Vector
 
 func (vectors Float64Vectors) Len() int {
 	return len(vectors)
+}
+
+func (vectors Float64Vectors) EnsureDim(dim int) Float64Vectors {
+	return stl.MapUnary(vectors, Float64Vector.EnsureDim, dim)
 }
 
 func (vectors Float64Vectors) FirstOneOrNil() Float64Vector {
