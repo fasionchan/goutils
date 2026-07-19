@@ -1,0 +1,28 @@
+# API 文档
+GET http://localhost:8080/docs
+
+###
+# API 定义
+GET http://localhost:8080/docs/openapi.yaml
+
+###
+# 获取所有标签页
+GET http://localhost:8080/Tabs
+
+###
+# 创建新标签页
+POST http://localhost:8080/Tabs
+Content-Type: application/json
+
+{
+  "url": "https://www.baidu.com"
+}
+
+###
+# 导航到指定URL
+POST http://localhost:8080/Tabs/B2C1931CF25AD08CAD47513C9CFC60B7/_navigate
+Content-Type: application/json
+
+{
+  "url": "https://www.163.com"
+}
