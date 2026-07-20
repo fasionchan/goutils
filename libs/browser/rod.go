@@ -57,6 +57,14 @@ func (b *RodBrowser) NewTab(options *NewTabOptions) (*Tab, error) {
 	return RodPageToTab(page), nil
 }
 
+func (b *RodBrowser) GetTab(id string) (*Tab, error) {
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return nil, err
+	}
+	return RodPageToTab(page), nil
+}
+
 func (b *RodBrowser) ListTabs() (Tabs, error) {
 	pages, err := b.Native().Pages()
 	if err != nil {

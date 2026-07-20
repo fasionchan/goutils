@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,6 +29,7 @@ const (
 
 type Browser interface {
 	NewTab(options *NewTabOptions) (*Tab, error)
+	GetTab(id string) (*Tab, error)
 	ListTabs() (Tabs, error)
 	SwitchToTab(id string) error
 	CloseTab(id string) error
@@ -43,8 +45,8 @@ type Browser interface {
 
 	Screenshot(id string, opts *ScreenshotOptions) ([]byte, error)
 	// Snapshot(id, snapshotType string) (string, error)
-	GetTexts(id, selector, selectorType string) (types.Strings, error)
-	GetHtmls(id, selector, selectorType string) (types.Strings, error)
+	GetTexts(id, target, targetType string) (types.Strings, error)
+	GetHtmls(id, target, targetType string) (types.Strings, error)
 
 	SetCookies(id string, cookies []*http.Cookie) error
 	GetCookies(id string) ([]*http.Cookie, error)
@@ -264,4 +266,17 @@ func NewScreencastStream(frameChan BytesChan, closeFunc CloseFunc) *ScreencastSt
 		BytesChan: frameChan,
 		CloseFunc: closeFunc,
 	}
+}
+
+type BrowserBuilder interface {
+	Build() (Browser, error)
+}
+
+type BrowserBuilderFunc func() (Browser, error)
+
+func (fn BrowserBuilderFunc) Build() (Browser, error) {
+	if fn == nil {
+		return nil, errors.New("browser builder function is nil")
+	}
+	return fn()
 }

@@ -31,164 +31,87 @@ func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
 	router := chi.NewRouter()
 	api := chiopenapi.NewRouter(router)
 
-	api.Get("/Tabs", func(w http.ResponseWriter, r *http.Request) {
-		tabs, err := handler.browser.ListTabs()
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to list tabs").WriteHttpResponse(w)
-			return
-		}
+	GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
+		return handler.browser, nil
+	}).RegisterChiOpenApiRoutes(api)
 
-		types.NewTypedResponseResultFromData(tabs).WriteHttpResponse(w)
-	})
-
-	api.Post("/Tabs", func(w http.ResponseWriter, r *http.Request) {
-		var options NewTabOptions
-		if err := json.NewDecoder(r.Body).Decode(&options); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		tab, err := handler.browser.NewTab(&options)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		json.NewEncoder(w).Encode(tab)
-	}).With(
-		option.Request(new(NewTabOptions)),
-	)
-
-	api.Route("/Tabs/{id}", func(r chiopenapi.Router) {
-		getId := func(r *http.Request) string {
-			return chi.URLParam(r, "id")
-		}
-
-		NewPageApiHandler(handler.browser, getId, &websocket.Upgrader{}).RegisterChiOpenApiRoutes(r)
-	})
-
-	return api
+	return router
 }
 
 func (handler *BrowserApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.GetHttpHandler().ServeHTTP(w, r)
 }
 
-type PageApiHandler struct {
-	browser  Browser
-	getId    func(*http.Request) string
-	upgrader *websocket.Upgrader
-}
+type GetBrowserFromRequest func (*http.Request) (Browser, error)
 
-func NewPageApiHandler(browser Browser, getId func(*http.Request) string, upgrader *websocket.Upgrader) *PageApiHandler {
-	return &PageApiHandler{
-		browser:  browser,
-		getId:    getId,
-		upgrader: upgrader,
-	}
-}
-
-// func (handler *PageApiHandler) GetMux() *chi.Mux {
-// 	return sync.OnceValue(handler.NewMux)()
-// }
-
-// func (handler *PageApiHandler) NewMux() *chi.Mux {
-// 	mux := chi.NewRouter()
-// 	handler.RegisterRoutes(mux)
-// 	return mux
-// }
-
-func (handler *PageApiHandler) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
-	type NavigateOptions struct {
-		Url string `json:"url"`
-	}
-
-	r.Post("/_navigate", func(w http.ResponseWriter, r *http.Request) {
-		id := handler.getId(r)
-
-		var options NavigateOptions
-		if err := json.NewDecoder(r.Body).Decode(&options); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err := handler.browser.Navigate(id, options.Url); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}).With(
-		option.Request(new(NavigateOptions)),
-	)
-
-	r.Post("/_reload", func(w http.ResponseWriter, r *http.Request) {
-		id := handler.getId(r)
-		if err := handler.browser.Reload(id); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	})
-
-	r.Get("/Screenshot", func(w http.ResponseWriter, r *http.Request) {
-		id := handler.getId(r)
-
-		opts, err := NewScreenshotOptionsFromUrlValues(r.URL.Query())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		screenshot, err := handler.browser.Screenshot(id, opts)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", opts.MimeType())
-		w.WriteHeader(http.StatusOK)
-		w.Write(screenshot)
-	})
-
-	r.Route("/Cookies", func(r chiopenapi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			id := handler.getId(r)
-			cookies, err := handler.browser.GetCookies(id)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			json.NewEncoder(w).Encode(cookies)
-		}).With(
-			option.Response(http.StatusOK, new([]http.Cookie)),
+func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
+	r.Route("/Tabs", func(r chiopenapi.Router) {
+		r.Get("/", fn.listTabs).With(
+			// option.Summary("List all tabs"),
+			option.Description("List all tabs"),
+			option.Tags("Tabs"),
+			option.Response(http.StatusOK, new(Tabs)),
 		)
 
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			id := handler.getId(r)
-
-			var cookie http.Cookie
-			if err := json.NewDecoder(r.Body).Decode(&cookie); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			if err := handler.browser.SetCookies(id, []*http.Cookie{&cookie}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.WriteHeader(http.StatusOK)
-		}).With(
-			option.Request(new(http.Cookie)),
+		r.Post("/", fn.createTab).With(
+			option.Description("Create a new tab"),
+			option.Tags("Tabs"),
+			option.Request(new(NewTabOptions)),
+			option.Response(http.StatusOK, new(Tab)),
 		)
+
+		r.Route("/{tabId}", func(r chiopenapi.Router) {
+			getTab := func(r *http.Request) (*TabHandler, error) {
+				browser, err := fn(r)
+				if err != nil {
+					return nil, err
+				}
+
+				return NewTabHandler(browser, chi.URLParam(r, "tabId")), nil
+			}
+
+			GetTabHandlerFromRequest(getTab).RegisterChiOpenApiRoutes(r)
+		})
 	})
 }
 
-// func (handler *PageApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Println("PageApiHandler", r.URL.Path)
-// 	handler.GetMux().ServeHTTP(w, r)
-// }
+func (fn GetBrowserFromRequest) listTabs(w http.ResponseWriter, r *http.Request) {
+	browser, err := fn(r)
+	if err != nil {
+		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get browser").WriteHttpResponse(w)
+		return
+	}
+
+	tabs, err := browser.ListTabs()
+	if err != nil {
+		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to list tabs").WriteHttpResponse(w)
+		return
+	}
+
+	types.NewTypedResponseResultFromData(tabs).WriteHttpResponse(w)
+}
+
+func (fn GetBrowserFromRequest) createTab(w http.ResponseWriter, r *http.Request) {
+	browser, err := fn(r)
+	if err != nil {
+		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get browser").WriteHttpResponse(w)
+		return
+	}
+
+	var options NewTabOptions
+	if err := json.NewDecoder(r.Body).Decode(&options); err != nil {
+		types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to decode request body").WriteHttpResponse(w)
+		return
+	}
+
+	tab, err := browser.NewTab(&options)
+	if err != nil {
+		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to create new tab").WriteHttpResponse(w)
+		return
+	}
+
+	types.NewTypedResponseResultFromData(tab).WriteHttpResponse(w)
+}
 
 type RemoteController struct {
 	browser  Browser

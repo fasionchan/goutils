@@ -116,6 +116,8 @@ github.com/go-git/go-git-fixtures/v6 v6.0.0-20260422085740-0c07409f52ec h1:FpCNU
 github.com/go-git/go-git-fixtures/v6 v6.0.0-20260422085740-0c07409f52ec/go.mod h1:F1SpxOny2UYXu62DzjEH4UqBjk4AoGs27cA8I9buK+o=
 github.com/go-git/go-git/v6 v6.0.0-alpha.3 h1:lJGritJ5AcC0X7buV0lReZ4cEHqcKB3Ab2ZjD3Ku+Ss=
 github.com/go-git/go-git/v6 v6.0.0-alpha.3/go.mod h1:DGnqu+twdAgtDx/4tQTWFrVE1an+2ACph3W9yOfSJZM=
+github.com/go-playground/form/v4 v4.3.0 h1:OVttojbQv2WNCs4P+VnjPtrt/+30Ipw4890W3OaFlvk=
+github.com/go-playground/form/v4 v4.3.0/go.mod h1:Cpe1iYJKoXb1vILRXEwxpWMGWyQuqplQ/4cvPecy+Jo=
 github.com/go-rod/rod v0.116.2 h1:A5t2Ky2A+5eD/ZJQr1EfsQSe5rms5Xof/qj296e+ZqA=
 github.com/go-rod/rod v0.116.2/go.mod h1:H+CMO9SCNc2TJ2WfrG+pKhITz57uGNYU43qYHh438Mg=
 github.com/goccy/go-yaml v1.19.2 h1:PmFC1S6h8ljIz6gMRBopkjP1TVT7xuwrButHID66PoM=

@@ -3,18 +3,39 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	browserlib "github.com/fasionchan/goutils/libs/browser"
 )
 
 func main() {
-	browser, err := browserlib.ConnectRodBrowser()
-	if err != nil {
-		log.Fatal(err)
+	mode := "instance"
+	if len(os.Args) > 1 {
+		mode = os.Args[1]
 	}
-	defer browser.Close()
 
-	apiHandler := browserlib.NewBrowserApiHandler(browser)
+	apiHandler := http.NotFoundHandler()
+
+	switch mode {
+	case "instance":
+		browser, err := browserlib.ConnectRodBrowser()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer browser.Close()
+
+		apiHandler = browserlib.NewBrowserApiHandler(browser)
+	case "pool":
+		pool := browserlib.NewBrowserPool(browserlib.BrowserBuilderFunc(func() (browserlib.Browser, error) {
+			return browserlib.ConnectRodBrowser()
+		}))
+		defer pool.Close()
+
+		apiHandler = pool
+	default:
+		log.Fatalf("Invalid mode: %s", mode)
+		return
+	}
 
 	// id, err := browser.NewTab(browserlib.NewTabWithUrl("https://time.is/zh/"))
 	// if err != nil {
