@@ -221,7 +221,7 @@ func dupAndSeek(file *os.File, offset int64) (*os.File, error) {
 // 	return client.Read(ctx, key, offset, length)
 // }
 
-func (client *Client) StoreSegmentableResource(ctx context.Context, reader SegmentableResourceReader, input *s3.CreateMultipartUploadInput, opts ...func(*s3.CreateMultipartUploadInput)) (any, error) {
+func (client *Client) StoreSegmentableResource(ctx context.Context, reader SegmentableResourceReader, input *s3.CreateMultipartUploadInput, opts ...CreateMultipartUploadOptions) (any, error) {
 	input = stl.NewOptions(opts...).Apply(input)
 
 	// 读取第一个分片
@@ -282,7 +282,7 @@ func (client *Client) StoreSegmentableResource(ctx context.Context, reader Segme
 	return nil, err
 }
 
-func (client *BucketClient) StoreSegmentableResource(ctx context.Context, reader SegmentableResourceReader, input *s3.CreateMultipartUploadInput, opts ...func(*s3.CreateMultipartUploadInput)) (any, error) {
+func (client *BucketClient) StoreSegmentableResource(ctx context.Context, reader SegmentableResourceReader, input *s3.CreateMultipartUploadInput, opts ...CreateMultipartUploadOptions) (any, error) {
 	input.Bucket = aws.String(client.Bucket)
 	return client.Client.StoreSegmentableResource(ctx, reader, input, opts...)
 }

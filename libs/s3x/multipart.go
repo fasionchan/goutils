@@ -18,8 +18,8 @@ const (
 )
 
 type (
-	CreateMultipartUploadOptions = func(*s3.CreateMultipartUploadInput)
-	UploadPartOptions            = func(*s3.UploadPartInput)
+	CreateMultipartUploadOptions = stl.Option[*s3.CreateMultipartUploadInput]
+	UploadPartOptions            = stl.Option[*s3.UploadPartInput]
 )
 
 func (client *Client) NewMultipartUploader(ctx context.Context, input *s3.CreateMultipartUploadInput, opts ...CreateMultipartUploadOptions) (*MultipartUploader, error) {
@@ -35,7 +35,7 @@ type MultipartUploader struct {
 	completed      bool
 }
 
-func NewMultipartUploader(ctx context.Context, client *s3.Client, input *s3.CreateMultipartUploadInput, opts ...func(*s3.CreateMultipartUploadInput)) (*MultipartUploader, error) {
+func NewMultipartUploader(ctx context.Context, client *s3.Client, input *s3.CreateMultipartUploadInput, opts ...CreateMultipartUploadOptions) (*MultipartUploader, error) {
 	input = stl.NewOptions(opts...).Apply(input)
 
 	created, err := client.CreateMultipartUpload(ctx, input)
