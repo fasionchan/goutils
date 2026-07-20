@@ -50,14 +50,14 @@ type ParamsBasedRequestHandler[
 	Result any,
 	Target any,
 	Params any,
-] func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]
+] func(target Target, params Params, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]
 
 func NewParamsBasedRequestHandler[
 	TargetFromRequest ~func(*http.Request) (Target, error),
 	Result any,
 	Target any,
 	Params any,
-](handler func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]) ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params] {
+](handler func(target Target, params Params, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]) ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params] {
 	return handler
 }
 
@@ -75,7 +75,7 @@ func (handler ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Param
 			return
 		}
 
-		handler(params, target, w, r).WriteHttpResponse(w)
+		handler(target, params, w, r).WriteHttpResponse(w)
 	}).With(
 		option.Request(new(Params)),
 		option.Response(http.StatusOK, new(types.TypedResponseResult[Result])),
@@ -83,7 +83,7 @@ func (handler ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Param
 }
 
 func RegisterParamsBasedRequestHandler[
-	Handler ~func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result],
+	Handler ~func(target Target, params Params, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result],
 	TargetFromRequest ~func(*http.Request) (Target, error),
 	Result any,
 	Params any,
