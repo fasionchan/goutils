@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -40,7 +41,7 @@ type Browser interface {
 	Type(id, selector, selectorType, text string) error
 	SetInputFiles(id, selector, selectorType string, files []string) error
 
-	Screenshot(id string) ([]byte, error)
+	Screenshot(id string, opts *ScreenshotOptions) ([]byte, error)
 	// Snapshot(id, snapshotType string) (string, error)
 	GetTexts(id, selector, selectorType string) (types.Strings, error)
 	GetHtmls(id, selector, selectorType string) (types.Strings, error)
@@ -124,6 +125,63 @@ func (tabs Tabs) Ids() types.Strings {
 	return stl.Map(tabs, TabPtr.GetId)
 }
 
+type ScreenshotOptions struct {
+	Format *string `json:"format,omitempty"`
+	Quality *int `json:"quality,omitempty"`
+}
+
+func NewScreenshotOptions(options ...ScreenshotOption) *ScreenshotOptions {
+	return stl.NewOptions(options...).Apply(new(ScreenshotOptions))
+}
+
+func NewScreenshotOptionsFromUrlValues(query url.Values) (*ScreenshotOptions, error) {
+	var opts stl.Options[*ScreenshotOptions]
+
+	if format := query.Get("format"); format != "" {
+		opts = append(opts, ScreenshotWithFormat(format))
+	}
+
+	opts, err := opts.ParseAndAppendIntOptions(stl.IntOptionMetas[*ScreenshotOptions]{
+		{Opt: ScreenshotWithQuality, Value: query.Get("quality")},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewScreenshotOptions(opts...), nil
+	
+}
+
+func (opts *ScreenshotOptions) GetFormat() string {
+	if opts == nil {
+		return "png"
+	}
+
+	if format := opts.Format; format != nil {
+		return *format
+	}
+
+	return "png"
+}
+
+func (opts *ScreenshotOptions) MimeType() string {
+	return fmt.Sprintf("image/%s", opts.GetFormat())
+}
+
+type ScreenshotOption = stl.Option[*ScreenshotOptions]
+
+func ScreenshotWithFormat(format string) ScreenshotOption {
+	return func(opts *ScreenshotOptions) {
+		opts.Format = &format
+	}
+}
+
+func ScreenshotWithQuality(quality int) ScreenshotOption {
+	return func(opts *ScreenshotOptions) {
+		opts.Quality = &quality
+	}
+}
+
 type ScreencastOptions struct {
 	Format        *string `json:"format,omitempty"`
 	Quality       *int    `json:"quality,omitempty"`
@@ -143,11 +201,11 @@ func NewScreencastOptionsFromUrlValues(query url.Values) (*ScreencastOptions, er
 		opts = append(opts, ScreencastWithFormat(format))
 	}
 
-	opts, err := opts.ParseAndAppendIntOptions(stl.KeyValuePairPtrs[func(int) ScreencastOption, string]{
-		{Key: ScreencastWithQuality, Value: query.Get("quality")},
-		{Key: ScreencastWithMaxWidth, Value: query.Get("max_width")},
-		{Key: ScreencastWithMaxHeight, Value: query.Get("max_height")},
-		{Key: ScreencastWithEventNthFrame, Value: query.Get("event_nth_frame")},
+	opts, err := opts.ParseAndAppendIntOptions(stl.IntOptionMetas[*ScreencastOptions]{
+		{Opt: ScreencastWithQuality, Value: query.Get("quality")},
+		{Opt: ScreencastWithMaxWidth, Value: query.Get("max_width")},
+		{Opt: ScreencastWithMaxHeight, Value: query.Get("max_height")},
+		{Opt: ScreencastWithEventNthFrame, Value: query.Get("event_nth_frame")},
 	})
 	if err != nil {
 		return nil, err

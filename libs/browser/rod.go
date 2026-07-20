@@ -151,12 +151,16 @@ func (b *RodBrowser) SetInputFiles(id string, selector, selectorType string, fil
 	return element.SetFiles(files)
 }
 
-func (b *RodBrowser) Screenshot(id string) ([]byte, error) {
+func (b *RodBrowser) Screenshot(id string, opts *ScreenshotOptions) ([]byte, error) {
 	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
 	if err != nil {
 		return nil, err
 	}
-	return page.Screenshot(true, nil)
+
+	return page.Screenshot(true, &proto.PageCaptureScreenshot{
+		Format: proto.PageCaptureScreenshotFormat(opts.GetFormat()),
+		Quality: opts.Quality,
+	})
 }
 
 // func (b *RodBrowser) Snapshot(id, snapshotType string) (string, error) {

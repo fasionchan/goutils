@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
@@ -33,10 +34,11 @@ func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
 	api.Get("/Tabs", func(w http.ResponseWriter, r *http.Request) {
 		tabs, err := handler.browser.ListTabs()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to list tabs").WriteHttpResponse(w)
 			return
 		}
-		json.NewEncoder(w).Encode(tabs)
+
+		types.NewTypedResponseResultFromData(tabs).WriteHttpResponse(w)
 	})
 
 	api.Post("/Tabs", func(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +121,35 @@ func (handler *PageApiHandler) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	}).With(
 		option.Request(new(NavigateOptions)),
 	)
+
+	r.Post("/_reload", func(w http.ResponseWriter, r *http.Request) {
+		id := handler.getId(r)
+		if err := handler.browser.Reload(id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r.Get("/Screenshot", func(w http.ResponseWriter, r *http.Request) {
+		id := handler.getId(r)
+
+		opts, err := NewScreenshotOptionsFromUrlValues(r.URL.Query())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		screenshot, err := handler.browser.Screenshot(id, opts)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", opts.MimeType())
+		w.WriteHeader(http.StatusOK)
+		w.Write(screenshot)
+	})
 
 	r.Route("/Cookies", func(r chiopenapi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {

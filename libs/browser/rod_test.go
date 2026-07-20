@@ -103,7 +103,7 @@ func TestRodBrowser(t *testing.T) {
 		json.NewEncoder(os.Stdout).Encode(cookie)
 	}
 
-	screenshot, err := browser.Screenshot(tab1.Id)
+	screenshot, err := browser.Screenshot(tab1.Id, nil)
 	if err != nil {
 		t.Fatalf("failed to screenshot: %v", err)
 	}
