@@ -95,7 +95,7 @@ func (h *TabHandler) StartScreencast(opts *ScreencastOptions) (*ScreencastStream
 	return h.browser.StartScreencast(h.id, opts)
 }
 
-type GetTabHandlerFromRequest func (*http.Request) (*TabHandler, error)
+type GetTabHandlerFromRequest func(*http.Request) (*TabHandler, error)
 
 func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	type NavigateOptions struct {
@@ -128,7 +128,6 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
 			return
 		}
-
 
 		if err := tabHandler.Close(); err != nil {
 			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to close page").WriteHttpResponse(w)
@@ -192,7 +191,6 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 			return
 		}
 
-
 		if err := tabHandler.GoBack(); err != nil {
 			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go back").WriteHttpResponse(w)
 			return
@@ -210,7 +208,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
 			return
 		}
-		
+
 		if err := tabHandler.GoForward(); err != nil {
 			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go forward").WriteHttpResponse(w)
 			return
@@ -297,68 +295,72 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 		)
 	})
 
-	r.Get("/Texts", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_click", TabClickRequestParamsPtr.HandleClick, fn).With(
+		option.Description("Click on a element"),
+		option.Tags("Actions"),
+	)
 
-		request, err := ParseRequest[TabGetTextsRequest](r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to parse request").WriteHttpResponse(w)
-			return
-		}
-
-		texts, err := tabHandler.GetTexts(request.Target, request.TargetType)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get texts").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewTypedResponseResultFromData(texts).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Texts", TabGetTextsParamsPtr.HandleGetTexts, fn).With(
 		option.Description("Get texts"),
 		option.Tags("Texts"),
-		option.Request(new(TabGetTextsRequest)),
 		option.Response(http.StatusOK, new(types.Strings)),
 	)
 
-	r.Get("/Htmls", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		request, err := ParseRequest[TabGetHtmlsRequest](r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to parse request").WriteHttpResponse(w)
-			return
-		}
-
-		htmls, err := tabHandler.GetHtmls(request.Target, request.TargetType)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get htmls").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewTypedResponseResultFromData(htmls).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Htmls", TabGetHtmlsParamsPtr.HandleGetHtmls, fn).With(
 		option.Description("Get htmls"),
 		option.Tags("Htmls"),
-		option.Request(new(TabGetHtmlsRequest)),
 		option.Response(http.StatusOK, new(types.Strings)),
 	)
 }
 
-type TabGetHtmlsRequest = TabGetTextsRequest
+type TabClickRequestParamsPtr = *TabClickRequestParams
 
-type TabGetTextsRequest struct {
-	TabGetTextsQuery `json:"-" query:",inline"`
+type TabClickRequestParams struct {
+	Target     string `json:"target"`
+	TargetType string `json:"targetType"`
+	Button     string `json:"button"`
+	Count      int    `json:"count"`
 }
 
-type TabGetTextsQuery struct {
-	Target string `query:"target"`
+func (params *TabClickRequestParams) HandleClick(target *TabHandler, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[any] {
+	if err := target.Click(params.Target, params.TargetType, params.Button, params.Count); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to click")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+type TabGetHtmlsParamsPtr = *TabGetHtmlsParams
+
+type TabGetHtmlsParams struct {
+	DomElementLocatorQuery `json:"-" query:",inline"`
+}
+
+func (params *TabGetHtmlsParams) HandleGetHtmls(target *TabHandler, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[types.Strings] {
+	htmls, err := target.GetHtmls(params.Target, params.TargetType)
+	if err != nil {
+		return types.NewTypedResponseResultFromError[types.Strings](http.StatusInternalServerError, err, "Failed to get htmls")
+	}
+
+	return types.NewTypedResponseResultFromData(htmls)
+}
+
+type TabGetTextsParamsPtr = *TabGetTextsParams
+
+type TabGetTextsParams struct {
+	DomElementLocatorQuery `json:"-" query:",inline"`
+}
+
+func (params *TabGetTextsParams) HandleGetTexts(target *TabHandler, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[types.Strings] {
+	texts, err := target.GetTexts(params.Target, params.TargetType)
+	if err != nil {
+		return types.NewTypedResponseResultFromError[types.Strings](http.StatusInternalServerError, err, "Failed to get texts")
+	}
+
+	return types.NewTypedResponseResultFromData(texts)
+}
+
+type DomElementLocatorQuery struct {
+	Target     string `query:"target"`
 	TargetType string `query:"targetType"`
 }

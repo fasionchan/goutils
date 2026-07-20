@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/fasionchan/goutils/types"
 	"github.com/go-playground/form/v4"
+	"github.com/oaswrap/spec/adapter/chiopenapi"
+	"github.com/oaswrap/spec/option"
 )
 
 var (
@@ -16,9 +19,9 @@ type RequestParams[
 	Query any,
 	Path any,
 ] struct {
-	Body Body
+	Body  Body
 	Query Query
-	Path Path
+	Path  Path
 }
 
 func ParseRequest[
@@ -40,6 +43,54 @@ func ParseRequest[
 	}
 
 	return
+}
+
+type ParamsBasedRequestHandler[
+	TargetFromRequest ~func(*http.Request) (Target, error),
+	Result any,
+	Target any,
+	Params any,
+] func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]
+
+func NewParamsBasedRequestHandler[
+	TargetFromRequest ~func(*http.Request) (Target, error),
+	Result any,
+	Target any,
+	Params any,
+](handler func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result]) ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params] {
+	return handler
+}
+
+func (handler ParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params]) RegisterToChiOpenApiRouter(r chiopenapi.Router, method, path string, targetFromRequest TargetFromRequest) chiopenapi.Route {
+	return r.MethodFunc(method, path, func(w http.ResponseWriter, r *http.Request) {
+		target, err := targetFromRequest(r)
+		if err != nil {
+			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to get target").WriteHttpResponse(w)
+			return
+		}
+
+		params, err := ParseRequest[Params](r)
+		if err != nil {
+			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to parse params").WriteHttpResponse(w)
+			return
+		}
+
+		handler(params, target, w, r).WriteHttpResponse(w)
+	}).With(
+		option.Request(new(Params)),
+		option.Response(http.StatusOK, new(types.TypedResponseResult[Result])),
+	)
+}
+
+func RegisterParamsBasedRequestHandler[
+	Handler ~func(params Params, target Target, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Result],
+	TargetFromRequest ~func(*http.Request) (Target, error),
+	Result any,
+	Params any,
+	Target any,
+](r chiopenapi.Router, method, path string, handler Handler, targetFromRequest TargetFromRequest) chiopenapi.Route {
+	return NewParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params](handler).
+		RegisterToChiOpenApiRouter(r, method, path, targetFromRequest)
 }
 
 func init() {

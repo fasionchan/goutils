@@ -1,13 +1,8 @@
-/*
- * Author: fasion
- * Created time: 2022-11-19 17:43:35
- * Last Modified by: fasion
- * Last Modified time: 2026-06-14 18:08:23
- */
-
 package stl
 
-import "iter"
+import (
+	"iter"
+)
 
 type Mapping[Key comparable, Value any] map[Key]Value
 
@@ -58,9 +53,23 @@ type KeyValuePair[Key any, Value any] struct {
 	Value Value
 }
 
+func NewKeyValuePair[Key any, Value any](key Key, value Value) *KeyValuePair[Key, Value] {
+	return &KeyValuePair[Key, Value]{
+		Key:   key,
+		Value: value,
+	}
+}
+
 func (pair *KeyValuePair[Key, Value]) GetKey() (key Key) {
 	if pair != nil {
 		return pair.Key
+	}
+	return
+}
+
+func (pair *KeyValuePair[Key, Value]) GetKeyValue() (key Key, value Value) {
+	if pair != nil {
+		return pair.GetKey(), pair.GetValue()
 	}
 	return
 }
@@ -70,6 +79,24 @@ func (pair *KeyValuePair[Key, Value]) GetValue() (value Value) {
 		return pair.Value
 	}
 	return
+}
+
+func (pair *KeyValuePair[Key, Value]) KeySeq() iter.Seq[Key] {
+	return func(yield func(Key) bool) {
+		yield(pair.GetKey())
+	}
+}
+
+func (pair *KeyValuePair[Key, Value]) KeyValueSeq() iter.Seq2[Key, Value] {
+	return func(yield func(Key, Value) bool) {
+		yield(pair.GetKeyValue())
+	}
+}
+
+func (pair *KeyValuePair[Key, Value]) ValueSeq() iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		yield(pair.GetValue())
+	}
 }
 
 type KeyValuePairs[Key any, Value any] []KeyValuePair[Key, Value]

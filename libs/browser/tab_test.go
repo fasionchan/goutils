@@ -9,14 +9,14 @@ import (
 )
 
 func TestTabGetHtmlsRequest(t *testing.T) {
-	var request TabGetHtmlsRequest
+	var request TabGetHtmlsParams
 
 	formDecoder := form.NewDecoder()
 	formDecoder.SetTagName("query")
 	formDecoder.SetMode(form.ModeExplicit)
 
 	if err := formDecoder.Decode(&request, url.Values{
-		"target": {"target"},
+		"target":     {"target"},
 		"targetType": {"targetType"},
 	}); err != nil {
 		t.Fatalf("Failed to decode request: %v", err)

@@ -28,7 +28,7 @@ func NewOptions[Data any](opts ...Option[Data]) Options[Data] {
 	return opts
 }
 
-func (opts Options[Data]) Append(more... Option[Data]) Options[Data] {
+func (opts Options[Data]) Append(more ...Option[Data]) Options[Data] {
 	return append(opts, more...)
 }
 
@@ -51,15 +51,15 @@ func (opts Options[Data]) PurgeNil() Options[Data] {
 }
 
 type IntOptionMeta[Data any] struct {
-	Opt func(int) Option[Data]
-	Value string
+	Opt      func(int) Option[Data]
+	Value    string
 	Required bool
-	Default *int
+	Default  *int
 }
 
 func NewIntOptionMeta[Data any](opt func(int) Option[Data], value string) IntOptionMeta[Data] {
 	return IntOptionMeta[Data]{
-		Opt: opt,
+		Opt:   opt,
 		Value: value,
 	}
 }

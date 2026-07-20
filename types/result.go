@@ -64,7 +64,7 @@ func NewTypedResponseResultFromError[T any](code int, err error, msg string) *Ty
 	}
 
 	var zero T
-	return NewTypedResponseResult[T](false, code, errstr, msg, zero, nil, "")
+	return NewTypedResponseResult(false, code, errstr, msg, zero, nil, "")
 }
 
 func NewTypedResponseResultFromData[T any](data T) *TypedResponseResult[T] {

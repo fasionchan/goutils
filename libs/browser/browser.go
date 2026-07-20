@@ -128,8 +128,8 @@ func (tabs Tabs) Ids() types.Strings {
 }
 
 type ScreenshotOptions struct {
-	Format *string `json:"format,omitempty"`
-	Quality *int `json:"quality,omitempty"`
+	Format  *string `json:"format,omitempty" query:"format"`
+	Quality *int    `json:"quality,omitempty" query:"quality"`
 }
 
 func NewScreenshotOptions(options ...ScreenshotOption) *ScreenshotOptions {
@@ -151,7 +151,7 @@ func NewScreenshotOptionsFromUrlValues(query url.Values) (*ScreenshotOptions, er
 	}
 
 	return NewScreenshotOptions(opts...), nil
-	
+
 }
 
 func (opts *ScreenshotOptions) GetFormat() string {
