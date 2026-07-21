@@ -12,6 +12,7 @@ import (
 
 var (
 	queryDecoder = form.NewDecoder()
+	queryEncoder = form.NewEncoder()
 )
 
 type RequestParams[
@@ -96,4 +97,6 @@ func RegisterParamsBasedRequestHandler[
 func init() {
 	queryDecoder.SetTagName("query")
 	queryDecoder.SetMode(form.ModeExplicit)
+	queryEncoder.SetTagName("query")
+	queryEncoder.SetMode(form.ModeExplicit)
 }

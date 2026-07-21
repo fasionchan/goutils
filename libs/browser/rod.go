@@ -193,10 +193,71 @@ func (b *RodBrowser) Screenshot(id string, opts *ScreenshotOptions) ([]byte, err
 		return nil, err
 	}
 
+	if target := opts.Target; target != nil && opts.Clip == nil {
+		elements, err := b.getElementsFromPage(page, target.Expr, target.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(elements) == 0 {
+			return nil, fmt.Errorf("no elements found for selector: %s", target.Expr)
+		}
+
+		results, err := RodElements(elements).Shape()
+		if err != nil {
+			return nil, err
+		}
+
+		rect := results.Box().Box()
+		if rect == nil {
+			return nil, fmt.Errorf("no rect found for selector: %s", target.Expr)
+		}
+
+		opts.Clip = &Viewport{
+			X:      rect.X,
+			Y:      rect.Y,
+			Width:  rect.Width,
+			Height: rect.Height,
+		}
+	}
+
+	clip := PageCaptureScreenshotClipFromOptions(opts.Clip)
+	if scale := opts.Scale; scale != nil {
+		clip.Scale = *scale
+	}
+
 	return page.Screenshot(true, &proto.PageCaptureScreenshot{
-		Format: proto.PageCaptureScreenshotFormat(opts.GetFormat()),
+		Format:  proto.PageCaptureScreenshotFormat(opts.GetFormat()),
 		Quality: opts.Quality,
+		Clip:    clip,
 	})
+}
+
+func PageCaptureScreenshotFromOptions(opts *ScreenshotOptions) *proto.PageCaptureScreenshot {
+	clip := PageCaptureScreenshotClipFromOptions(opts.Clip)
+	if scale := opts.Scale; scale != nil {
+		clip.Scale = *scale
+	}
+
+	return &proto.PageCaptureScreenshot{
+		Format:  proto.PageCaptureScreenshotFormat(opts.GetFormat()),
+		Quality: opts.Quality,
+		Clip:    clip,
+	}
+}
+
+func PageCaptureScreenshotClipFromOptions(clip *Viewport) *proto.PageViewport {
+	if clip == nil {
+		return nil
+	}
+
+	return &proto.PageViewport{
+		X:      clip.X,
+		Y:      clip.Y,
+		Width:  clip.Width,
+		Height: clip.Height,
+		Scale:  1,
+	}
 }
 
 // func (b *RodBrowser) Snapshot(id, snapshotType string) (string, error) {
@@ -234,6 +295,10 @@ func (b *RodBrowser) getElements(id, selector, selectorType string) (rod.Element
 		return nil, err
 	}
 
+	return b.getElementsFromPage(page, selector, selectorType)
+}
+
+func (b *RodBrowser) getElementsFromPage(page *rod.Page, selector, selectorType string) (rod.Elements, error) {
 	var fn func(string) (rod.Elements, error)
 	switch selectorType {
 	case SelectorTypeCss:
@@ -530,6 +595,78 @@ func RodCall[
 	},
 ](client proto.Client, data Data) (err error) {
 	return data.Call(client)
+}
+
+type RodElements rod.Elements
+
+func (els RodElements) Native() rod.Elements {
+	return rod.Elements(els)
+}
+
+func (els RodElements) Describe(depth int, pierce bool) (RodDomNodes, error) {
+	nodes, errs := stl.MapWithError(els, true, func(el *rod.Element) (*proto.DOMNode, error) {
+		return el.Describe(depth, pierce)
+	})
+	if err := errs.Simplify(); err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
+}
+
+func (els RodElements) Shape() (RodContentQuadsResults, error) {
+	results, errs := stl.MapWithError(els, true, (*rod.Element).Shape)
+	if err := errs.Simplify(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+type RodDomNodes []*proto.DOMNode
+
+type RodContentQuadsResults []*proto.DOMGetContentQuadsResult
+
+func (results RodContentQuadsResults) Box() DomRects {
+	return stl.Map(results, (*proto.DOMGetContentQuadsResult).Box)
+}
+
+type DomRects []*proto.DOMRect
+
+func (rects DomRects) Empty() bool {
+	return len(rects) == 0
+}
+
+func (rects DomRects) PurgeNil() DomRects {
+	return stl.PurgeZero(rects)
+}
+
+func (rects DomRects) Box() *proto.DOMRect {
+	rects = rects.PurgeNil()
+
+	if rects.Empty() {
+		return nil
+	}
+
+	first := rects[0]
+
+	x1 := first.X
+	y1 := first.Y
+	x2 := first.X + first.Width
+	y2 := first.Y + first.Height
+
+	for _, rect := range rects[1:] {
+		x1 = min(x1, rect.X)
+		y1 = min(y1, rect.Y)
+		x2 = max(x2, rect.X+rect.Width)
+		y2 = max(y2, rect.Y+rect.Height)
+	}
+
+	return &proto.DOMRect{
+		X:      x1,
+		Y:      y1,
+		Width:  x2 - x1,
+		Height: y2 - y1,
+	}
 }
 
 var _ Browser = &RodBrowserManager{}

@@ -112,6 +112,20 @@ func (h *TabHandler) HandleClick(params *TabClickRequestParams, w http.ResponseW
 	return types.NewResponseResultFromData(nil)
 }
 
+type TabTypeRequestParams struct {
+	Target     string `json:"target"`
+	TargetType string `json:"targetType"`
+	Text       string `json:"text"`
+}
+
+func (h *TabHandler) HandleType(params *TabTypeRequestParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[any] {
+	if err := h.Type(params.Target, params.TargetType, params.Text); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to type")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
 type TabGetHtmlsParams struct {
 	DomElementLocatorQuery `json:"-" query:",inline"`
 }
@@ -277,7 +291,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 			return
 		}
 
-		opts, err := NewScreenshotOptionsFromUrlValues(r.URL.Query())
+		opts, err := ParseRequest[*ScreenshotOptions](r)
 		if err != nil {
 			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to parse screenshot options").WriteHttpResponse(w)
 			return
@@ -348,6 +362,11 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_click", TabHandlerPtr.HandleClick, fn).With(
 		option.Description("Click on a element"),
+		option.Tags("Actions"),
+	)
+
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_type", TabHandlerPtr.HandleType, fn).With(
+		option.Description("Type text into a element"),
 		option.Tags("Actions"),
 	)
 

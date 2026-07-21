@@ -129,9 +129,36 @@ func (tabs Tabs) Ids() types.Strings {
 	return stl.Map(tabs, TabPtr.GetId)
 }
 
+type ViewRegion struct {
+}
+
+type Viewport struct {
+	// X offset in device independent pixels (dip).
+	X float64 `json:"x" query:"x"`
+
+	// Y offset in device independent pixels (dip).
+	Y float64 `json:"y" query:"y"`
+
+	// Width Rectangle width in device independent pixels (dip).
+	Width float64 `json:"width" query:"width"`
+
+	// Height Rectangle height in device independent pixels (dip).
+	Height float64 `json:"height" query:"height"`
+}
+
 type ScreenshotOptions struct {
-	Format  *string `json:"format,omitempty" query:"format"`
-	Quality *int    `json:"quality,omitempty" query:"quality"`
+	Format  *string    `json:"format,omitempty" query:"format"`
+	Quality *int       `json:"quality,omitempty" query:"quality"`
+	Clip    *Viewport  `json:"clip,omitempty" query:"clip"`
+	Target  *TypedExpr `json:"target,omitempty" query:"target"`
+
+	// Scale Page scale factor.
+	Scale *float64 `json:"scale" query:"scale"`
+}
+
+type TypedExpr struct {
+	Expr string `json:"expr" query:"expr"`
+	Type string `json:"type" query:"type"`
 }
 
 func NewScreenshotOptions(options ...ScreenshotOption) *ScreenshotOptions {
