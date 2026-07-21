@@ -16,6 +16,7 @@ import (
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/launcher/flags"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/gorilla/websocket"
 )
@@ -40,6 +41,10 @@ func LaunchRodBrowser(ctx context.Context, opts *BrowserLaunchOptions) (*RodBrow
 	if addr := opts.Addr; addr != nil {
 		launcher.Set("remote-debugging-address", addr.IP.String())
 		launcher.Set("remote-debugging-port", strconv.Itoa(addr.Port))
+	}
+
+	for key, values := range opts.Flags {
+		launcher.Set(flags.Flag(key), values...)
 	}
 
 	url, err := launcher.Launch()

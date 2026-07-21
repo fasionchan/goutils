@@ -271,7 +271,8 @@ func NewScreencastStream(frameChan BytesChan, closeFunc CloseFunc) *ScreencastSt
 }
 
 type BrowserLaunchOptions struct {
-	Addr *net.TCPAddr
+	Addr  *net.TCPAddr
+	Flags url.Values
 }
 
 type BrowserLauncher interface {
