@@ -26,9 +26,7 @@ func main() {
 
 		apiHandler = browserlib.NewBrowserApiHandler(browser)
 	case "pool":
-		pool := browserlib.NewBrowserPool(browserlib.BrowserBuilderFunc(func() (browserlib.Browser, error) {
-			return browserlib.ConnectRodBrowser()
-		}))
+		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(browserlib.LaunchRodBrowser)
 		defer pool.Close()
 
 		apiHandler = pool

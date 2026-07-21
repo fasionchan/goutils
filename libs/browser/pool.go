@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/fasionchan/goutils/std/netx"
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
@@ -13,20 +14,34 @@ import (
 )
 
 type BrowserPool struct {
-	builder BrowserBuilder
+	launcher BrowserLauncher
 	browsers *stl.SyncMap[string, Browser]
 }
 
-func NewBrowserPool(builder BrowserBuilder) *BrowserPool {
+func NewBrowserPool(launcher BrowserLauncher) *BrowserPool {
 	return &BrowserPool{
-		builder: builder,
+		launcher: launcher,
 		browsers: stl.NewSyncMap[string, Browser](),
 	}
 }
 
+func NewBrowserPoolFromLaunchFunc(launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)) *BrowserPool {
+	return NewBrowserPool(BrowserLaunchFunc(launchFunc))
+}
+
+func NewBrowserPoolFromTypedLaunchFunc[
+	BrowserT Browser,
+](launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (BrowserT, error)) *BrowserPool {
+	return NewBrowserPool(BrowserLaunchFunc(func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error) {
+		return launchFunc(ctx, opts)
+	}))
+}
+
 func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, error) {
 	browser, _, err := p.browsers.LoadOrCreate(ctx, id, func(ctx context.Context) (Browser, error) {
-		return p.builder.Build()
+		return p.launcher.Launch(ctx, &BrowserLaunchOptions{
+			Addr: netx.RandomLocalTcpAddr(),
+		})
 	})
 	return browser, err
 }

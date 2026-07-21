@@ -8,12 +8,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/gorilla/websocket"
 )
@@ -30,6 +32,27 @@ func ConnectRodBrowser() (*RodBrowser, error) {
 		return nil, err
 	}
 	return browser, nil
+}
+
+func LaunchRodBrowser(ctx context.Context, opts *BrowserLaunchOptions) (*RodBrowser, error) {
+	launcher := launcher.New()
+
+	if addr := opts.Addr; addr != nil {
+		launcher.Set("remote-debugging-address", addr.IP.String())
+		launcher.Set("remote-debugging-port", strconv.Itoa(addr.Port))
+	}
+
+	url, err := launcher.Launch()
+	if err != nil {
+		return nil, err
+	}
+
+	browser := rod.New().ControlURL(url)
+	if err := browser.Connect(); err != nil {
+		return nil, err
+	}
+
+	return (*RodBrowser)(browser), nil
 }
 
 func (b *RodBrowser) Native() *rod.Browser {

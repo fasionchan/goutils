@@ -1,9 +1,11 @@
 package browser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 
@@ -268,15 +270,19 @@ func NewScreencastStream(frameChan BytesChan, closeFunc CloseFunc) *ScreencastSt
 	}
 }
 
-type BrowserBuilder interface {
-	Build() (Browser, error)
+type BrowserLaunchOptions struct {
+	Addr *net.TCPAddr
 }
 
-type BrowserBuilderFunc func() (Browser, error)
+type BrowserLauncher interface {
+	Launch(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)
+}
 
-func (fn BrowserBuilderFunc) Build() (Browser, error) {
+type BrowserLaunchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)
+
+func (fn BrowserLaunchFunc) Launch(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error) {
 	if fn == nil {
-		return nil, errors.New("browser builder function is nil")
+		return nil, errors.New("browser launch function is nil")
 	}
-	return fn()
+	return fn(ctx, opts)
 }
