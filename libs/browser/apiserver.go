@@ -9,6 +9,9 @@ import (
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
+	specui "github.com/oaswrap/spec-ui"
+	"github.com/oaswrap/spec-ui/config"
+	"github.com/oaswrap/spec-ui/stoplight"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
 )
@@ -29,7 +32,13 @@ func (handler *BrowserApiHandler) GetHttpHandler() http.Handler {
 
 func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
 	router := chi.NewRouter()
-	api := chiopenapi.NewRouter(router)
+
+	api := chiopenapi.NewRouter(router,
+		option.WithUIOption(func(c *config.SpecUI) {
+			stoplight.WithUI()(c)
+			specui.WithSpecPath("./openapi.yaml")(c)
+		}),
+	)
 
 	GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
 		return handler.browser, nil

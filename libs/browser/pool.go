@@ -9,6 +9,9 @@ import (
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
+	specui "github.com/oaswrap/spec-ui"
+	"github.com/oaswrap/spec-ui/config"
+	"github.com/oaswrap/spec-ui/stoplight"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
 )
@@ -52,7 +55,15 @@ func (p *BrowserPool) GetChiOpenApiRouter() chiopenapi.Router {
 }
 
 func (p *BrowserPool) NewChiOpenApiRouter() chiopenapi.Router {
-	api := chiopenapi.NewRouter(chi.NewRouter())
+	api := chiopenapi.NewRouter(chi.NewRouter(),
+		// WithUIOption 会覆盖默认 UI provider，因此这里需显式保留 Stoplight。
+		// 服务端路由仍用默认绝对路径 /docs/openapi.yaml（chi 要求以 / 开头）；
+		// UI 的 SpecPath 改为相对路径，前端会按当前页面 pathname 拼接，兼容 nginx 前缀改写。
+		option.WithUIOption(func(c *config.SpecUI) {
+			stoplight.WithUI()(c)
+			specui.WithSpecPath("./openapi.yaml")(c)
+		}),
+	)
 	p.RegistryChiOpenApiRoutes(api)
 	return api
 }
