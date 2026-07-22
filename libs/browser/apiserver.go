@@ -8,9 +8,6 @@ import (
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-	specui "github.com/oaswrap/spec-ui"
-	"github.com/oaswrap/spec-ui/config"
-	"github.com/oaswrap/spec-ui/stoplight"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
 )
@@ -25,19 +22,21 @@ func NewBrowserApiHandler(browser Browser) *BrowserApiHandler {
 	}
 }
 
-func (handler *BrowserApiHandler) NewChiOpenApiRouter() chiopenapi.Router {
-	router := chi.NewRouter()
+func (handler *BrowserApiHandler) NewChiOpenApiRouter(prefix string) chiopenapi.Router {
+	api := NewChiOpenApiRouter(prefix)
 
-	api := chiopenapi.NewRouter(router,
-		option.WithUIOption(func(c *config.SpecUI) {
-			stoplight.WithUI()(c)
-			specui.WithSpecPath("./openapi.yaml")(c)
-		}),
-	)
-
-	GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
+	browserFn := GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
 		return handler.browser, nil
-	}).RegisterChiOpenApiRoutes(api)
+	})
+
+	if prefix == "" || prefix == "/" {
+		browserFn.RegisterChiOpenApiRoutes(api)
+		return api
+	}
+
+	api.Route(prefix, func(r chiopenapi.Router) {
+		browserFn.RegisterChiOpenApiRoutes(r)
+	})
 
 	return api
 }

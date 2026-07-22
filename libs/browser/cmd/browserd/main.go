@@ -18,6 +18,8 @@ func main() {
 	apiHandler := http.NotFoundHandler()
 	opts := browserlib.NewBrowserLaunchOptionsFromEnv(os.Getenv)
 
+	apiPrefix := os.Getenv("API_PREFIX")
+
 	switch mode {
 	case "instance":
 		browser, err := browserlib.LaunchRodBrowserForManager(context.Background(), opts)
@@ -26,12 +28,12 @@ func main() {
 		}
 		defer browser.Close()
 
-		apiHandler = browserlib.NewBrowserApiHandler(browser).NewChiOpenApiRouter()
+		apiHandler = browserlib.NewBrowserApiHandler(browser).NewChiOpenApiRouter(apiPrefix)
 	case "pool":
 		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager)
 		defer pool.Close()
 
-		apiHandler = pool.NewChiOpenApiRouter()
+		apiHandler = pool.NewChiOpenApiRouter(apiPrefix)
 	default:
 		log.Fatalf("Invalid mode: %s", mode)
 		return

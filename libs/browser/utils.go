@@ -1,11 +1,18 @@
 package browser
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
+	"path"
 
+	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/form/v4"
+	specui "github.com/oaswrap/spec-ui"
+	"github.com/oaswrap/spec-ui/config"
+	"github.com/oaswrap/spec-ui/stoplight"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
 )
@@ -98,6 +105,56 @@ func RegisterParamsBasedRequestHandler[
 ](r chiopenapi.Router, method, path string, handler Handler, targetFromRequest TargetFromRequest) chiopenapi.Route {
 	return NewParamsBasedRequestHandler[TargetFromRequest, Result, Target, Params](handler).
 		RegisterToChiOpenApiRouter(r, method, path, targetFromRequest)
+}
+
+func NewChiOpenApiRouter(basePath string, opts ...option.OpenAPIOption) chiopenapi.Generator {
+	if basePath == "" {
+		basePath = "/"
+	}
+
+	serverUrlMagic := "__server__"
+	docsPath := path.Join(basePath, "docs")
+	specPath := path.Join(docsPath, "openapi.yaml")
+
+	opts = stl.NewSlice(
+		option.WithSpecPath(specPath),
+		option.WithDocsPath(docsPath),
+
+		option.WithServer(serverUrlMagic),
+
+		// WithUIOption 会覆盖默认 UI provider，因此这里需显式保留 Stoplight。
+		// 服务端路由仍用默认绝对路径 /docs/openapi.yaml（chi 要求以 / 开头）；
+		// UI 的 SpecPath 改为相对路径，前端会按当前页面 pathname 拼接，兼容 nginx 前缀改写。
+		option.WithUIOption(func(c *config.SpecUI) {
+			stoplight.WithUI()(c)
+			specui.WithSpecPath("./openapi.yaml")(c)
+		}),
+	).Append(opts...)
+
+	api := chiopenapi.NewRouter(chi.NewRouter(), opts...)
+
+	api.HandleFunc(specPath, func(w http.ResponseWriter, r *http.Request) {
+		spec, err := api.GenerateSchema("yaml")
+		if err != nil {
+			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to generate OpenAPI schema").WriteHttpResponse(w)
+			return
+		}
+
+		prefix := r.Header.Get("X-Forwarded-Prefix")
+		if prefix == "" {
+			prefix = "/"
+		}
+
+		old := []byte("- url: " + serverUrlMagic)
+		new := []byte("- url: " + path.Clean(prefix))
+		spec = bytes.Replace(spec, old, new, 1)
+
+		w.Header().Set("Content-Type", "application/x-yaml")
+		w.WriteHeader(http.StatusOK)
+		w.Write(spec)
+	})
+
+	return api
 }
 
 func init() {
