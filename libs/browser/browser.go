@@ -58,6 +58,8 @@ type Browser interface {
 	PrintToPdf(id string) (io.ReadCloser, error)
 
 	StartScreencast(id string, opts *ScreencastOptions) (*ScreencastStream, error)
+
+	Close() error
 }
 
 type NewTabOptions struct {

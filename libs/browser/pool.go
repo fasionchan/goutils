@@ -2,8 +2,8 @@ package browser
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/fasionchan/goutils/std/netx"
 	"github.com/fasionchan/goutils/stl"
@@ -18,13 +18,13 @@ import (
 
 type BrowserPool struct {
 	launcher BrowserLauncher
-	opts *BrowserLaunchOptions
+	opts     *BrowserLaunchOptions
 	browsers *stl.SyncMap[string, Browser]
 }
 
 func NewBrowserPool(opts *BrowserLaunchOptions, launcher BrowserLauncher) *BrowserPool {
 	return &BrowserPool{
-		opts: opts,
+		opts:     opts,
 		launcher: launcher,
 		browsers: stl.NewSyncMap[string, Browser](),
 	}
@@ -50,15 +50,28 @@ func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, er
 	return browser, err
 }
 
-func (p *BrowserPool) GetChiOpenApiRouter() chiopenapi.Router {
-	return sync.OnceValue(p.NewChiOpenApiRouter)()
+func (p *BrowserPool) DeleteBrowser(ctx context.Context, id string) (Browser, error) {
+	browser, loaded := p.browsers.Delete(id)
+	if !loaded {
+		return nil, fmt.Errorf("browser not found")
+	}
+	err := browser.Close()
+	return browser, err
 }
 
 func (p *BrowserPool) NewChiOpenApiRouter() chiopenapi.Router {
 	api := chiopenapi.NewRouter(chi.NewRouter(),
+		// option.WithServer("{bashPath}", option.ServerVariables(map[string]openapi.ServerVariable{
+		// 	"bashPath": {
+		// 		Description: "The base path of the server",
+		// 		Default:     "/api",
+		// 	},
+		// })),
 		// WithUIOption 会覆盖默认 UI provider，因此这里需显式保留 Stoplight。
 		// 服务端路由仍用默认绝对路径 /docs/openapi.yaml（chi 要求以 / 开头）；
 		// UI 的 SpecPath 改为相对路径，前端会按当前页面 pathname 拼接，兼容 nginx 前缀改写。
+		// option.WithSpecPath("/api/docs/openapi.yaml"),
+		// option.WithDocsPath("/api/docs"),
 		option.WithUIOption(func(c *config.SpecUI) {
 			stoplight.WithUI()(c)
 			specui.WithSpecPath("./openapi.yaml")(c)
@@ -80,7 +93,34 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 			option.Response(http.StatusOK, new(types.TypedResponseResult[types.Strings])),
 		)
 
+		r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
+			if err := p.Close(); err != nil {
+				types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to delete browser instances").WriteHttpResponse(w)
+				return
+			}
+			types.NewResponseResultFromData(nil).WriteHttpResponse(w)
+		}).With(
+			option.Summary("Delete All"),
+			option.Description("Delete all browser instances"),
+			option.Tags("Instances"),
+			option.Response(http.StatusOK, new(types.TypedResponseResult[types.Strings])),
+		)
+
 		r.Route("/{instanceId}", func(r chiopenapi.Router) {
+			r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
+				instanceId := chi.URLParam(r, "instanceId")
+				if _, err := p.DeleteBrowser(r.Context(), instanceId); err != nil {
+					types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to delete browser instance").WriteHttpResponse(w)
+					return
+				}
+				types.NewTypedResponseResultFromData(instanceId).WriteHttpResponse(w)
+			}).With(
+				option.Summary("Delete"),
+				option.Description("Delete a browser instance"),
+				option.Tags("Instances"),
+				option.Response(http.StatusOK, new(types.TypedResponseResult[string])),
+			)
+
 			GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
 				return p.EnsureBrowser(r.Context(), chi.URLParam(r, "instanceId"))
 			}).RegisterChiOpenApiRoutes(r)
@@ -88,11 +128,11 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 	})
 }
 
-func (p *BrowserPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p.GetChiOpenApiRouter().ServeHTTP(w, r)
-}
-
 func (p *BrowserPool) Close() error {
-	// todo
+	for _, key := range p.browsers.Keys() {
+		if _, err := p.DeleteBrowser(context.Background(), key); err != nil {
+			return err
+		}
+	}
 	return nil
 }

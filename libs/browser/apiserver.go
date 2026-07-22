@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
@@ -26,11 +25,7 @@ func NewBrowserApiHandler(browser Browser) *BrowserApiHandler {
 	}
 }
 
-func (handler *BrowserApiHandler) GetHttpHandler() http.Handler {
-	return sync.OnceValue(handler.NewHttpHandler)()
-}
-
-func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
+func (handler *BrowserApiHandler) NewChiOpenApiRouter() chiopenapi.Router {
 	router := chi.NewRouter()
 
 	api := chiopenapi.NewRouter(router,
@@ -44,14 +39,10 @@ func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
 		return handler.browser, nil
 	}).RegisterChiOpenApiRoutes(api)
 
-	return router
+	return api
 }
 
-func (handler *BrowserApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler.GetHttpHandler().ServeHTTP(w, r)
-}
-
-type GetBrowserFromRequest func (*http.Request) (Browser, error)
+type GetBrowserFromRequest func(*http.Request) (Browser, error)
 
 func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	r.Route("/Tabs", func(r chiopenapi.Router) {

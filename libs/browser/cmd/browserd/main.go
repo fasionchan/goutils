@@ -26,12 +26,12 @@ func main() {
 		}
 		defer browser.Close()
 
-		apiHandler = browserlib.NewBrowserApiHandler(browser)
+		apiHandler = browserlib.NewBrowserApiHandler(browser).NewChiOpenApiRouter()
 	case "pool":
 		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager)
 		defer pool.Close()
 
-		apiHandler = pool
+		apiHandler = pool.NewChiOpenApiRouter()
 	default:
 		log.Fatalf("Invalid mode: %s", mode)
 		return
