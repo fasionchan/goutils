@@ -47,13 +47,14 @@ type GetBrowserFromRequest func (*http.Request) (Browser, error)
 func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	r.Route("/Tabs", func(r chiopenapi.Router) {
 		r.Get("/", fn.listTabs).With(
-			// option.Summary("List all tabs"),
+			option.Summary("List"),
 			option.Description("List all tabs"),
 			option.Tags("Tabs"),
 			option.Response(http.StatusOK, new(Tabs)),
 		)
 
 		r.Post("/", fn.createTab).With(
+			option.Summary("Create"),
 			option.Description("Create a new tab"),
 			option.Tags("Tabs"),
 			option.Request(new(NewTabOptions)),

@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
@@ -46,7 +48,7 @@ type Browser interface {
 	SetInputFiles(id, selector, selectorType string, files []string) error
 
 	Screenshot(id string, opts *ScreenshotOptions) ([]byte, error)
-	// Snapshot(id, snapshotType string) (string, error)
+	Snapshot(id, snapshotType string) (string, error)
 	GetTexts(id, target, targetType string) (types.Strings, error)
 	GetHtmls(id, target, targetType string) (types.Strings, error)
 
@@ -300,6 +302,69 @@ func NewScreencastStream(frameChan BytesChan, closeFunc CloseFunc) *ScreencastSt
 type BrowserLaunchOptions struct {
 	Addr  *net.TCPAddr
 	Flags url.Values
+}
+
+func NewBrowserLaunchOptionsFromEnv(getenv func(string) string) *BrowserLaunchOptions {
+	addrStr := getenv("BROWSER_ADDR")
+	if addrStr == "" {
+		addrStr = "127.0.0.1:9222"
+	}
+
+	addr, err := net.ResolveTCPAddr("tcp", addrStr)
+	if err != nil {
+		return nil
+	}
+
+	flags := url.Values{}
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		name := strings.TrimSpace(parts[0])
+		if !strings.HasPrefix(name, "BROWSER_") {
+			continue
+		}
+
+		name = strings.TrimPrefix(name, "BROWSER_")
+		name = strings.ToLower(name)
+		name = strings.ReplaceAll(name, "_", "-")
+
+		value := strings.TrimSpace(parts[1])
+		flags.Add(name, value)
+	}
+
+	return &BrowserLaunchOptions{
+		Addr:  addr,
+		Flags: flags,
+	}
+}
+
+// deep copy?
+func (opts *BrowserLaunchOptions) Dup() *BrowserLaunchOptions {
+	return stl.Dup(opts)
+}
+
+func (opts *BrowserLaunchOptions) WithAddr(addr *net.TCPAddr) *BrowserLaunchOptions {
+	if opts == nil {
+		return nil
+	}
+
+	opts.Addr = addr
+	return opts
+}
+
+func (opts *BrowserLaunchOptions) WithFlag(name, value string) *BrowserLaunchOptions {
+	if opts == nil {
+		return nil
+	}
+
+	if flags := opts.Flags; flags != nil {
+		flags.Add(name, value)
+	}
+
+	return opts
 }
 
 type BrowserLauncher interface {

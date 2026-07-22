@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -15,10 +16,11 @@ func main() {
 	}
 
 	apiHandler := http.NotFoundHandler()
+	opts := browserlib.NewBrowserLaunchOptionsFromEnv(os.Getenv)
 
 	switch mode {
 	case "instance":
-		browser, err := browserlib.ConnectRodBrowser()
+		browser, err := browserlib.LaunchRodBrowserForManager(context.Background(), opts)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -26,7 +28,7 @@ func main() {
 
 		apiHandler = browserlib.NewBrowserApiHandler(browser)
 	case "pool":
-		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(browserlib.LaunchRodBrowser)
+		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager)
 		defer pool.Close()
 
 		apiHandler = pool

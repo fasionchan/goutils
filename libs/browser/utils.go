@@ -28,6 +28,12 @@ type RequestParams[
 func ParseRequest[
 	Request any,
 ](r *http.Request) (result Request, err error) {
+	if query := r.URL.Query(); len(query) > 0 {
+		if err = queryDecoder.Decode(&result, query); err != nil {
+			return
+		}
+	}
+
 	if err = queryDecoder.Decode(&result, r.URL.Query()); err != nil {
 		return
 	}

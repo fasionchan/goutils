@@ -35,8 +35,19 @@ func ConnectRodBrowser() (*RodBrowser, error) {
 	return browser, nil
 }
 
+func ConnectRodBrowserForManager() (*RodBrowserManager, error) {
+	browser, err := ConnectRodBrowser()
+	if err != nil {
+		return nil, err
+	}
+	return NewRodBrowserManagerFromNative(browser.Native()), nil
+}
+
 func LaunchRodBrowser(ctx context.Context, opts *BrowserLaunchOptions) (*RodBrowser, error) {
 	launcher := launcher.New()
+
+	launcher.Set("headless", "new")
+	// launcher.Set("disable-gpu", "true")
 
 	if addr := opts.Addr; addr != nil {
 		launcher.Set("remote-debugging-address", addr.IP.String())
@@ -58,6 +69,14 @@ func LaunchRodBrowser(ctx context.Context, opts *BrowserLaunchOptions) (*RodBrow
 	}
 
 	return (*RodBrowser)(browser), nil
+}
+
+func LaunchRodBrowserForManager(ctx context.Context, opts *BrowserLaunchOptions) (*RodBrowserManager, error) {
+	browser, err := LaunchRodBrowser(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return NewRodBrowserManagerFromNative(browser.Native()), nil
 }
 
 func (b *RodBrowser) Native() *rod.Browser {
@@ -260,14 +279,6 @@ func PageCaptureScreenshotClipFromOptions(clip *Viewport) *proto.PageViewport {
 	}
 }
 
-// func (b *RodBrowser) Snapshot(id, snapshotType string) (string, error) {
-// 	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return page.Snapshot(snapshotType)
-// }
-
 func (b *RodBrowser) GetTexts(id, selector, selectorType string) (types.Strings, error) {
 	return b.getStrings(id, selector, selectorType, (*rod.Element).Text)
 }
@@ -299,17 +310,43 @@ func (b *RodBrowser) getElements(id, selector, selectorType string) (rod.Element
 }
 
 func (b *RodBrowser) getElementsFromPage(page *rod.Page, selector, selectorType string) (rod.Elements, error) {
-	var fn func(string) (rod.Elements, error)
+	var fn func(*rod.Page, string) (rod.Elements, error)
+
 	switch selectorType {
 	case SelectorTypeCss:
-		fn = page.Elements
+		fn = (*rod.Page).Elements
 	case SelectorTypeXPath:
-		fn = page.ElementsX
+		fn = (*rod.Page).ElementsX
+	case SelectorTypeRef:
+		fn = b.getElementsFromPageByRef
 	default:
 		return nil, fmt.Errorf("invalid selector type: %s", selectorType)
 	}
 
-	return fn(selector)
+	return fn(page, selector)
+}
+
+func (b *RodBrowser) getElementsFromPageByRef(page *rod.Page, ref string) (rod.Elements, error) {
+	nodeId, err := strconv.ParseInt(ref, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	request := proto.DOMDescribeNode{
+		BackendNodeID: proto.DOMBackendNodeID(nodeId),
+	}
+
+	result, err := request.Call(page)
+	if err != nil {
+		return nil, err
+	}
+
+	element, err := page.ElementFromNode(result.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	return rod.Elements{element}, nil
 }
 
 func (b *RodBrowser) getExactElement(id, selector, selectorType string) (*rod.Element, error) {
@@ -478,8 +515,41 @@ func GetHtmlsFromRodElements(elements rod.Elements) (types.Strings, error) {
 }
 
 type RodBrowserManager struct {
-	RodBrowser
+	*RodBrowser
+	refs *stl.SyncMap[string, IdMappingByRef]
 }
+
+func NewRodBrowserManager(b *RodBrowser) *RodBrowserManager {
+	return &RodBrowserManager{
+		RodBrowser: b,
+		refs: stl.NewSyncMap[string, IdMappingByRef](),
+	}
+}
+
+func NewRodBrowserManagerFromNative(b *rod.Browser) *RodBrowserManager {
+	return NewRodBrowserManager((*RodBrowser)(b))
+}
+
+func (b *RodBrowserManager) Snapshot(id, snapshotType string) (string, error) {
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return "", err
+	}
+
+	switch snapshotType {
+	case "", SnapshotTypeA11y:
+		var request proto.AccessibilityGetFullAXTree
+		result, err := request.Call(page)
+		if err != nil {
+			return "", err
+		}
+		return AccessibilityAxNodes(result.Nodes).String(), nil
+	default:
+		return "", fmt.Errorf("unsupported snapshot type: %s", snapshotType)
+	}
+}
+
+type IdMappingByRef = stl.Mapping[string, string]
 
 func RodPageToTab(page *rod.Page) *Tab {
 	tab := Tab{

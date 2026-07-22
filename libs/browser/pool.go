@@ -15,33 +15,34 @@ import (
 
 type BrowserPool struct {
 	launcher BrowserLauncher
+	opts *BrowserLaunchOptions
 	browsers *stl.SyncMap[string, Browser]
 }
 
-func NewBrowserPool(launcher BrowserLauncher) *BrowserPool {
+func NewBrowserPool(opts *BrowserLaunchOptions, launcher BrowserLauncher) *BrowserPool {
 	return &BrowserPool{
+		opts: opts,
 		launcher: launcher,
 		browsers: stl.NewSyncMap[string, Browser](),
 	}
 }
 
-func NewBrowserPoolFromLaunchFunc(launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)) *BrowserPool {
-	return NewBrowserPool(BrowserLaunchFunc(launchFunc))
+func NewBrowserPoolFromLaunchFunc(opts *BrowserLaunchOptions, launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)) *BrowserPool {
+	return NewBrowserPool(opts, BrowserLaunchFunc(launchFunc))
 }
 
 func NewBrowserPoolFromTypedLaunchFunc[
 	BrowserT Browser,
-](launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (BrowserT, error)) *BrowserPool {
-	return NewBrowserPool(BrowserLaunchFunc(func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error) {
+](opts *BrowserLaunchOptions, launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (BrowserT, error)) *BrowserPool {
+	return NewBrowserPool(opts, BrowserLaunchFunc(func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error) {
 		return launchFunc(ctx, opts)
 	}))
 }
 
 func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, error) {
 	browser, _, err := p.browsers.LoadOrCreate(ctx, id, func(ctx context.Context) (Browser, error) {
-		return p.launcher.Launch(ctx, &BrowserLaunchOptions{
-			Addr: netx.RandomLocalTcpAddr(),
-		})
+		opts := p.opts.Dup().WithAddr(netx.RandomLocalTcpAddr())
+		return p.launcher.Launch(ctx, opts)
 	})
 	return browser, err
 }
@@ -62,6 +63,7 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 			instances := p.browsers.Keys()
 			types.NewTypedResponseResultFromData(instances).WriteHttpResponse(w)
 		}).With(
+			option.Summary("List"),
 			option.Description("List all browser instances"),
 			option.Tags("Instances"),
 			option.Response(http.StatusOK, new(types.TypedResponseResult[types.Strings])),

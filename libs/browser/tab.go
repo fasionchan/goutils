@@ -97,6 +97,31 @@ func (h *TabHandler) StartScreencast(opts *ScreencastOptions) (*ScreencastStream
 	return h.browser.StartScreencast(h.id, opts)
 }
 
+type SnapshotOptions struct {
+	Type *string `json:"type"`
+}
+
+func (opts *SnapshotOptions) GetType() string {
+	if opts == nil {
+		return ""
+	}
+
+	if ptr := opts.Type; ptr != nil {
+		return *ptr
+	}
+
+	return ""
+}
+
+func (h *TabHandler) HandleSnapshot(params *SnapshotOptions, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[string] {
+	snapshot, err := h.browser.Snapshot(h.id, params.GetType())
+	if err != nil {
+		return types.NewTypedResponseResultFromError[string](http.StatusInternalServerError, err, "Failed to take snapshot")
+	}
+
+	return types.NewTypedResponseResultFromData(snapshot)
+}
+
 type TabClickRequestParams struct {
 	Target     string `json:"target"`
 	TargetType string `json:"targetType"`
@@ -181,6 +206,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewTypedResponseResultFromData(tab).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Get"),
 		option.Description("Get the current tab"),
 		option.Tags("Tabs"),
 		option.Response(http.StatusOK, new(Tab)),
@@ -200,6 +226,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Close"),
 		option.Description("Close the current page"),
 		option.Tags("Tabs"),
 		option.Response(http.StatusOK, nil),
@@ -225,6 +252,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Navigate"),
 		option.Description("Navigate to a URL"),
 		option.Tags("Navigation"),
 		option.Request(new(NavigateOptions)),
@@ -244,6 +272,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Reload"),
 		option.Description("Reload the current page"),
 		option.Tags("Navigation"),
 	)
@@ -262,6 +291,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Go back"),
 		option.Description("Go back to the previous page"),
 		option.Tags("Navigation"),
 	)
@@ -280,6 +310,7 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 	}).With(
+		option.Summary("Go forward"),
 		option.Description("Go forward to the next page"),
 		option.Tags("Navigation"),
 	)
@@ -307,8 +338,9 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 		w.WriteHeader(http.StatusOK)
 		w.Write(screenshot)
 	}).With(
+		option.Summary("Screenshot"),
 		option.Description("Take a screenshot of the current page"),
-		option.Tags("Screenshots"),
+		option.Tags("Observations"),
 		option.Request(new(ScreenshotOptions)),
 		option.Response(http.StatusOK, new(bytes.Buffer)),
 	)
@@ -329,7 +361,8 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 			types.NewTypedResponseResultFromData(cookies).WriteHttpResponse(w)
 		}).With(
-			option.Description("Get cookies"),
+			option.Summary("List"),
+			option.Description("List cookies"),
 			option.Tags("Cookies"),
 			option.Response(http.StatusOK, new([]http.Cookie)),
 		)
@@ -354,31 +387,44 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 
 			types.NewResponseResultFromData(nil).WriteHttpResponse(w)
 		}).With(
-			option.Description("Set cookies"),
+			option.Summary("Set"),
+			option.Description("Set cookie"),
 			option.Tags("Cookies"),
 			option.Request(new(http.Cookie)),
 		)
 	})
 
+	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Snapshot", TabHandlerPtr.HandleSnapshot, fn).With(
+		option.Summary("Snapshot"),
+		option.Description("Take a snapshot of the current page"),
+		option.Tags("Observations"),
+		option.Request(new(SnapshotOptions)),
+		option.Response(http.StatusOK, new(string)),
+	)
+
 	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_click", TabHandlerPtr.HandleClick, fn).With(
+		option.Summary("Click"),
 		option.Description("Click on a element"),
 		option.Tags("Actions"),
 	)
 
 	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_type", TabHandlerPtr.HandleType, fn).With(
+		option.Summary("Type"),
 		option.Description("Type text into a element"),
 		option.Tags("Actions"),
 	)
 
 	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Texts", TabHandlerPtr.HandleGetTexts, fn).With(
+		option.Summary("Texts"),
 		option.Description("Get texts"),
-		option.Tags("Texts"),
+		option.Tags("Observations"),
 		option.Response(http.StatusOK, new(types.Strings)),
 	)
 
 	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Htmls", TabHandlerPtr.HandleGetHtmls, fn).With(
+		option.Summary("Htmls"),
 		option.Description("Get htmls"),
-		option.Tags("Htmls"),
+		option.Tags("Observations"),
 		option.Response(http.StatusOK, new(types.Strings)),
 	)
 }
