@@ -56,6 +56,9 @@ func (p *BrowserPool) GetChiOpenApiRouter() chiopenapi.Router {
 
 func (p *BrowserPool) NewChiOpenApiRouter() chiopenapi.Router {
 	api := chiopenapi.NewRouter(chi.NewRouter(),
+		// API 调用基址相对 openapi.yaml：/prefix/docs/openapi.yaml + ../ => /prefix/
+		// 这样经 nginx 前缀代理后，Try It 不会落到站点根路径。
+		option.WithServer("../", option.ServerDescription("Relative to docs (reverse-proxy friendly)")),
 		// WithUIOption 会覆盖默认 UI provider，因此这里需显式保留 Stoplight。
 		// 服务端路由仍用默认绝对路径 /docs/openapi.yaml（chi 要求以 / 开头）；
 		// UI 的 SpecPath 改为相对路径，前端会按当前页面 pathname 拼接，兼容 nginx 前缀改写。

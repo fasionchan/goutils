@@ -34,6 +34,7 @@ func (handler *BrowserApiHandler) NewHttpHandler() http.Handler {
 	router := chi.NewRouter()
 
 	api := chiopenapi.NewRouter(router,
+		option.WithServer("../", option.ServerDescription("Relative to docs (reverse-proxy friendly)")),
 		option.WithUIOption(func(c *config.SpecUI) {
 			stoplight.WithUI()(c)
 			specui.WithSpecPath("./openapi.yaml")(c)
