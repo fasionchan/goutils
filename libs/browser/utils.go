@@ -107,6 +107,26 @@ func RegisterParamsBasedRequestHandler[
 		RegisterToChiOpenApiRouter(r, method, path, targetFromRequest)
 }
 
+// todo move to httpx
+type ResponseWriterBodyCapturer struct {
+	http.ResponseWriter
+	bytes.Buffer
+}
+
+func NewResponseWriterBodyCapturer(w http.ResponseWriter) *ResponseWriterBodyCapturer {
+	return &ResponseWriterBodyCapturer{
+		ResponseWriter: w,
+	}
+}
+
+func (w *ResponseWriterBodyCapturer) GetBody() []byte {
+	return w.Buffer.Bytes()
+}
+
+func (w *ResponseWriterBodyCapturer) Write(p []byte) (n int, err error) {
+	return w.Buffer.Write(p)
+}
+
 func NewChiOpenApiRouter(basePath string, opts ...option.OpenAPIOption) chiopenapi.Generator {
 	if basePath == "" {
 		basePath = "/"
@@ -131,7 +151,22 @@ func NewChiOpenApiRouter(basePath string, opts ...option.OpenAPIOption) chiopena
 		}),
 	).Append(opts...)
 
+	docsApi := chiopenapi.NewRouter(chi.NewRouter(), opts...)
 	api := chiopenapi.NewRouter(chi.NewRouter(), opts...)
+
+	api.HandleFunc(docsPath, func(w http.ResponseWriter, r *http.Request) {
+		capture := NewResponseWriterBodyCapturer(w)
+		docsApi.ServeHTTP(capture, r)
+
+		body := capture.GetBody()
+
+		docsLine := "const docs = document.getElementById('docs');"
+		addLine := "docs.tryItCredentialsPolicy = 'same-origin';"
+
+		body = bytes.Replace(body, []byte(docsLine), []byte(docsLine+"    "+addLine), 1)
+
+		w.Write(body)
+	})
 
 	api.HandleFunc(specPath, func(w http.ResponseWriter, r *http.Request) {
 		spec, err := api.GenerateSchema("yaml")
