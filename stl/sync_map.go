@@ -30,10 +30,16 @@ func (m *SyncMap[Key, Value]) Empty() bool {
 	return m.Len() == 0
 }
 
-func (m *SyncMap[Key, Value]) Delete(key Key) {
+func (m *SyncMap[Key, Value]) Delete(key Key) (value Value, loaded bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.m, key)
+
+	value, loaded = m.m[key]
+	if loaded {
+		delete(m.m, key)
+	}
+
+	return
 }
 
 func (m *SyncMap[Key, Value]) Keys() []Key {
