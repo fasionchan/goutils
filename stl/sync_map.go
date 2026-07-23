@@ -55,7 +55,7 @@ func (m *SyncMap[Key, Value]) Load(key Key) (value Value, loaded bool) {
 	return
 }
 
-func (m *SyncMap[Key, Value]) LoadOrCreate(ctx context.Context, key Key, create func (ctx context.Context) (Value, error)) (value Value, loaded bool, err error) {
+func (m *SyncMap[Key, Value]) LoadOrCreate(ctx context.Context, key Key, create func(ctx context.Context) (Value, error)) (value Value, loaded bool, err error) {
 	value, loaded = m.Load(key)
 	if loaded {
 		return
@@ -79,7 +79,7 @@ func (m *SyncMap[Key, Value]) LoadOrCreate(ctx context.Context, key Key, create 
 	return
 }
 
-func (m *SyncMap[Key, Value]) LoadOrCreateLite(key Key, create func () Value) (value Value, loaded bool) {
+func (m *SyncMap[Key, Value]) LoadOrCreateLite(key Key, create func() Value) (value Value, loaded bool) {
 	value, loaded = m.Load(key)
 	if loaded {
 		return

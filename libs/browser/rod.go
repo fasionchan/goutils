@@ -522,7 +522,7 @@ type RodBrowserManager struct {
 func NewRodBrowserManager(b *RodBrowser) *RodBrowserManager {
 	return &RodBrowserManager{
 		RodBrowser: b,
-		refs: stl.NewSyncMap[string, IdMappingByRef](),
+		refs:       stl.NewSyncMap[string, IdMappingByRef](),
 	}
 }
 

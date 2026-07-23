@@ -57,7 +57,10 @@ func (p *BrowserPool) DeleteBrowser(ctx context.Context, id string) (Browser, er
 }
 
 func (p *BrowserPool) NewChiOpenApiRouter(prefix string) chiopenapi.Router {
-	api := NewChiOpenApiRouter(prefix)
+	api := NewChiOpenApiRouter(prefix,
+		option.WithTitle("Browser Pool"),
+		option.WithDescription("Browser Pool API"),
+	)
 
 	if prefix == "" || prefix == "/" {
 		p.RegistryChiOpenApiRoutes(api)

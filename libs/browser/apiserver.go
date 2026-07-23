@@ -23,7 +23,10 @@ func NewBrowserApiHandler(browser Browser) *BrowserApiHandler {
 }
 
 func (handler *BrowserApiHandler) NewChiOpenApiRouter(prefix string) chiopenapi.Router {
-	api := NewChiOpenApiRouter(prefix)
+	api := NewChiOpenApiRouter(prefix,
+		option.WithTitle("Browser"),
+		option.WithDescription("Browser API"),
+	)
 
 	browserFn := GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
 		return handler.browser, nil
