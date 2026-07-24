@@ -886,16 +886,16 @@ func ConcatSlicesTo[Data any, Slice ~[]Data](slice Slice, slices ...Slice) Slice
 	}, slice)
 }
 
-func MappingByKey[Data any, Datas ~[]Data, Key comparable](datas Datas, key func(Data) Key) Mapping[Key, Data] {
-	m := Mapping[Key, Data]{}
+func MappingByKey[Data any, Datas ~[]Data, Key comparable](datas Datas, key func(Data) Key) map[Key]Data {
+	m := map[Key]Data{}
 	for _, data := range datas {
 		m[key(data)] = data
 	}
 	return m
 }
 
-func MappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](datas Datas, keys func(Data) Keys) Mapping[Key, Data] {
-	m := Mapping[Key, Data]{}
+func MappingByKeys[Data any, Datas ~[]Data, Key comparable, Keys ~[]Key](datas Datas, keys func(Data) Keys) map[Key]Data {
+	m := map[Key]Data{}
 	for _, data := range datas {
 		for _, key := range UniqueBySet(keys(data)) {
 			m[key] = data
