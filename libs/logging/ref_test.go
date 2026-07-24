@@ -11,8 +11,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
-	"gotest.tools/assert"
 )
 
 func TestLoggerRef(t *testing.T) {

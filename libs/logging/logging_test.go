@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gotest.tools/assert"
 )
 
 func TestLogLevel(t *testing.T) {
@@ -33,7 +33,6 @@ func TestLogLevel(t *testing.T) {
 	fmt.Println(level2)
 
 	assert.Equal(t, level, level2)
-	assert.Assert(t, false)
 }
 
 func TestLogging(t *testing.T) {

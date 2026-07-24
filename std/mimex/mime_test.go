@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/fasionchan/goutils/baseutils"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type PeekContentTypeTestCase struct {
