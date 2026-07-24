@@ -262,7 +262,7 @@ func SetinPro[
 	}
 
 	subDataMapping := stl.MappingByKey(subDatas, subDataKey)
-	BatchCallUnarySetinHandler(datas, setinHandler, subDataMapping)
+	BatchCallUnarySetinHandler(datas, setinHandler, subDataMapping.Native())
 
 	return nil
 }
