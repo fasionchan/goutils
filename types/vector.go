@@ -7,7 +7,9 @@
 
 package types
 
-import "github.com/fasionchan/goutils/stl"
+import (
+	"github.com/fasionchan/goutils/stl"
+)
 
 func Float32ToFloat64(value float32) float64 {
 	return float64(value)

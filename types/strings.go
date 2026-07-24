@@ -1,10 +1,3 @@
-/*
- * Author: fasion
- * Created time: 2022-11-19 17:56:20
- * Last Modified by: fasion
- * Last Modified time: 2026-04-26 12:57:48
- */
-
 package types
 
 import (
@@ -15,6 +8,8 @@ import (
 
 	"github.com/fasionchan/goutils/stl"
 )
+
+type StringWriter = stl.Writer[Strings, string]
 
 type String string
 

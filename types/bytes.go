@@ -11,6 +11,8 @@ import (
 	"github.com/fasionchan/goutils/stl"
 )
 
+type ByteWriter = stl.Writer[[]byte, byte]
+
 type BytesBoundedBuffer = stl.BoundedBuffer[[]byte, byte]
 
 func NewBytesBoundedBuffer(size int) *BytesBoundedBuffer {

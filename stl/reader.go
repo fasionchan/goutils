@@ -14,6 +14,11 @@ func ReaderFromSeq[Datas ~[]Data, Data any](seq iter.Seq[Data]) Reader[Datas, Da
 	return SeqReader[Datas, Data](seq)
 }
 
+type ReadCloser[Datas ~[]Data, Data any] interface {
+	Reader[Datas, Data]
+	io.Closer
+}
+
 type SeqReader[Datas ~[]Data, Data any] iter.Seq[Data]
 
 func (r SeqReader[Datas, Data]) Read(p []Data) (n int, err error) {
