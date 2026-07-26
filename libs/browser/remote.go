@@ -16,10 +16,11 @@ import (
 const (
 	RemoteProtocolVersion = 1
 
-	RemoteTypeSessionPing    = "session.ping"
-	RemoteTypeSessionPong    = "session.pong"
-	RemoteTypeSessionReady   = "session.ready"
-	RemoteTypeScreencastMeta = "screencast.meta"
+	RemoteTypeSessionPing     = "session.ping"
+	RemoteTypeSessionPong     = "session.pong"
+	RemoteTypeSessionReady    = "session.ready"
+	RemoteTypeScreencastMeta  = "screencast.meta"
+	RemoteTypeScreencastFrame = "screencast.frame"
 
 	RemoteTypeMouseMove  = "mouse.move"
 	RemoteTypeMouseDown  = "mouse.down"
@@ -112,6 +113,12 @@ type RemoteScreencastMetaPayload struct {
 	DeviceScaleFactor float64 `json:"device_scale_factor,omitempty"`
 }
 
+type RemoteScreencastFramePayload struct {
+	Seq    uint64 `json:"seq"`
+	Format string `json:"format"`
+	Ts     int64  `json:"ts,omitempty"`
+}
+
 type RemoteAckPayload struct {
 	RefType string `json:"ref_type,omitempty"`
 }
@@ -187,12 +194,15 @@ func (controller *RemoteController) ServeHTTP(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	format := opts.GetFormat()
 	go func() {
+		var seq uint64
 		for frame := range frames.BytesChan {
-			if err := controller.writeBinary(conn, frame); err != nil {
+			if err := controller.writeScreencastFrame(conn, seq, format, frame); err != nil {
 				log.Println(err)
 				return
 			}
+			seq++
 		}
 	}()
 
@@ -247,9 +257,20 @@ func (controller *RemoteController) handleTextMessage(conn *websocket.Conn, data
 	return nil
 }
 
-func (controller *RemoteController) writeBinary(conn *websocket.Conn, frame []byte) error {
+// writeScreencastFrame sends screencast.frame TextMessage then the raw image BinaryMessage under one lock.
+func (controller *RemoteController) writeScreencastFrame(conn *websocket.Conn, seq uint64, format string, frame []byte) error {
 	controller.writeMu.Lock()
 	defer controller.writeMu.Unlock()
+
+	ts := time.Now().UnixMilli()
+	envelope := NewRemoteEnvelope(RemoteTypeScreencastFrame, &RemoteScreencastFramePayload{
+		Seq:    seq,
+		Format: format,
+		Ts:     ts,
+	})
+	if err := conn.WriteJSON(envelope); err != nil {
+		return err
+	}
 	return conn.WriteMessage(websocket.BinaryMessage, frame)
 }
 

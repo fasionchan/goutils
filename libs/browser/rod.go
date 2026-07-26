@@ -516,38 +516,120 @@ func (b *RodBrowser) StartScreencast(id string, opts *ScreencastOptions) (*Scree
 
 	pageWithCancel, cancel := page.WithCancel()
 
-	frameChan := make(chan []byte)
+	if err := b.startScreencast(page, opts); err != nil {
+		cancel()
+		return nil, err
+	}
+
+	// Buffered to reduce risk of blocking the CDP event loop on slow WS consumers.
+	frameChan := make(chan []byte, 8)
+
+	var restartMu sync.Mutex
+	var restartTimer *time.Timer
+	scheduleRestart := func(reason string) {
+		restartMu.Lock()
+		defer restartMu.Unlock()
+		if restartTimer != nil {
+			restartTimer.Stop()
+		}
+		restartTimer = time.AfterFunc(300*time.Millisecond, func() {
+			if err := b.restartScreencast(page, opts); err != nil {
+				log.Println("failed to restart screencast after", reason, err)
+			}
+		})
+	}
 
 	go func() {
 		defer close(frameChan)
 
-		pageWithCancel.EachEvent(func(e *proto.PageScreencastFrame) {
-			if e == nil {
-				return
-			}
-			frameChan <- e.Data
+		pageWithCancel.EachEvent(
+			func(e *proto.PageScreencastFrame) {
+				if e == nil {
+					return
+				}
 
-			if err := RodCall(page, proto.PageScreencastFrameAck{
-				SessionID: e.SessionID,
-			}); err != nil {
+				// Copy payload: CDP may reuse buffers; also keep ack off the critical path semantics.
+				frame := append([]byte(nil), e.Data...)
+				sessionID := e.SessionID
 
-			}
-		})()
+				select {
+				case frameChan <- frame:
+				case <-pageWithCancel.GetContext().Done():
+					return
+				default:
+				}
+
+				// Ack failures are common around navigation; restart path recovers streaming.
+				if err := RodCall(page, proto.PageScreencastFrameAck{SessionID: sessionID}); err != nil {
+					log.Println("failed to ack screencast frame", err)
+				}
+			},
+
+			func(e *proto.PageFrameNavigated) {
+				if e == nil || e.Frame == nil {
+					return
+				}
+				// Main frame navigations stop CDP screencast; restart after settle.
+				if e.Frame.ParentID == "" {
+					scheduleRestart("frame navigated")
+				}
+			},
+		)()
 	}()
 
-	if _, err := b.Native().Call(context.Background(), string(page.SessionID), "Page.startScreencast", opts); err != nil {
-		return nil, err
-	}
-
 	return NewScreencastStream(frameChan, func() error {
+		restartMu.Lock()
+		if restartTimer != nil {
+			restartTimer.Stop()
+			restartTimer = nil
+		}
+		restartMu.Unlock()
+
 		cancel()
 
-		_, err := b.Native().Call(context.Background(), string(page.SessionID), "Page.stopScreencast", opts)
-		if err != nil {
-			fmt.Println("failed to stop screencast", err)
+		// Best-effort stop; ignore errors so Close stays idempotent after navigation.
+		if err := b.stopScreencast(page); err != nil {
+			log.Println("failed to stop screencast", err)
 		}
-		return err
+		return nil
 	}), nil
+}
+
+// restartScreencast best-effort stops then starts again.
+// After navigation Chrome already stops screencast, so stop errors must not block start.
+func (b *RodBrowser) restartScreencast(page *rod.Page, opts *ScreencastOptions) error {
+	_ = b.stopScreencast(page)
+	return b.startScreencast(page, opts)
+}
+
+func (b *RodBrowser) startScreencast(page *rod.Page, opts *ScreencastOptions) error {
+	return screencastOptionsToProto(opts).Call(page)
+}
+
+func (b *RodBrowser) stopScreencast(page *rod.Page) error {
+	return proto.PageStopScreencast{}.Call(page)
+}
+
+// screencastOptionsToProto maps API options to CDP Page.startScreencast
+// (camelCase everyNthFrame/maxWidth/maxHeight — not ScreencastOptions snake_case JSON tags).
+func screencastOptionsToProto(opts *ScreencastOptions) *proto.PageStartScreencast {
+	req := &proto.PageStartScreencast{
+		Format: proto.PageStartScreencastFormatJpeg,
+	}
+	if opts == nil {
+		return req
+	}
+	switch opts.GetFormat() {
+	case "png":
+		req.Format = proto.PageStartScreencastFormatPng
+	default:
+		req.Format = proto.PageStartScreencastFormatJpeg
+	}
+	req.Quality = opts.Quality
+	req.MaxWidth = opts.MaxWidth
+	req.MaxHeight = opts.MaxHeight
+	req.EveryNthFrame = opts.EventNthFrame
+	return req
 }
 
 func (b *RodBrowser) DispatchMouseEvent(id string, event *MouseEvent) error {

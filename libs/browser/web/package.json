@@ -1,0 +1,44 @@
+{
+  "name": "@fasionchan/browser-remote-react",
+  "version": "0.1.0",
+  "description": "React viewer for goutils browser WebSocket remote control",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react --external react-dom",
+    "demo": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts --outDir dist-demo",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  },
+  "license": "MIT"
+}

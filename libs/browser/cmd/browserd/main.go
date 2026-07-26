@@ -44,6 +44,22 @@ func main() {
 		apiHandler = browserlib.JwtPathValidator(secret)(apiHandler)
 	}
 
+	handler := withOptionalDemoStatic(apiHandler)
+
 	log.Println("Server started on port 8080")
-	http.ListenAndServe(":8080", apiHandler)
+	http.ListenAndServe(":8080", handler)
+}
+
+// withOptionalDemoStatic serves built demo assets under /demo/ when DEMO_STATIC_DIR is set.
+func withOptionalDemoStatic(api http.Handler) http.Handler {
+	demoDir := os.Getenv("DEMO_STATIC_DIR")
+	if demoDir == "" {
+		return api
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/demo/", http.StripPrefix("/demo/", http.FileServer(http.Dir(demoDir))))
+	mux.Handle("/", api)
+	log.Printf("Serving demo static files from %s at /demo/", demoDir)
+	return mux
 }

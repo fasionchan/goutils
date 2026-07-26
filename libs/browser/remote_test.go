@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/fasionchan/goutils/types"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 )
 
@@ -181,6 +184,75 @@ func TestEncodeInputModifiersAndEstimateFrameSize(t *testing.T) {
 	fw, fh := EstimateScreencastFrameSize(1280, 720, &ScreencastOptions{MaxWidth: &maxW, MaxHeight: &maxH})
 	require.Equal(t, 640, fw)
 	require.Equal(t, 360, fh)
+}
+
+func TestScreencastOptionsToProtoMapsCDPFields(t *testing.T) {
+	quality, maxW, maxH, nth := 80, 1280, 720, 2
+	format := "png"
+	opts := &ScreencastOptions{
+		Format:        &format,
+		Quality:       &quality,
+		MaxWidth:      &maxW,
+		MaxHeight:     &maxH,
+		EventNthFrame: &nth,
+	}
+
+	req := screencastOptionsToProto(opts)
+	require.Equal(t, "png", string(req.Format))
+	require.Equal(t, &quality, req.Quality)
+	require.Equal(t, &maxW, req.MaxWidth)
+	require.Equal(t, &maxH, req.MaxHeight)
+	require.Equal(t, &nth, req.EveryNthFrame)
+}
+
+func TestWriteScreencastFrameSendsMarkerThenBinary(t *testing.T) {
+	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		require.NoError(t, err)
+		defer conn.Close()
+
+		controller := NewRemoteController(nil, "tab-1", nil)
+		require.NoError(t, controller.writeScreencastFrame(conn, 0, "jpeg", []byte{0xff, 0xd8, 0xff}))
+		require.NoError(t, controller.writeScreencastFrame(conn, 1, "jpeg", []byte{0xff, 0xd8, 0xfe}))
+	}))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	msgType, data, err := conn.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.TextMessage, msgType)
+
+	var envelope RemoteEnvelope
+	require.NoError(t, json.Unmarshal(data, &envelope))
+	require.Equal(t, RemoteTypeScreencastFrame, envelope.Type)
+
+	var payload RemoteScreencastFramePayload
+	require.NoError(t, json.Unmarshal(envelope.Payload, &payload))
+	require.Equal(t, uint64(0), payload.Seq)
+	require.Equal(t, "jpeg", payload.Format)
+	require.NotZero(t, payload.Ts)
+
+	msgType, data, err = conn.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.BinaryMessage, msgType)
+	require.Equal(t, []byte{0xff, 0xd8, 0xff}, data)
+
+	msgType, data, err = conn.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.TextMessage, msgType)
+	require.NoError(t, json.Unmarshal(data, &envelope))
+	require.NoError(t, json.Unmarshal(envelope.Payload, &payload))
+	require.Equal(t, uint64(1), payload.Seq)
+
+	msgType, data, err = conn.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.BinaryMessage, msgType)
+	require.Equal(t, []byte{0xff, 0xd8, 0xfe}, data)
 }
 
 func TestRodInputEventTypeConverters(t *testing.T) {
