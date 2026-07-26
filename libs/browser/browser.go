@@ -19,9 +19,13 @@ const (
 	SnapshotTypeA11y = "a11y"
 	SnapshotTypeDom  = "dom"
 
-	SelectorTypeCss   = "css"
-	SelectorTypeXPath = "xpath"
-	SelectorTypeRef   = "ref"
+	LocatorTypeCssSelector = "css-selector"
+	LocatorTypeXPath       = "xpath"
+	LocatorTypeRef         = "ref"
+
+	OptionLocatorTypeText        = "text"
+	OptionLocatorTypeCssSelector = "css-selector"
+	OptionLocatorTypeRegex       = "regex"
 
 	MouseButtonLeft    = "left"
 	MouseButtonMiddle  = "middle"
@@ -29,6 +33,19 @@ const (
 	MouseButtonBack    = "back"
 	MouseButtonForward = "forward"
 	MouseButtonNone    = "none"
+
+	MouseEventTypeMove  = "move"
+	MouseEventTypeDown  = "down"
+	MouseEventTypeUp    = "up"
+	MouseEventTypeWheel = "wheel"
+
+	KeyEventTypeDown = "down"
+	KeyEventTypeUp   = "up"
+
+	InputModifierAlt   = "alt"
+	InputModifierCtrl  = "ctrl"
+	InputModifierMeta  = "meta"
+	InputModifierShift = "shift"
 )
 
 type Browser interface {
@@ -45,7 +62,12 @@ type Browser interface {
 
 	Click(id, selector, selectorType, button string, count int) error
 	Type(id, selector, selectorType, text string) error
+	Hover(id, selector, selectorType string) error
+	SelectOption(id, target, targetType string, options []string, optionType string, selected bool) error
 	SetInputFiles(id, selector, selectorType string, files []string) error
+
+	DispatchMouseEvent(id string, event *MouseEvent) error
+	DispatchKeyEvent(id string, event *KeyEvent) error
 
 	Screenshot(id string, opts *ScreenshotOptions) ([]byte, error)
 	Snapshot(id, snapshotType string) (string, error)
@@ -58,8 +80,92 @@ type Browser interface {
 	PrintToPdf(id string) (io.ReadCloser, error)
 
 	StartScreencast(id string, opts *ScreencastOptions) (*ScreencastStream, error)
+	GetScreencastSessionMeta(id string, opts *ScreencastOptions) (*ScreencastSessionMeta, error)
 
 	Close() error
+}
+
+// MouseEvent is a coordinate-based mouse input in page CSS pixels.
+type MouseEvent struct {
+	Type       string   `json:"type"`
+	X          float64  `json:"x"`
+	Y          float64  `json:"y"`
+	Button     string   `json:"button,omitempty"`
+	ClickCount int      `json:"click_count,omitempty"`
+	DeltaX     float64  `json:"delta_x,omitempty"`
+	DeltaY     float64  `json:"delta_y,omitempty"`
+	Modifiers  []string `json:"modifiers,omitempty"`
+}
+
+// KeyEvent is a keyboard input event.
+type KeyEvent struct {
+	Type       string   `json:"type"`
+	Key        string   `json:"key,omitempty"`
+	Code       string   `json:"code,omitempty"`
+	Text       string   `json:"text,omitempty"`
+	Modifiers  []string `json:"modifiers,omitempty"`
+	AutoRepeat bool     `json:"auto_repeat,omitempty"`
+}
+
+// ScreencastSessionMeta describes viewport/frame geometry for remote control clients.
+type ScreencastSessionMeta struct {
+	Format            string  `json:"format,omitempty"`
+	ViewportWidth     int     `json:"viewport_width"`
+	ViewportHeight    int     `json:"viewport_height"`
+	FrameWidth        int     `json:"frame_width"`
+	FrameHeight       int     `json:"frame_height"`
+	DeviceScaleFactor float64 `json:"device_scale_factor,omitempty"`
+}
+
+// EncodeInputModifiers converts modifier names to CDP bit flags (Alt=1, Ctrl=2, Meta=4, Shift=8).
+func EncodeInputModifiers(modifiers []string) int {
+	var bits int
+	for _, modifier := range modifiers {
+		switch strings.ToLower(strings.TrimSpace(modifier)) {
+		case InputModifierAlt:
+			bits |= 1
+		case InputModifierCtrl, "control":
+			bits |= 2
+		case InputModifierMeta, "command", "cmd":
+			bits |= 4
+		case InputModifierShift:
+			bits |= 8
+		}
+	}
+	return bits
+}
+
+func EstimateScreencastFrameSize(viewportWidth, viewportHeight int, opts *ScreencastOptions) (int, int) {
+	width, height := viewportWidth, viewportHeight
+	if width <= 0 || height <= 0 {
+		return width, height
+	}
+	if opts == nil {
+		return width, height
+	}
+
+	scale := 1.0
+	if opts.MaxWidth != nil && *opts.MaxWidth > 0 {
+		if s := float64(*opts.MaxWidth) / float64(width); s < scale {
+			scale = s
+		}
+	}
+	if opts.MaxHeight != nil && *opts.MaxHeight > 0 {
+		if s := float64(*opts.MaxHeight) / float64(height); s < scale {
+			scale = s
+		}
+	}
+	if scale >= 1 {
+		return width, height
+	}
+	return int(float64(width) * scale), int(float64(height) * scale)
+}
+
+func (opts *ScreencastOptions) GetFormat() string {
+	if opts == nil || opts.Format == nil || *opts.Format == "" {
+		return "jpeg"
+	}
+	return *opts.Format
 }
 
 type NewTabOptions struct {
@@ -151,13 +257,33 @@ type Viewport struct {
 }
 
 type ScreenshotOptions struct {
-	Format  *string    `json:"format,omitempty" query:"format"`
-	Quality *int       `json:"quality,omitempty" query:"quality"`
-	Clip    *Viewport  `json:"clip,omitempty" query:"clip"`
-	Target  *TypedExpr `json:"target,omitempty" query:"target"`
+	Format  *string    `json:"format,omitempty"`
+	Quality *int       `json:"quality,omitempty"`
+	Clip    *Viewport  `json:"clip,omitempty"`
+	Target  *TypedExpr `json:"target,omitempty"`
 
 	// Scale Page scale factor.
-	Scale *float64 `json:"scale" query:"scale"`
+	Scale *float64 `json:"scale,omitempty"`
+}
+
+type ScreenOptionsQuery struct {
+	Format  *string    `query:"format" required:"true" default:"jpeg" enum:"jpeg,png"`
+	Quality *int       `query:"quality" required:"true" default:"60" min:"0" max:"100"`
+	Clip    *Viewport  `query:"clip"`
+	Target  *TypedExpr `query:"target"`
+
+	// Scale Page scale factor.
+	Scale *float64 `query:"scale,omitempty"`
+}
+
+func (query *ScreenOptionsQuery) ToScreenshotOptions() *ScreenshotOptions {
+	return &ScreenshotOptions{
+		Format:  query.Format,
+		Quality: query.Quality,
+		Clip:    query.Clip,
+		Target:  query.Target,
+		Scale:   query.Scale,
+	}
 }
 
 type TypedExpr struct {

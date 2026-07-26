@@ -166,6 +166,42 @@ func (result *TypedResponseResult[T]) WithError(err string) *TypedResponseResult
 	return result
 }
 
+func (result *TypedResponseResult[T]) WithFail(code int, err, msg string) *TypedResponseResult[T] {
+	if result == nil {
+		return nil
+	}
+
+	result.Success = false
+	result.Code = code
+	result.Error = err
+	result.Message = msg
+
+	return result
+}
+
+func (result *TypedResponseResult[T]) WithSuccessData(data T) *TypedResponseResult[T] {
+	if result == nil {
+		return nil
+	}
+
+	result.Success = true
+	result.Data = data
+
+	return result
+}
+
+func (result *TypedResponseResult[T]) WithSuccessPagedData(data T, pagination *Pagination) *TypedResponseResult[T] {
+	if result == nil {
+		return nil
+	}
+
+	result.Success = true
+	result.Data = data
+	result.Pagination = pagination
+
+	return result
+}
+
 func (result *TypedResponseResult[T]) WithMessage(msg string) *TypedResponseResult[T] {
 	result.SetMessage(msg)
 	return result

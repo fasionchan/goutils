@@ -3,6 +3,7 @@ package browser
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -42,4 +43,13 @@ func TestQueryEncodeEnbed(t *testing.T) {
 	require.Equal(t, query.Get("width"), "300")
 	require.Equal(t, query.Get("height"), "400")
 	require.Equal(t, query.Get("scale"), "2")
+}
+
+func TestGenerateJwtPathToken(t *testing.T) {
+	token, err := GenerateJwtPathToken("/docs", "abc", 1*time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	fmt.Println(token)
 }

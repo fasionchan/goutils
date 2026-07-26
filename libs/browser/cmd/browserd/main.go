@@ -39,16 +39,10 @@ func main() {
 		return
 	}
 
-	// id, err := browser.NewTab(browserlib.NewTabWithUrl("https://time.is/zh/"))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// controller := browserlib.NewRemoteController(browser, id, &websocket.Upgrader{
-	// 	CheckOrigin: func(r *http.Request) bool {
-	// 		return true
-	// 	},
-	// })
+	secret := os.Getenv("JWT_SECRET")
+	if secret != "" {
+		apiHandler = browserlib.JwtPathValidator(secret)(apiHandler)
+	}
 
 	log.Println("Server started on port 8080")
 	http.ListenAndServe(":8080", apiHandler)

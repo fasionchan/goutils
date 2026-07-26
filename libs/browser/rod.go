@@ -197,6 +197,37 @@ func (b *RodBrowser) Type(id string, selector, selectorType, text string) error 
 	return element.Input(text)
 }
 
+func (b *RodBrowser) Hover(id string, selector, selectorType string) error {
+	element, err := b.getExactElement(id, selector, selectorType)
+	if err != nil {
+		return err
+	}
+
+	return element.Hover()
+}
+
+func (b *RodBrowser) SelectOption(id string, target, targetType string, options []string, optionType string, selected bool) error {
+	element, err := b.getExactElement(id, target, targetType)
+	if err != nil {
+		return err
+	}
+
+	return element.Select(options, selected, RodSelectorTypeFromStd(optionType))
+}
+
+func RodSelectorTypeFromStd(optionType string) rod.SelectorType {
+	switch optionType {
+	case OptionLocatorTypeCssSelector:
+		return rod.SelectorTypeCSSSector
+	case OptionLocatorTypeText:
+		return rod.SelectorTypeText
+	case OptionLocatorTypeRegex:
+		return rod.SelectorTypeRegex
+	default:
+		return ""
+	}
+}
+
 func (b *RodBrowser) SetInputFiles(id string, selector, selectorType string, files []string) error {
 	element, err := b.getExactElement(id, selector, selectorType)
 	if err != nil {
@@ -242,7 +273,9 @@ func (b *RodBrowser) Screenshot(id string, opts *ScreenshotOptions) ([]byte, err
 
 	clip := PageCaptureScreenshotClipFromOptions(opts.Clip)
 	if scale := opts.Scale; scale != nil {
-		clip.Scale = *scale
+		if clip != nil {
+			clip.Scale = *scale
+		}
 	}
 
 	return page.Screenshot(true, &proto.PageCaptureScreenshot{
@@ -250,6 +283,25 @@ func (b *RodBrowser) Screenshot(id string, opts *ScreenshotOptions) ([]byte, err
 		Quality: opts.Quality,
 		Clip:    clip,
 	})
+}
+
+func (b *RodBrowser) Snapshot(id, snapshotType string) (string, error) {
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return "", err
+	}
+
+	switch snapshotType {
+	case "", SnapshotTypeA11y:
+		var request proto.AccessibilityGetFullAXTree
+		result, err := request.Call(page)
+		if err != nil {
+			return "", err
+		}
+		return AccessibilityAxNodes(result.Nodes).String(), nil
+	default:
+		return "", fmt.Errorf("unsupported snapshot type: %s", snapshotType)
+	}
 }
 
 func PageCaptureScreenshotFromOptions(opts *ScreenshotOptions) *proto.PageCaptureScreenshot {
@@ -309,21 +361,21 @@ func (b *RodBrowser) getElements(id, selector, selectorType string) (rod.Element
 	return b.getElementsFromPage(page, selector, selectorType)
 }
 
-func (b *RodBrowser) getElementsFromPage(page *rod.Page, selector, selectorType string) (rod.Elements, error) {
+func (b *RodBrowser) getElementsFromPage(page *rod.Page, locator, locatorType string) (rod.Elements, error) {
 	var fn func(*rod.Page, string) (rod.Elements, error)
 
-	switch selectorType {
-	case SelectorTypeCss:
+	switch locatorType {
+	case LocatorTypeCssSelector:
 		fn = (*rod.Page).Elements
-	case SelectorTypeXPath:
+	case LocatorTypeXPath:
 		fn = (*rod.Page).ElementsX
-	case SelectorTypeRef:
+	case LocatorTypeRef:
 		fn = b.getElementsFromPageByRef
 	default:
-		return nil, fmt.Errorf("invalid selector type: %s", selectorType)
+		return nil, fmt.Errorf("invalid locator type: %s", locatorType)
 	}
 
-	return fn(page, selector)
+	return fn(page, locator)
 }
 
 func (b *RodBrowser) getElementsFromPageByRef(page *rod.Page, ref string) (rod.Elements, error) {
@@ -498,6 +550,126 @@ func (b *RodBrowser) StartScreencast(id string, opts *ScreencastOptions) (*Scree
 	}), nil
 }
 
+func (b *RodBrowser) DispatchMouseEvent(id string, event *MouseEvent) error {
+	if event == nil {
+		return fmt.Errorf("mouse event is nil")
+	}
+
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return err
+	}
+
+	cdpType, err := rodMouseEventTypeFromStd(event.Type)
+	if err != nil {
+		return err
+	}
+
+	button := event.Button
+	if button == "" {
+		button = MouseButtonNone
+	}
+
+	req := proto.InputDispatchMouseEvent{
+		Type:       cdpType,
+		X:          event.X,
+		Y:          event.Y,
+		Button:     RodMouseButtonFromStd(button),
+		ClickCount: event.ClickCount,
+		DeltaX:     event.DeltaX,
+		DeltaY:     event.DeltaY,
+		Modifiers:  EncodeInputModifiers(event.Modifiers),
+	}
+	return req.Call(page)
+}
+
+func (b *RodBrowser) DispatchKeyEvent(id string, event *KeyEvent) error {
+	if event == nil {
+		return fmt.Errorf("key event is nil")
+	}
+
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return err
+	}
+
+	cdpType, err := rodKeyEventTypeFromStd(event.Type)
+	if err != nil {
+		return err
+	}
+
+	req := proto.InputDispatchKeyEvent{
+		Type:       cdpType,
+		Key:        event.Key,
+		Code:       event.Code,
+		Text:       event.Text,
+		AutoRepeat: event.AutoRepeat,
+		Modifiers:  EncodeInputModifiers(event.Modifiers),
+	}
+	return req.Call(page)
+}
+
+func (b *RodBrowser) GetScreencastSessionMeta(id string, opts *ScreencastOptions) (*ScreencastSessionMeta, error) {
+	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	metrics, err := proto.PageGetLayoutMetrics{}.Call(page)
+	if err != nil {
+		return nil, err
+	}
+
+	viewportWidth, viewportHeight := 0, 0
+	deviceScaleFactor := 1.0
+	if metrics.CSSLayoutViewport != nil {
+		viewportWidth = metrics.CSSLayoutViewport.ClientWidth
+		viewportHeight = metrics.CSSLayoutViewport.ClientHeight
+	} else if metrics.LayoutViewport != nil {
+		viewportWidth = metrics.LayoutViewport.ClientWidth
+		viewportHeight = metrics.LayoutViewport.ClientHeight
+	}
+	if metrics.CSSVisualViewport != nil && metrics.CSSVisualViewport.Scale > 0 {
+		deviceScaleFactor = metrics.CSSVisualViewport.Scale
+	}
+
+	frameWidth, frameHeight := EstimateScreencastFrameSize(viewportWidth, viewportHeight, opts)
+	return &ScreencastSessionMeta{
+		Format:            opts.GetFormat(),
+		ViewportWidth:     viewportWidth,
+		ViewportHeight:    viewportHeight,
+		FrameWidth:        frameWidth,
+		FrameHeight:       frameHeight,
+		DeviceScaleFactor: deviceScaleFactor,
+	}, nil
+}
+
+func rodMouseEventTypeFromStd(eventType string) (proto.InputDispatchMouseEventType, error) {
+	switch eventType {
+	case MouseEventTypeMove:
+		return proto.InputDispatchMouseEventTypeMouseMoved, nil
+	case MouseEventTypeDown:
+		return proto.InputDispatchMouseEventTypeMousePressed, nil
+	case MouseEventTypeUp:
+		return proto.InputDispatchMouseEventTypeMouseReleased, nil
+	case MouseEventTypeWheel:
+		return proto.InputDispatchMouseEventTypeMouseWheel, nil
+	default:
+		return "", fmt.Errorf("unsupported mouse event type: %s", eventType)
+	}
+}
+
+func rodKeyEventTypeFromStd(eventType string) (proto.InputDispatchKeyEventType, error) {
+	switch eventType {
+	case KeyEventTypeDown:
+		return proto.InputDispatchKeyEventTypeKeyDown, nil
+	case KeyEventTypeUp:
+		return proto.InputDispatchKeyEventTypeKeyUp, nil
+	default:
+		return "", fmt.Errorf("unsupported key event type: %s", eventType)
+	}
+}
+
 func GetStringsFromRodElements(elements rod.Elements, getter func(*rod.Element) (string, error)) (types.Strings, error) {
 	strs, errs := stl.MapWithError(elements, true, getter)
 	if err := errs.Simplify(); err != nil {
@@ -528,25 +700,6 @@ func NewRodBrowserManager(b *RodBrowser) *RodBrowserManager {
 
 func NewRodBrowserManagerFromNative(b *rod.Browser) *RodBrowserManager {
 	return NewRodBrowserManager((*RodBrowser)(b))
-}
-
-func (b *RodBrowserManager) Snapshot(id, snapshotType string) (string, error) {
-	page, err := b.Native().PageFromTarget(proto.TargetTargetID(id))
-	if err != nil {
-		return "", err
-	}
-
-	switch snapshotType {
-	case "", SnapshotTypeA11y:
-		var request proto.AccessibilityGetFullAXTree
-		result, err := request.Call(page)
-		if err != nil {
-			return "", err
-		}
-		return AccessibilityAxNodes(result.Nodes).String(), nil
-	default:
-		return "", fmt.Errorf("unsupported snapshot type: %s", snapshotType)
-	}
 }
 
 type IdMappingByRef = stl.Mapping[string, string]

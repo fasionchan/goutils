@@ -47,6 +47,15 @@ func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, er
 	return browser, err
 }
 
+func (p *BrowserPool) EnsureBrowserApiHandler(ctx context.Context, id string) (*BrowserApiHandler, error) {
+	browser, err := p.EnsureBrowser(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewBrowserApiHandler(browser), nil
+}
+
 func (p *BrowserPool) DeleteBrowser(ctx context.Context, id string) (Browser, error) {
 	browser, loaded := p.browsers.Delete(id)
 	if !loaded {
@@ -114,8 +123,8 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 				option.Response(http.StatusOK, new(types.TypedResponseResult[string])),
 			)
 
-			GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
-				return p.EnsureBrowser(r.Context(), chi.URLParam(r, "instanceId"))
+			GetBrowserFromRequest(func(r *http.Request) (*BrowserApiHandler, error) {
+				return p.EnsureBrowserApiHandler(r.Context(), chi.URLParam(r, "instanceId"))
 			}).RegisterChiOpenApiRoutes(r)
 		})
 	})

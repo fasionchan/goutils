@@ -60,14 +60,14 @@ func TestRodBrowser(t *testing.T) {
 		return
 	}
 
-	texts, err := browser.GetTexts(tab1.Id, "body", SelectorTypeCss)
+	texts, err := browser.GetTexts(tab1.Id, "body", LocatorTypeCssSelector)
 	if err != nil {
 		t.Fatalf("failed to get texts: %v", err)
 	}
 
 	fmt.Println(texts)
 
-	htmls, err := browser.GetHtmls(tab1.Id, "body", SelectorTypeCss)
+	htmls, err := browser.GetHtmls(tab1.Id, "body", LocatorTypeCssSelector)
 	if err != nil {
 		t.Fatalf("failed to get htmls: %v", err)
 	}

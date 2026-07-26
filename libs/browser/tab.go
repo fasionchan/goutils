@@ -2,10 +2,10 @@ package browser
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 
+	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
@@ -65,6 +65,14 @@ func (h *TabHandler) Type(selector, selectorType, text string) error {
 	return h.browser.Type(h.id, selector, selectorType, text)
 }
 
+func (h *TabHandler) Hover(selector, selectorType string) error {
+	return h.browser.Hover(h.id, selector, selectorType)
+}
+
+func (h *TabHandler) SelectOption(target, targetType string, options []string, optionType string, selected bool) error {
+	return h.browser.SelectOption(h.id, target, targetType, options, optionType, selected)
+}
+
 func (h *TabHandler) SetInputFiles(selector, selectorType string, files []string) error {
 	return h.browser.SetInputFiles(h.id, selector, selectorType, files)
 }
@@ -95,6 +103,89 @@ func (h *TabHandler) PrintToPdf() (io.ReadCloser, error) {
 
 func (h *TabHandler) StartScreencast(opts *ScreencastOptions) (*ScreencastStream, error) {
 	return h.browser.StartScreencast(h.id, opts)
+}
+
+func (h *TabHandler) NewRemoteController() *RemoteController {
+	return NewRemoteController(h.browser, h.id, DefaultWebSocketUpgrader)
+}
+
+func (h *TabHandler) HandleGetTab(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[*Tab] {
+	tab, err := h.GetTab()
+	if err != nil {
+		return types.NewTypedResponseResultFromError[*Tab](http.StatusBadRequest, err, "Failed to get tab")
+	}
+
+	return types.NewTypedResponseResultFromData(tab)
+}
+
+func (h *TabHandler) HandleDeleteTab(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.ResponseResult {
+	if err := h.Close(); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to close tab")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+type NavigateOptions struct {
+	Url string `json:"url"`
+}
+
+func (h *TabHandler) HandleNavigate(params *NavigateOptions, w http.ResponseWriter, r *http.Request) *types.ResponseResult {
+	if err := h.Navigate(params.Url); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to navigate")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+func (h *TabHandler) HandleReload(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.ResponseResult {
+	if err := h.Reload(); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to reload")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+func (h *TabHandler) HandleGoBack(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.ResponseResult {
+	if err := h.GoBack(); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go back")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+func (h *TabHandler) HandleGoForward(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.ResponseResult {
+	if err := h.GoForward(); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go forward")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+func (h *TabHandler) HandleListCookies(params NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[[]*http.Cookie] {
+	cookies, err := h.GetCookies()
+	if err != nil {
+		return types.NewTypedResponseResultFromError[[]*http.Cookie](http.StatusInternalServerError, err, "Failed to get cookies")
+	}
+
+	return types.NewTypedResponseResultFromData(cookies)
+}
+
+func (h *TabHandler) HandleSetCookie(params *http.Cookie, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[*http.Cookie] {
+	if err := h.SetCookies([]*http.Cookie{params}); err != nil {
+		return types.NewTypedResponseResultFromError[*http.Cookie](http.StatusInternalServerError, err, "Failed to set cookie")
+	}
+
+	cookies, err := h.GetCookies()
+	if err != nil {
+		return types.NewTypedResponseResultFromError[*http.Cookie](http.StatusInternalServerError, err, "Failed to get cookies")
+	}
+
+	cookie, _ := stl.FindFirstByKey(cookies, func(cookie *http.Cookie) string {
+		return cookie.Name
+	}, params.Name)
+
+	return types.NewTypedResponseResultFromData(cookie)
 }
 
 type SnapshotOptions struct {
@@ -151,6 +242,35 @@ func (h *TabHandler) HandleType(params *TabTypeRequestParams, w http.ResponseWri
 	return types.NewResponseResultFromData(nil)
 }
 
+type TabHoverRequestParams struct {
+	Target     string `json:"target"`
+	TargetType string `json:"targetType"`
+}
+
+func (h *TabHandler) HandleHover(params *TabHoverRequestParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[any] {
+	if err := h.Hover(params.Target, params.TargetType); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to hover")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
+type TabSelectOptionRequestParams struct {
+	Target     string   `json:"target"`
+	TargetType string   `json:"targetType"`
+	Options    []string `json:"options"`
+	OptionType string   `json:"optionType"`
+	Selected   bool     `json:"selected"`
+}
+
+func (h *TabHandler) HandleSelectOption(params *TabSelectOptionRequestParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[any] {
+	if err := h.SelectOption(params.Target, params.TargetType, params.Options, params.OptionType, params.Selected); err != nil {
+		return types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to select option")
+	}
+
+	return types.NewResponseResultFromData(nil)
+}
+
 type TabGetHtmlsParams struct {
 	DomElementLocatorQuery `json:"-" query:",inline"`
 }
@@ -187,129 +307,39 @@ type DomElementLocatorQuery struct {
 type GetTabHandlerFromRequest func(*http.Request) (*TabHandler, error)
 
 func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
-	type NavigateOptions struct {
-		Url string `json:"url"`
-	}
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		tab, err := tabHandler.GetTab()
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get tab").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewTypedResponseResultFromData(tab).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/", TabHandlerPtr.HandleGetTab, fn).With(
 		option.Summary("Get"),
 		option.Description("Get the current tab"),
 		option.Tags("Tabs"),
-		option.Response(http.StatusOK, new(Tab)),
 	)
 
-	r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		if err := tabHandler.Close(); err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to close page").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodDelete, "/", TabHandlerPtr.HandleDeleteTab, fn).With(
 		option.Summary("Close"),
 		option.Description("Close the current page"),
 		option.Tags("Tabs"),
-		option.Response(http.StatusOK, nil),
 	)
 
-	r.Post("/_navigate", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		var options NavigateOptions
-		if err := json.NewDecoder(r.Body).Decode(&options); err != nil {
-			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to decode request body").WriteHttpResponse(w)
-			return
-		}
-
-		if err := tabHandler.Navigate(options.Url); err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to navigate").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_navigate", TabHandlerPtr.HandleNavigate, fn).With(
 		option.Summary("Navigate"),
 		option.Description("Navigate to a URL"),
 		option.Tags("Navigation"),
 		option.Request(new(NavigateOptions)),
 	)
 
-	r.Post("/_reload", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		if err := tabHandler.Reload(); err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to reload").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_reload", TabHandlerPtr.HandleReload, fn).With(
 		option.Summary("Reload"),
 		option.Description("Reload the current page"),
 		option.Tags("Navigation"),
 	)
 
-	r.Post("/_goBack", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		if err := tabHandler.GoBack(); err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go back").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_goBack", TabHandlerPtr.HandleGoBack, fn).With(
 		option.Summary("Go back"),
 		option.Description("Go back to the previous page"),
 		option.Tags("Navigation"),
 	)
 
-	r.Post("/_goForward", func(w http.ResponseWriter, r *http.Request) {
-		tabHandler, err := fn(r)
-		if err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-			return
-		}
-
-		if err := tabHandler.GoForward(); err != nil {
-			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to go forward").WriteHttpResponse(w)
-			return
-		}
-
-		types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-	}).With(
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_goForward", TabHandlerPtr.HandleGoForward, fn).With(
 		option.Summary("Go forward"),
 		option.Description("Go forward to the next page"),
 		option.Tags("Navigation"),
@@ -322,11 +352,13 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 			return
 		}
 
-		opts, err := ParseRequest[*ScreenshotOptions](r)
+		query, err := ParseRequest[ScreenOptionsQuery](r)
 		if err != nil {
 			types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to parse screenshot options").WriteHttpResponse(w)
 			return
 		}
+
+		opts := query.ToScreenshotOptions()
 
 		screenshot, err := tabHandler.Screenshot(opts)
 		if err != nil {
@@ -341,56 +373,21 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 		option.Summary("Screenshot"),
 		option.Description("Take a screenshot of the current page"),
 		option.Tags("Observations"),
-		option.Request(new(ScreenshotOptions)),
+		option.Request(new(ScreenOptionsQuery)),
 		option.Response(http.StatusOK, new(bytes.Buffer)),
 	)
 
 	r.Route("/Cookies", func(r chiopenapi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			tabHandler, err := fn(r)
-			if err != nil {
-				types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-				return
-			}
-
-			cookies, err := tabHandler.GetCookies()
-			if err != nil {
-				types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get cookies").WriteHttpResponse(w)
-				return
-			}
-
-			types.NewTypedResponseResultFromData(cookies).WriteHttpResponse(w)
-		}).With(
+		RegisterParamsBasedRequestHandler(r, http.MethodGet, "/", TabHandlerPtr.HandleListCookies, fn).With(
 			option.Summary("List"),
 			option.Description("List cookies"),
 			option.Tags("Cookies"),
-			option.Response(http.StatusOK, new([]http.Cookie)),
 		)
 
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			tabHandler, err := fn(r)
-			if err != nil {
-				types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
-				return
-			}
-
-			var cookie http.Cookie
-			if err := json.NewDecoder(r.Body).Decode(&cookie); err != nil {
-				types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to decode request body").WriteHttpResponse(w)
-				return
-			}
-
-			if err := tabHandler.SetCookies([]*http.Cookie{&cookie}); err != nil {
-				types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to set cookies").WriteHttpResponse(w)
-				return
-			}
-
-			types.NewResponseResultFromData(nil).WriteHttpResponse(w)
-		}).With(
+		RegisterParamsBasedRequestHandler(r, http.MethodPost, "/", TabHandlerPtr.HandleSetCookie, fn).With(
 			option.Summary("Set"),
 			option.Description("Set cookie"),
 			option.Tags("Cookies"),
-			option.Request(new(http.Cookie)),
 		)
 	})
 
@@ -414,6 +411,18 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 		option.Tags("Actions"),
 	)
 
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_hover", TabHandlerPtr.HandleHover, fn).With(
+		option.Summary("Hover"),
+		option.Description("Hover over a element"),
+		option.Tags("Actions"),
+	)
+
+	RegisterParamsBasedRequestHandler(r, http.MethodPost, "/_selectOption", TabHandlerPtr.HandleSelectOption, fn).With(
+		option.Summary("Select option"),
+		option.Description("Select an option from a dropdown"),
+		option.Tags("Actions"),
+	)
+
 	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/Texts", TabHandlerPtr.HandleGetTexts, fn).With(
 		option.Summary("Texts"),
 		option.Description("Get texts"),
@@ -426,5 +435,24 @@ func (fn GetTabHandlerFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router)
 		option.Description("Get htmls"),
 		option.Tags("Observations"),
 		option.Response(http.StatusOK, new(types.Strings)),
+	)
+
+	fn.RegisterRemoteChiOpenApiRoute(r)
+}
+
+func (fn GetTabHandlerFromRequest) RegisterRemoteChiOpenApiRoute(r chiopenapi.Router) {
+	r.Get("/Remote", func(w http.ResponseWriter, r *http.Request) {
+		tabHandler, err := fn(r)
+		if err != nil {
+			types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get page").WriteHttpResponse(w)
+			return
+		}
+
+		tabHandler.NewRemoteController().ServeHTTP(w, r)
+	}).With(
+		option.Summary("Remote control"),
+		option.Description("WebSocket remote control: binary screencast frames and JSON mouse/keyboard events"),
+		option.Tags("Remote"),
+		option.Request(new(ScreencastOptionsQuery)),
 	)
 }

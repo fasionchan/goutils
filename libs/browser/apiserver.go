@@ -1,16 +1,16 @@
 package browser
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
+	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/websocket"
 	"github.com/oaswrap/spec/adapter/chiopenapi"
 	"github.com/oaswrap/spec/option"
 )
+
+type BrowserApiHandlerPtr = *BrowserApiHandler
 
 type BrowserApiHandler struct {
 	browser Browser
@@ -22,14 +22,16 @@ func NewBrowserApiHandler(browser Browser) *BrowserApiHandler {
 	}
 }
 
-func (handler *BrowserApiHandler) NewChiOpenApiRouter(prefix string) chiopenapi.Router {
-	api := NewChiOpenApiRouter(prefix,
+func (handler *BrowserApiHandler) NewChiOpenApiRouter(prefix string, opts ...option.OpenAPIOption) chiopenapi.Router {
+	opts = stl.NewSlice(
 		option.WithTitle("Browser"),
 		option.WithDescription("Browser API"),
-	)
+	).Append(opts...)
 
-	browserFn := GetBrowserFromRequest(func(r *http.Request) (Browser, error) {
-		return handler.browser, nil
+	api := NewChiOpenApiRouter(prefix, opts...)
+
+	browserFn := GetBrowserFromRequest(func(r *http.Request) (*BrowserApiHandler, error) {
+		return handler, nil
 	})
 
 	if prefix == "" || prefix == "/" {
@@ -44,126 +46,55 @@ func (handler *BrowserApiHandler) NewChiOpenApiRouter(prefix string) chiopenapi.
 	return api
 }
 
-type GetBrowserFromRequest func(*http.Request) (Browser, error)
+func (handler *BrowserApiHandler) NewTabHandler(id string) *TabHandler {
+	return NewTabHandler(handler.browser, id)
+}
+
+func (handler *BrowserApiHandler) HandleListTabs(_ NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Tabs] {
+	tabs, err := handler.browser.ListTabs()
+	if err != nil {
+		return types.NewTypedResponseResultFromError[Tabs](http.StatusInternalServerError, err, "Failed to list tabs")
+	}
+
+	return types.NewTypedResponseResultFromData(tabs)
+}
+
+func (handler *BrowserApiHandler) HandleCreateTab(params *NewTabOptions, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[*Tab] {
+	tab, err := handler.browser.NewTab(params)
+	if err != nil {
+		return types.NewTypedResponseResultFromError[*Tab](http.StatusInternalServerError, err, "Failed to create tab")
+	}
+
+	return types.NewTypedResponseResultFromData(tab)
+}
+
+type GetBrowserFromRequest func(*http.Request) (*BrowserApiHandler, error)
 
 func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	r.Route("/Tabs", func(r chiopenapi.Router) {
-		r.Get("/", fn.listTabs).With(
+		RegisterParamsBasedRequestHandler(r, http.MethodGet, "/", BrowserApiHandlerPtr.HandleListTabs, fn).With(
 			option.Summary("List"),
 			option.Description("List all tabs"),
 			option.Tags("Tabs"),
-			option.Response(http.StatusOK, new(Tabs)),
 		)
 
-		r.Post("/", fn.createTab).With(
+		RegisterParamsBasedRequestHandler(r, http.MethodPost, "/", BrowserApiHandlerPtr.HandleCreateTab, fn).With(
 			option.Summary("Create"),
 			option.Description("Create a new tab"),
 			option.Tags("Tabs"),
-			option.Request(new(NewTabOptions)),
-			option.Response(http.StatusOK, new(Tab)),
 		)
 
 		r.Route("/{tabId}", func(r chiopenapi.Router) {
-			getTab := func(r *http.Request) (*TabHandler, error) {
-				browser, err := fn(r)
+			getTab := GetTabHandlerFromRequest(func(r *http.Request) (*TabHandler, error) {
+				handler, err := fn(r)
 				if err != nil {
 					return nil, err
 				}
 
-				return NewTabHandler(browser, chi.URLParam(r, "tabId")), nil
-			}
+				return handler.NewTabHandler(chi.URLParam(r, "tabId")), nil
+			})
 
-			GetTabHandlerFromRequest(getTab).RegisterChiOpenApiRoutes(r)
+			getTab.RegisterChiOpenApiRoutes(r)
 		})
 	})
-}
-
-func (fn GetBrowserFromRequest) listTabs(w http.ResponseWriter, r *http.Request) {
-	browser, err := fn(r)
-	if err != nil {
-		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get browser").WriteHttpResponse(w)
-		return
-	}
-
-	tabs, err := browser.ListTabs()
-	if err != nil {
-		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to list tabs").WriteHttpResponse(w)
-		return
-	}
-
-	types.NewTypedResponseResultFromData(tabs).WriteHttpResponse(w)
-}
-
-func (fn GetBrowserFromRequest) createTab(w http.ResponseWriter, r *http.Request) {
-	browser, err := fn(r)
-	if err != nil {
-		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to get browser").WriteHttpResponse(w)
-		return
-	}
-
-	var options NewTabOptions
-	if err := json.NewDecoder(r.Body).Decode(&options); err != nil {
-		types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to decode request body").WriteHttpResponse(w)
-		return
-	}
-
-	tab, err := browser.NewTab(&options)
-	if err != nil {
-		types.NewResponseResultFromError(http.StatusInternalServerError, err, "Failed to create new tab").WriteHttpResponse(w)
-		return
-	}
-
-	types.NewTypedResponseResultFromData(tab).WriteHttpResponse(w)
-}
-
-type RemoteController struct {
-	browser  Browser
-	id       string
-	upgrader *websocket.Upgrader
-}
-
-func NewRemoteController(browser Browser, id string, upgrader *websocket.Upgrader) *RemoteController {
-	return &RemoteController{
-		browser:  browser,
-		id:       id,
-		upgrader: upgrader,
-	}
-}
-
-func (controller *RemoteController) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	opts, err := NewScreencastOptionsFromUrlValues(r.URL.Query())
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	conn, err := controller.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer conn.Close()
-
-	frames, err := controller.browser.StartScreencast(controller.id, opts)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer frames.Close()
-
-	go func() {
-		for frame := range frames.BytesChan {
-			if err := conn.WriteMessage(websocket.BinaryMessage, frame); err != nil {
-				log.Println(err)
-				return
-			}
-		}
-	}()
-
-	for {
-		if err := conn.ReadJSON(&json.RawMessage{}); err != nil {
-			log.Println(err)
-			return
-		}
-	}
 }
