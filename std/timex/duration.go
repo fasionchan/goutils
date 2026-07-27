@@ -111,3 +111,19 @@ func (d Duration) RandomBetween(other Duration) Duration {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return Duration(r.Int63n(maxInt-minInt+1) + minInt)
 }
+
+func DurationBetween(since, until time.Time) time.Duration {
+	if since.IsZero() {
+		return -1
+	}
+
+	if until.IsZero() {
+		return -1
+	}
+
+	if since.After(until) {
+		return -1
+	}
+
+	return until.Sub(since)
+}

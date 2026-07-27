@@ -27,6 +27,39 @@ func (close NilNopCloseFunc) Close() error {
 	return close()
 }
 
+type Closers []io.Closer
+
+func NewClosers(closers ...io.Closer) Closers {
+	return Closers(closers)
+}
+
+func (closers Closers) Append(others ...io.Closer) Closers {
+	return append(closers, others...)
+}
+
+func (closers Closers) Concat(others ...Closers) Closers {
+	return ConcatSlicesTo(closers, others...)
+}
+
+func (closers Closers) Close() error {
+	var errs Errors = Map(closers, io.Closer.Close)
+	return errs.Simplify()
+}
+
+func (closers Closers) PurgeNil() Closers {
+	return PurgeZero(closers)
+}
+
+func (closers Closers) Simplify() io.Closer {
+	if len(closers) == 0 {
+		return NopCloser{}
+	} else if len(closers) == 1 {
+		return closers[0]
+	} else {
+		return closers
+	}
+}
+
 type PipeParser[
 	SrcDatas ~[]SrcData,
 	ResultDatas ~[]ResultData,

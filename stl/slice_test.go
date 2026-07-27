@@ -18,14 +18,14 @@ var testNumbers = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 
 func TestDivide(t *testing.T) {
 	case1 := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
-	fmt.Println(Divide(case1, 1, false))
-	fmt.Println(Divide(case1, 2, false))
-	fmt.Println(Divide(case1[1:], 2, false))
-	fmt.Println(Divide(case1, 9, false))
-	fmt.Println(Divide(case1, 10, false))
-	fmt.Println(Divide(case1, 11, false))
-	fmt.Println(Divide(case1, 0, false))
-	fmt.Println(Divide(case1, -1, false))
+	assert.Equal(t, [][]int{{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}}, Divide(case1, 1, false))
+	assert.Equal(t, [][]int{{0, 1}, {2, 3}, {4, 5}, {6, 7}, {8, 9}}, Divide(case1, 2, false))
+	assert.Equal(t, [][]int{{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9}}, Divide(case1[1:], 2, false))
+	assert.Equal(t, [][]int{{0, 1, 2, 3, 4, 5, 6, 7, 8}, {9}}, Divide(case1, 9, false))
+	assert.Equal(t, [][]int{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}, Divide(case1, 10, false))
+	assert.Equal(t, [][]int{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}, Divide(case1, 11, false))
+	assert.Equal(t, [][]int{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}, Divide(case1, 0, false))
+	assert.Equal(t, [][]int{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}, Divide(case1, -1, false))
 }
 
 func TestSlice(t *testing.T) {

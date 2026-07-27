@@ -70,6 +70,16 @@ func (writers Writers[Datas, Data]) Append(others ...Writer[Datas, Data]) Writer
 	return append(writers, others...)
 }
 
+func (writers Writers[Datas, Data]) MultiWriter() Writer[Datas, Data] {
+	if len(writers) == 0 {
+		return nil
+	} else if len(writers) == 1 {
+		return writers[0]
+	} else {
+		return writers
+	}
+}
+
 func (writers Writers[Datas, Data]) Native() []Writer[Datas, Data] {
 	return writers
 }
@@ -88,7 +98,7 @@ func (writers Writers[Datas, Data]) Write(datas Datas) (n int, err error) {
 	return len(datas), nil
 }
 
-func (writers Writers[Datas, Data]) Close1() error {
+func (writers Writers[Datas, Data]) Close() error {
 	var errs Errors = Map(writers, func(writer Writer[Datas, Data]) error {
 		if closer, ok := writer.(io.Closer); ok {
 			return closer.Close()
@@ -97,6 +107,33 @@ func (writers Writers[Datas, Data]) Close1() error {
 	})
 
 	return errs.Simplify()
+}
+
+func (writers Writers[Datas, Data]) Closers() Closers {
+	return Map(writers, func(writer Writer[Datas, Data]) io.Closer {
+		if closer, ok := writer.(io.Closer); ok {
+			return closer
+		}
+		return nil
+	})
+}
+
+func (writers Writers[Datas, Data]) ValidClosers() Closers {
+	return writers.Closers().PurgeNil()
+}
+
+type WriteClosers[Datas ~[]Data, Data any] []WriteCloser[Datas, Data]
+
+func (writeClosers WriteClosers[Datas, Data]) AsWriters() Writers[Datas, Data] {
+	return Map(writeClosers, func(writer WriteCloser[Datas, Data]) Writer[Datas, Data] {
+		return writer
+	})
+}
+
+func (writeClosers WriteClosers[Datas, Data]) AsClosers() Closers {
+	return Map(writeClosers, func(writer WriteCloser[Datas, Data]) io.Closer {
+		return writer
+	})
 }
 
 type UnaryWriteFunc[Datas ~[]Data, Data any] func(data Data) (err error)

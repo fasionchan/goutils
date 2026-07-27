@@ -377,6 +377,16 @@ func FindLastOrZero[Data any](datas []Data, test func(Data) bool) Data {
 	return data
 }
 
+func FirstNotZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, keyFunc func(Data) Key) Key {
+	var zero Key
+	for _, data := range datas {
+		if key := keyFunc(data); key != zero {
+			return key
+		}
+	}
+	return zero
+}
+
 func RandomOneOrZero[Datas ~[]Data, Data any](datas Datas, rand_ *rand.Rand) (data Data) {
 	if rand_ == nil {
 		rand_ = defaultRand
@@ -402,6 +412,16 @@ func Index[Data any](datas []Data, i int) (data Data, ok bool) {
 func IndexOf[Data comparable](datas []Data, target Data) int {
 	for i, data := range datas {
 		if data == target {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func IndexOfKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key, target Key) int {
+	for i, data := range datas {
+		if key(data) == target {
 			return i
 		}
 	}
