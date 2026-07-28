@@ -111,6 +111,17 @@ func Dereference[Ptr ~*Data, Data any](ptr Ptr) Data {
 	return *ptr
 }
 
+func SetZero[Ptr ~*Data, Data any](ptr Ptr) Ptr {
+	if ptr == nil {
+		return nil
+	}
+
+	var zero Data
+	*ptr = zero
+
+	return ptr
+}
+
 func ToTypeless[Data any](data Data) any {
 	return data
 }

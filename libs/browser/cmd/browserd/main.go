@@ -7,6 +7,7 @@ import (
 	"os"
 
 	browserlib "github.com/fasionchan/goutils/libs/browser"
+	browsermcp "github.com/fasionchan/goutils/libs/browser/mcp"
 )
 
 func main() {
@@ -19,6 +20,10 @@ func main() {
 	opts := browserlib.NewBrowserLaunchOptionsFromEnv(os.Getenv)
 
 	apiPrefix := os.Getenv("API_PREFIX")
+	mcpPath := os.Getenv("MCP_PATH")
+	if mcpPath == "" {
+		mcpPath = browsermcp.DefaultMCPPath
+	}
 
 	switch mode {
 	case "instance":
@@ -29,11 +34,19 @@ func main() {
 		defer browser.Close()
 
 		apiHandler = browserlib.NewBrowserApiHandler(browser).NewChiOpenApiRouter(apiPrefix)
+
+		mcpServer, err := browsermcp.NewBrowserMcpServer(browser, browsermcp.WithPath(mcpPath))
+		if err != nil {
+			log.Fatal(err)
+		}
+		apiHandler = mcpServer.MountOnto(apiHandler)
+		log.Printf("MCP mounted at %s (sse: %s/sse, streamable: %s)", mcpPath, mcpPath, mcpPath)
 	case "pool":
 		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager)
 		defer pool.Close()
 
 		apiHandler = pool.NewChiOpenApiRouter(apiPrefix)
+		log.Printf("MCP skipped in pool mode (instance only)")
 	default:
 		log.Fatalf("Invalid mode: %s", mode)
 		return

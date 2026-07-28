@@ -124,6 +124,10 @@ func (writers Writers[Datas, Data]) ValidClosers() Closers {
 
 type WriteClosers[Datas ~[]Data, Data any] []WriteCloser[Datas, Data]
 
+func NewWriteClosers[Datas ~[]Data, Data any](writeClosers ...WriteCloser[Datas, Data]) WriteClosers[Datas, Data] {
+	return writeClosers
+}
+
 func (writeClosers WriteClosers[Datas, Data]) AsWriters() Writers[Datas, Data] {
 	return Map(writeClosers, func(writer WriteCloser[Datas, Data]) Writer[Datas, Data] {
 		return writer

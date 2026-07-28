@@ -19,6 +19,16 @@ type ReadCloser[Datas ~[]Data, Data any] interface {
 	io.Closer
 }
 
+func NewReadCloser[Datas ~[]Data, Data any](reader Reader[Datas, Data], closer io.Closer) ReadCloser[Datas, Data] {
+	return struct {
+		Reader[Datas, Data]
+		io.Closer
+	}{
+		Reader: reader,
+		Closer: closer,
+	}
+}
+
 type SeqReader[Datas ~[]Data, Data any] iter.Seq[Data]
 
 func (r SeqReader[Datas, Data]) Read(p []Data) (n int, err error) {
