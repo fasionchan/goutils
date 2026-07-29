@@ -10,12 +10,119 @@ func NewMapping[Key comparable, Value any]() Mapping[Key, Value] {
 	return Mapping[Key, Value]{}
 }
 
-func (mapping Mapping[Key, Value]) Native() map[Key]Value {
-	return mapping
+func NewMappingWithCap[Key comparable, Value any](cap int) Mapping[Key, Value] {
+	return make(Mapping[Key, Value], cap)
+}
+
+func (m Mapping[Key, Value]) Clear() {
+	ForEach(m.Keys(), m.Delete)
+}
+
+func (m Mapping[Key, Value]) Delete(key Key) {
+	if m == nil {
+		return
+	}
+
+	delete(m, key)
+}
+
+func (m Mapping[Key, Value]) Get(key Key) (_ Value) {
+	if m == nil {
+		return
+	}
+
+	return m[key]
+}
+
+func (mapping Mapping[Key, Value]) Keys() []Key {
+	return MapKeys(mapping)
 }
 
 func (mapping Mapping[Key, Value]) KeyValuePairs() KeyValuePairs[Key, Value] {
 	return MapKeyValuePairs(mapping)
+}
+
+func (m Mapping[Key, Value]) Len() int {
+	return len(m)
+}
+
+func (m Mapping[Key, Value]) Load(key Key) (Value, bool) {
+	value, ok := m[key]
+	return value, ok
+}
+
+func (m Mapping[Key, Value]) LoadAndDelete(key Key) (value Value, ok bool) {
+	if m == nil {
+		return
+	}
+
+	value, ok = m[key]
+	if ok {
+		delete(m, key)
+	}
+
+	return
+}
+
+func (m Mapping[Key, Value]) LoadOrCreate(key Key, create func () Value) (Value, bool) {
+	value, ok := m.Load(key)
+	if ok {
+		return value, true
+	}
+
+	value = create()
+	m.Store(key, value)
+
+	return value, false
+}
+
+func (m Mapping[Key, Value]) LoadOrStore(key Key, value Value) (Value, bool) {
+	oldValue, ok := m.Load(key)
+	if ok {
+		return oldValue, true
+	}
+
+	m.Store(key, value)
+	return value, false
+}
+
+func (mapping Mapping[Key, Value]) Native() map[Key]Value {
+	return mapping
+}
+
+func (m Mapping[Key, Value]) Store(key Key, value Value) {
+	m[key] = value
+}
+
+func (m Mapping[Key, Value]) StoreOk(key Key, value Value) (ok bool) {
+	if m == nil {
+		return false
+	}
+
+	m[key] = value
+	return true
+}
+
+func (m Mapping[Key, Value]) Swap(key Key, value Value) (Value, bool) {
+	previous, loaded := m[key]
+	m[key] = value
+	return previous, loaded
+}
+
+func (m Mapping[Key, Value]) SwapOk(key Key, value Value) (previous Value, loaded bool, ok bool) {
+	if m == nil {
+		ok = false
+		return
+	}
+
+	ok = true
+	previous, loaded = m[key]
+
+	return
+}
+
+func (m Mapping[Key,Value]) Values() []Value {
+	return MapValues(m)
 }
 
 func FilterMap[Map ~map[Key]Value, Key comparable, Value any](m Map, tester func(Key, Value, Map) bool) Map {
