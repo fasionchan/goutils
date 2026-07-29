@@ -118,13 +118,13 @@ func callTool(t *testing.T, s *BrowserMcpServer, name string, args map[string]an
 }
 
 func TestNewBrowserMcpServerNilBrowser(t *testing.T) {
-	_, err := NewBrowserMcpServer(nil)
-	require.Error(t, err)
+	s := NewBrowserMcpServer(nil)
+	require.NotNil(t, s)
 }
 
 func TestMissingTabID(t *testing.T) {
-	s, err := NewBrowserMcpServer(&recordingBrowser{})
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(&recordingBrowser{})
+	require.NotNil(t, s)
 
 	result := callTool(t, s, "browser_navigate", map[string]any{"url": "https://example.com"})
 	require.True(t, result.IsError)
@@ -133,8 +133,8 @@ func TestMissingTabID(t *testing.T) {
 
 func TestNavigateAndClickMapping(t *testing.T) {
 	b := &recordingBrowser{tabs: browser.Tabs{{Id: "t1", Title: "x", Url: "about:blank"}}}
-	s, err := NewBrowserMcpServer(b)
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(b)
+	require.NotNil(t, s)
 
 	result := callTool(t, s, "browser_navigate", map[string]any{
 		"tabId": "t1",
@@ -155,8 +155,8 @@ func TestNavigateAndClickMapping(t *testing.T) {
 
 func TestUnknownTabError(t *testing.T) {
 	b := &recordingBrowser{getTabErr: errors.New("tab not found")}
-	s, err := NewBrowserMcpServer(b)
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(b)
+	require.NotNil(t, s)
 
 	result := callTool(t, s, "browser_get_tab", map[string]any{"tabId": "missing"})
 	require.True(t, result.IsError)
@@ -164,8 +164,8 @@ func TestUnknownTabError(t *testing.T) {
 }
 
 func TestToolListAudit(t *testing.T) {
-	s, err := NewBrowserMcpServer(&recordingBrowser{})
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(&recordingBrowser{})
+	require.NotNil(t, s)
 
 	required := []string{
 		"browser_list_tabs", "browser_new_tab", "browser_close_tab", "browser_get_tab",
@@ -195,8 +195,8 @@ func TestToolListAudit(t *testing.T) {
 
 func TestPressKeyDispatchesDownUp(t *testing.T) {
 	b := &recordingBrowser{}
-	s, err := NewBrowserMcpServer(b)
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(b)
+	require.NotNil(t, s)
 
 	result := callTool(t, s, "browser_press_key", map[string]any{
 		"tabId": "t1",
@@ -209,8 +209,8 @@ func TestPressKeyDispatchesDownUp(t *testing.T) {
 }
 
 func TestHTTPMountPaths(t *testing.T) {
-	s, err := NewBrowserMcpServer(&recordingBrowser{}, WithPath("/mcp"))
-	require.NoError(t, err)
+	s := NewBrowserMcpServer(&recordingBrowser{}, WithPath("/mcp"))
+	require.NotNil(t, s)
 	h := s.MountOnto(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTeapot)
 	}))

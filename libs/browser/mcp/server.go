@@ -1,8 +1,6 @@
 package browsermcp
 
 import (
-	"fmt"
-
 	"github.com/fasionchan/goutils/libs/browser"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -30,11 +28,7 @@ func WithPath(path string) Option {
 }
 
 // NewBrowserMcpServer creates an MCP server and registers P0+P1 browser tools.
-func NewBrowserMcpServer(b browser.Browser, opts ...Option) (*BrowserMcpServer, error) {
-	if b == nil {
-		return nil, fmt.Errorf("browser is nil")
-	}
-
+func NewBrowserMcpServer(b browser.Browser, opts ...Option) (*BrowserMcpServer) {
 	s := &BrowserMcpServer{
 		browser: b,
 		path:    DefaultMCPPath,
@@ -49,7 +43,7 @@ func NewBrowserMcpServer(b browser.Browser, opts ...Option) (*BrowserMcpServer, 
 	}
 
 	s.registerAllTools()
-	return s, nil
+	return s
 }
 
 func (s *BrowserMcpServer) GetPath() string {

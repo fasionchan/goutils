@@ -16,53 +16,66 @@ import (
 type BrowserPool struct {
 	launcher BrowserLauncher
 	opts     *BrowserLaunchOptions
-	browsers *stl.SyncMap[string, Browser]
+	browsers *stl.SyncMap[string, *BrowserApiHandler]
+	mcpServerHandler func (Browser) http.Handler
 }
 
-func NewBrowserPool(opts *BrowserLaunchOptions, launcher BrowserLauncher) *BrowserPool {
+func NewBrowserPool(opts *BrowserLaunchOptions, launcher BrowserLauncher, mcpServerHandler func (Browser) http.Handler) *BrowserPool {
 	return &BrowserPool{
 		opts:     opts,
 		launcher: launcher,
-		browsers: stl.NewSyncMap[string, Browser](),
+		browsers: stl.NewSyncMap[string, *BrowserApiHandler](),
+		mcpServerHandler: mcpServerHandler,
 	}
 }
 
-func NewBrowserPoolFromLaunchFunc(opts *BrowserLaunchOptions, launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error)) *BrowserPool {
-	return NewBrowserPool(opts, BrowserLaunchFunc(launchFunc))
+func NewBrowserPoolFromLaunchFunc(opts *BrowserLaunchOptions, launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error), mcpServerHandler func (Browser) http.Handler) *BrowserPool {
+	return NewBrowserPool(opts, BrowserLaunchFunc(launchFunc), mcpServerHandler)
 }
 
 func NewBrowserPoolFromTypedLaunchFunc[
 	BrowserT Browser,
-](opts *BrowserLaunchOptions, launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (BrowserT, error)) *BrowserPool {
+](
+	opts *BrowserLaunchOptions,
+	launchFunc func(ctx context.Context, opts *BrowserLaunchOptions) (BrowserT, error),
+	mcpServerHandler func (Browser) http.Handler,
+) *BrowserPool {
 	return NewBrowserPool(opts, BrowserLaunchFunc(func(ctx context.Context, opts *BrowserLaunchOptions) (Browser, error) {
 		return launchFunc(ctx, opts)
-	}))
+	}), mcpServerHandler)
 }
 
 func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, error) {
-	browser, _, err := p.browsers.LoadOrCreate(ctx, id, func(ctx context.Context) (Browser, error) {
-		opts := p.opts.Dup().WithAddr(netx.RandomLocalTcpAddr())
-		return p.launcher.Launch(ctx, opts)
-	})
-	return browser, err
-}
-
-func (p *BrowserPool) EnsureBrowserApiHandler(ctx context.Context, id string) (*BrowserApiHandler, error) {
-	browser, err := p.EnsureBrowser(ctx, id)
+	handler, err := p.EnsureBrowserApiHandler(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewBrowserApiHandler(browser), nil
+	return handler.browser, nil
 }
 
-func (p *BrowserPool) DeleteBrowser(ctx context.Context, id string) (Browser, error) {
-	browser, loaded := p.browsers.Delete(id)
+func (p *BrowserPool) EnsureBrowserApiHandler(ctx context.Context, id string) (*BrowserApiHandler, error) {
+	handler, _, err := p.browsers.LoadOrCreate(ctx, id, func(ctx context.Context, _ string) (*BrowserApiHandler, error) {
+		opts := p.opts.Dup().WithAddr(netx.RandomLocalTcpAddr())
+
+		browser, err := p.launcher.Launch(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewBrowserApiHandler(browser, p.mcpServerHandler), nil
+	})
+
+	return handler, err
+}
+
+func (p *BrowserPool) DeleteBrowserApiHandler(ctx context.Context, id string) (*BrowserApiHandler, error) {
+	handler, loaded := p.browsers.LoadAndDelete(id)
 	if !loaded {
 		return nil, fmt.Errorf("browser not found")
 	}
-	err := browser.Close()
-	return browser, err
+	err := handler.browser.Close()
+	return handler, err
 }
 
 func (p *BrowserPool) NewChiOpenApiRouter(prefix string) chiopenapi.Router {
@@ -111,7 +124,7 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 		r.Route("/{instanceId}", func(r chiopenapi.Router) {
 			r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 				instanceId := chi.URLParam(r, "instanceId")
-				if _, err := p.DeleteBrowser(r.Context(), instanceId); err != nil {
+				if _, err := p.DeleteBrowserApiHandler(r.Context(), instanceId); err != nil {
 					types.NewResponseResultFromError(http.StatusBadRequest, err, "Failed to delete browser instance").WriteHttpResponse(w)
 					return
 				}
@@ -132,7 +145,7 @@ func (p *BrowserPool) RegistryChiOpenApiRoutes(r chiopenapi.Router) {
 
 func (p *BrowserPool) Close() error {
 	for _, key := range p.browsers.Keys() {
-		if _, err := p.DeleteBrowser(context.Background(), key); err != nil {
+		if _, err := p.DeleteBrowserApiHandler(context.Background(), key); err != nil {
 			return err
 		}
 	}

@@ -2,6 +2,7 @@ package browser
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
@@ -14,11 +15,13 @@ type BrowserApiHandlerPtr = *BrowserApiHandler
 
 type BrowserApiHandler struct {
 	browser Browser
+	mcpServerHandler http.Handler
 }
 
-func NewBrowserApiHandler(browser Browser) *BrowserApiHandler {
+func NewBrowserApiHandler(browser Browser, mcpServerHandler func (Browser) http.Handler) *BrowserApiHandler {
 	return &BrowserApiHandler{
 		browser: browser,
+		mcpServerHandler: mcpServerHandler(browser),
 	}
 }
 
@@ -97,4 +100,18 @@ func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 			getTab.RegisterChiOpenApiRoutes(r)
 		})
 	})
+
+	// todo fix me
+	r.Mount("/mcp", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+		handler, err := fn(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		path := r.URL.Path
+		prefix := path[:strings.Index(path, "/mcp")]
+
+		http.StripPrefix(prefix, handler.mcpServerHandler).ServeHTTP(w, r)
+	}))
 }

@@ -25,6 +25,10 @@ func main() {
 		mcpPath = browsermcp.DefaultMCPPath
 	}
 
+	mcpServerHandler := func (browser browserlib.Browser) http.Handler {
+		return browsermcp.NewBrowserMcpServer(browser, browsermcp.WithPath("/mcp")).NewHTTPHandler()
+	}
+
 	switch mode {
 	case "instance":
 		browser, err := browserlib.LaunchRodBrowserForManager(context.Background(), opts)
@@ -33,20 +37,12 @@ func main() {
 		}
 		defer browser.Close()
 
-		apiHandler = browserlib.NewBrowserApiHandler(browser).NewChiOpenApiRouter(apiPrefix)
-
-		mcpServer, err := browsermcp.NewBrowserMcpServer(browser, browsermcp.WithPath(mcpPath))
-		if err != nil {
-			log.Fatal(err)
-		}
-		apiHandler = mcpServer.MountOnto(apiHandler)
-		log.Printf("MCP mounted at %s (sse: %s/sse, streamable: %s)", mcpPath, mcpPath, mcpPath)
+		apiHandler = browserlib.NewBrowserApiHandler(browser, mcpServerHandler).NewChiOpenApiRouter(apiPrefix)
 	case "pool":
-		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager)
+		pool := browserlib.NewBrowserPoolFromTypedLaunchFunc(opts, browserlib.LaunchRodBrowserForManager, mcpServerHandler)
 		defer pool.Close()
 
 		apiHandler = pool.NewChiOpenApiRouter(apiPrefix)
-		log.Printf("MCP skipped in pool mode (instance only)")
 	default:
 		log.Fatalf("Invalid mode: %s", mode)
 		return
