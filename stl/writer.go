@@ -70,6 +70,10 @@ func (writers Writers[Datas, Data]) Append(others ...Writer[Datas, Data]) Writer
 	return append(writers, others...)
 }
 
+func (writers Writers[Datas, Data]) Concat(others ...Writer[Datas, Data]) Writers[Datas, Data] {
+	return append(writers, others...)
+}
+
 func (writers Writers[Datas, Data]) MultiWriter() Writer[Datas, Data] {
 	if len(writers) == 0 {
 		return nil
@@ -158,11 +162,19 @@ func (write UnaryWriteFunc[Datas, Data]) Write(datas Datas) (n int, err error) {
 
 type WriteFunc[Datas any, Data any] func(datas Datas) (n int, err error)
 
+func NewWriteFunc[Datas any, Data any](write func(datas Datas) (n int, err error)) WriteFunc[Datas, Data] {
+	return write
+}
+
 func (write WriteFunc[Datas, Data]) Write(datas Datas) (n int, err error) {
 	return write(datas)
 }
 
 type NilNopWriteFunc[Datas ~[]Data, Data any] func(datas Datas) (n int, err error)
+
+func NewNilNopWriteFunc[Datas ~[]Data, Data any](write func(datas Datas) (n int, err error)) NilNopWriteFunc[Datas, Data] {
+	return write
+}
 
 func (write NilNopWriteFunc[Datas, Data]) Write(datas Datas) (n int, err error) {
 	if write == nil {

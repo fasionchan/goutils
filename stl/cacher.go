@@ -404,6 +404,67 @@ func (fetcher *CachedDataFetcher[Data]) getCached() (data Data, t time.Time) {
 	return fetcher.data.ValueAndTime()
 }
 
+type CachedDataFetcherMap[Key comparable, Data any] SyncMap[Key, *CachedDataFetcher[Data]]
+
+func NewCachedDataFetcherMap[Key comparable, Data any](
+	cap int,
+	fetchFunc func (ctx context.Context, key Key, sinceTime time.Time) (Data, time.Time, error),
+) *CachedDataFetcherMap[Key, Data] {
+	createFunc := func (ctx context.Context, key Key) (*CachedDataFetcher[Data], error) {
+		return NewCachedDataFetcher(func (ctx context.Context, sinceTime time.Time) (Data, time.Time, error) {
+			return fetchFunc(ctx, key, sinceTime)
+		}), nil
+	}
+
+	return (*CachedDataFetcherMap[Key, Data])(NewSyncMapPro(cap, createFunc))
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) SyncMapping() *SyncMap[Key, *CachedDataFetcher[Data]] {
+	return (*SyncMap[Key, *CachedDataFetcher[Data]])(m)
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) Fetch(ctx context.Context, key Key) (data Data, t time.Time, err error) {
+	fetcher, _, err := m.SyncMapping().LoadOrCreate(ctx, key, nil)
+	if err != nil {
+		return
+	}
+
+	return fetcher.Fetch(ctx)
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) FetchLite(ctx context.Context, key Key) (data Data, err error) {
+	data, _, err = m.Fetch(ctx, key)
+	return
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) FetchWithExpires(ctx context.Context, key Key, expires time.Duration) (data Data, t time.Time, err error) {
+	fetcher, _, err := m.SyncMapping().LoadOrCreate(ctx, key, nil)
+	if err != nil {
+		return
+	}
+
+	return fetcher.FetchWithExpires(ctx, expires)
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) FetchWithExpiresLite(ctx context.Context, key Key, expires time.Duration) (data Data, err error) {
+	data, _, err = m.FetchWithExpires(ctx, key, expires)
+	return
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) FetchWithSince(ctx context.Context, key Key, since time.Time) (data Data, t time.Time, err error) {
+	fetcher, _, err := m.SyncMapping().LoadOrCreate(ctx, key, nil)
+	if err != nil {
+		return
+	}
+
+	return fetcher.FetchWithSince(ctx, since)
+}
+
+func (m *CachedDataFetcherMap[Key, Data]) FetchWithSinceLite(ctx context.Context, key Key, since time.Time) (data Data, err error) {
+	data, _, err = m.FetchWithSince(ctx, key, since)
+	return
+}
+
 type CachedDataFetcherAccessor[Data any] struct {
 	fetcher          *CachedDataFetcher[Data]
 	expiresDuration  time.Duration
@@ -511,4 +572,27 @@ func GetCachedDataFetchLite[
 	Data any,
 ](cachedFetcher *CachedDataFetcher[Data]) Func {
 	return cachedFetcher.FetchLite
+}
+
+type LazyDataLoader[Data any] struct {
+	load func() (Data, error)
+	once sync.Once
+
+	data Data
+	err  error
+}
+
+func NewLazyDataLoader[Data any](load func() (Data, error)) *LazyDataLoader[Data] {
+	return &LazyDataLoader[Data]{
+		load: load,
+	}
+}
+
+func (lazy *LazyDataLoader[Data]) Load() (Data, error) {
+	lazy.once.Do(lazy.doLoad)
+	return lazy.data, lazy.err
+}
+
+func (lazy *LazyDataLoader[Data]) doLoad() {
+	lazy.data, lazy.err = lazy.load()
 }

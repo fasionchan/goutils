@@ -1,7 +1,10 @@
 package stl
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,4 +47,9 @@ func TestLimitWriter(t *testing.T) {
 	limitWriter.Write([]int{2, 3, 4})
 	limitWriter.Write([]int{5, 6})
 	assert.Equal(t, []int{1, 2, 3}, buffer.Datas())
+}
+
+func TestWriterType(t *testing.T) {
+	fmt.Println(reflect.TypeOf((*Writer[[]byte, byte])(nil)).Elem())
+	fmt.Println(reflect.TypeOf((*io.Writer)(nil)).Elem())
 }

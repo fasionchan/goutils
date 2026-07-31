@@ -220,6 +220,33 @@ func SliceEqual[Datas ~[]Data, Data comparable](as Datas, bs Datas) bool {
 	return true
 }
 
+func Subslice[Datas ~[]Data, Data any](datas Datas, start, length int) Datas {
+	n := len(datas)
+	start = start % n
+	if start < 0 {
+		start += n
+	}
+
+	if start + length <= n {
+		return datas[start:start+length]
+	}
+
+	result := make(Datas, 0, length)
+	result = append(result, datas[start:]...)
+
+	length -= n - start
+
+	for i := length / n; i > 0; i-- {
+		result = append(result, datas...)
+	}
+
+	if k := length % n; k > 0 {
+		result = append(result, datas[:k]...)
+	}
+
+	return result
+}
+
 func EqualBySort[Data constraints.Ordered](as []Data, bs []Data) bool {
 	if len(as) != len(bs) {
 		return false

@@ -52,6 +52,14 @@ func TestSlice(t *testing.T) {
 	assert.Equal(t, ConcatSlices([]int{1, 2}, []int{3, 4}), []int{1, 2, 3, 4})
 }
 
+func TestSubslice(t *testing.T) {
+	datas := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	assert.Equal(t, []int{0, 1, 2}, Subslice(datas, 0, 3))
+	assert.Equal(t, []int{9, 0, 1}, Subslice(datas, -1, 3))
+	assert.Equal(t, []int{9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0}, Subslice(datas, -11, 12))
+	assert.Equal(t, []int{9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0}, Subslice(datas, -11, 22))
+}
+
 func TestFilterDemo(t *testing.T) {
 	// 应用实例：对数列整体乘以2
 	var testNumbers = []int{1, 2, 3}
