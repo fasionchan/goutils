@@ -13,12 +13,20 @@ type StringWriter = stl.Writer[Strings, string]
 
 type String string
 
+func NewString(s string) String {
+	return String(s)
+}
+
 func (s String) IsPrefixOf(str string) bool {
 	return strings.HasPrefix(str, string(s))
 }
 
 func (s String) IsSuffixOf(str string) bool {
 	return strings.HasSuffix(str, string(s))
+}
+
+func (s String) Native() string {
+	return string(s)
 }
 
 type StringSet = stl.Set[string]

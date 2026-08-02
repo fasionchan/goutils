@@ -1,13 +1,7 @@
-/*
- * Author: fasion
- * Created time: 2024-10-16 09:33:55
- * Last Modified by: fasion
- * Last Modified time: 2024-10-16 09:50:22
- */
-
 package types
 
 import (
+	"github.com/fasionchan/goutils/stl"
 	"golang.org/x/exp/constraints"
 )
 
@@ -52,3 +46,7 @@ func NewSequenceNumber() *SequenceNumber {
 func NewSequenceNumberPro(start, delta int) *SequenceNumber {
 	return NewArithmeticProgression(start, delta)
 }
+
+type StringCounter = stl.Counter[string]
+
+var NewStringCounter = stl.NewCounter[string]

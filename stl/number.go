@@ -54,7 +54,7 @@ func (numbers Numbers[Data]) Min() Data {
 	return Min(numbers, 0)
 }
 
-func (numbers Numbers[Data]) positionFor(target Data, cond func (data, target Data) bool) int {
+func (numbers Numbers[Data]) positionFor(target Data, cond func(data, target Data) bool) int {
 	return sort.Search(numbers.Len(), func(i int) bool { return cond(numbers[i], target) })
 }
 
@@ -67,11 +67,11 @@ func (numbers Numbers[Data]) DescPositionFor(target Data) int {
 }
 
 func (numbers Numbers[Data]) AscRatioFor(target Data) float64 {
-	return float64(numbers.AscPositionFor(target) + 1) / float64(numbers.Len() + 1)
+	return float64(numbers.AscPositionFor(target)+1) / float64(numbers.Len()+1)
 }
 
 func (numbers Numbers[Data]) DescRatioFor(target Data) float64 {
-	return float64(numbers.DescPositionFor(target) + 1) / float64(numbers.Len() + 1)
+	return float64(numbers.DescPositionFor(target)+1) / float64(numbers.Len()+1)
 }
 
 func (numbers Numbers[Data]) AscPercentFor(target Data) float64 {
