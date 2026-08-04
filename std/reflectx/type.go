@@ -26,6 +26,8 @@ var (
 	Float32Type = reflect.TypeOf(float32(0))
 	Float64Type = reflect.TypeOf(float64(0))
 
+	StringType = reflect.TypeOf("")
+
 	ContextType  = TypeOf[context.Context]()
 	TimeType     = TypeOf[time.Time]()
 	DurationType = TypeOf[time.Duration]()

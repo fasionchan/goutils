@@ -12,7 +12,12 @@ func ConvertToNumber(data any, typ string) (any, error) {
 
 	switch value.Kind() {
 	case reflect.String:
-		return basic.ParseNumber(data.(string), typ)
+		str, ok := data.(string)
+		if !ok {
+			str = value.Convert(StringType).Interface().(string)
+		}
+
+		return basic.ParseNumber(str, typ)
 	}
 
 	target, ok := TypeMapping[typ]

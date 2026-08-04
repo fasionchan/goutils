@@ -25,3 +25,6 @@ func TestXxx(t *testing.T) {
 	var strs stl.Slice[string]
 	fmt.Println(Strings(strs))
 }
+
+func TestCompiling(t *testing.T) {
+}
