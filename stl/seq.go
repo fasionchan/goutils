@@ -42,6 +42,46 @@ func MultiSeq2[K any, V any](seqs ...iter.Seq2[K, V]) iter.Seq2[K, V] {
 	return NewSeq2s(seqs...).AsSeq2()
 }
 
+func ReadSeq[Datas ~[]Data, Data any](seq iter.Seq[Data]) Datas {
+	var datas Datas
+	for data := range seq {
+		datas = append(datas, data)
+	}
+	return datas
+}
+
+func MapSeq[T any, R any](seq iter.Seq[T], mapper func(T) R) iter.Seq[R] {
+	return func(yield func(R) bool) {
+		for data := range seq {
+			if !yield(mapper(data)) {
+				return
+			}
+		}
+	}
+}
+
+func MapSeqToSlice[Data any, Result any](seq iter.Seq[Data], mapper func(Data) Result) []Result {
+	var results []Result
+	for data := range seq {
+		results = append(results, mapper(data))
+	}
+	return results
+}
+
+func Seq2ToSeq[
+	Dst any,
+	SrcKey any,
+	SrcValue any,
+](seq iter.Seq2[SrcKey, SrcValue], mapper func(SrcKey, SrcValue) Dst) iter.Seq[Dst] {
+	return func(yield func(Dst) bool) {
+		for key, value := range seq {
+			if !yield(mapper(key, value)) {
+				return
+			}
+		}
+	}
+}
+
 type Seqs[Data any] []iter.Seq[Data]
 
 func NewSeqs[Data any](seqs ...iter.Seq[Data]) Seqs[Data] {

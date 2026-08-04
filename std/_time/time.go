@@ -1,4 +1,4 @@
-package timex
+package _time
 
 import (
 	"fmt"
@@ -23,6 +23,17 @@ const (
 )
 
 var (
+	TimeAligners = map[string]func(time.Time) time.Time{
+		"Year":       AlignTimeByYear,
+		"YearLocal":  AlignTimeByYearLocal,
+		"Month":      AlignTimeByMonth,
+		"MonthLocal": AlignTimeByMonthLocal,
+		"Week":       AlignTimeByWeek,
+		"Day":        AlignTimeByDay,
+		"Hour":       AlignTimeByHour,
+		"Minute":     AlignTimeByMinute,
+	}
+
 	FormatRfc3339     = NewTimeFormatter(time.RFC3339)
 	FormatRfc3339Nano = NewTimeFormatter(time.RFC3339Nano)
 	FormatIsoTime     = FormatRfc3339
@@ -31,6 +42,93 @@ var (
 	ParseRfc3339Nano = NewTimeParser(time.RFC3339Nano)
 	ParseIsoTime     = ParseRfc3339
 )
+
+func AlignTimeByYear(t time.Time) time.Time {
+	return time.Date(t.Year(), 1, 1, 0, 0, 0, 0, t.Location())
+}
+
+func AlignTimeByYearWithLocation(t time.Time, location *time.Location) time.Time {
+	if location != nil {
+		t = t.In(location)
+	}
+	return AlignTimeByYear(t)
+}
+
+func AlignTimeByYearLocal(t time.Time) time.Time {
+	return AlignTimeByYear(t.Local())
+}
+
+func AlignTimeByQuarter(t time.Time) time.Time {
+	return time.Date(t.Year(), (t.Month()-1)/3*3+1, 1, 0, 0, 0, 0, t.Location())
+}
+
+func AlignTimeByQuarterWithLocation(t time.Time, location *time.Location) time.Time {
+	if location != nil {
+		t = t.In(location)
+	}
+	return AlignTimeByQuarter(t)
+}
+
+func AlignTimeByQuarterLocal(t time.Time) time.Time {
+	return AlignTimeByQuarter(t.Local())
+}
+
+func AlignTimeByMonth(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+}
+
+func AlignTimeByMonthWithLocation(t time.Time, location *time.Location) time.Time {
+	if location != nil {
+		t = t.In(location)
+	}
+	return AlignTimeByMonth(t)
+}
+
+func AlignTimeByMonthLocal(t time.Time) time.Time {
+	return AlignTimeByMonth(t.Local())
+}
+
+func AlignTimeByWeek(t time.Time) time.Time {
+	weekday := int(t.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	return time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, t.Location())
+}
+
+func AlignTimeByWeekWithLocation(t time.Time, location *time.Location) time.Time {
+	if location != nil {
+		t = t.In(location)
+	}
+	return AlignTimeByWeek(t)
+}
+
+func AlignTimeByWeekLocal(t time.Time) time.Time {
+	return AlignTimeByWeek(t.Local())
+}
+
+func AlignTimeByDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+func AlignTimeByDayWithLocation(t time.Time, location *time.Location) time.Time {
+	if location != nil {
+		t = t.In(location)
+	}
+	return AlignTimeByDay(t)
+}
+
+func AlignTimeByDayLocal(t time.Time) time.Time {
+	return AlignTimeByDay(t.Local())
+}
+
+func AlignTimeByHour(t time.Time) time.Time {
+	return t.Truncate(time.Hour)
+}
+
+func AlignTimeByMinute(t time.Time) time.Time {
+	return t.Truncate(time.Minute)
+}
 
 func FormatTime(t time.Time, fmt string, zeroPlaceHolder string) string {
 	if t.IsZero() {

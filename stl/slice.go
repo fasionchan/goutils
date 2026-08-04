@@ -37,9 +37,27 @@ func AnyMatch[Data any](datas []Data, test func(Data) bool) bool {
 	return false
 }
 
+func AnyMatchUnary[Data any, Arg any](datas []Data, test func(Data, Arg) bool, arg Arg) bool {
+	for _, data := range datas {
+		if test(data, arg) {
+			return true
+		}
+	}
+	return false
+}
+
 func AllMatch[Data any](datas []Data, test func(Data) bool) bool {
 	for _, data := range datas {
 		if !test(data) {
+			return false
+		}
+	}
+	return true
+}
+
+func AllMatchUnary[Data any, Arg any](datas []Data, test func(Data, Arg) bool, arg Arg) bool {
+	for _, data := range datas {
+		if !test(data, arg) {
 			return false
 		}
 	}
@@ -793,10 +811,18 @@ func ReadAll[Datas ~[]Data, Data any](read func() (Data, error)) (Datas, error) 
 	}
 }
 
-func Reduce[Data any, Datas ~[]Data, Result any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {
+func Reduce[Result any, Datas ~[]Data, Data any](datas Datas, reducer func(Result, Data) Result, initial Result) (result Result) {
 	result = initial
 	for _, data := range datas {
 		result = reducer(result, data)
+	}
+	return
+}
+
+func ReduceUnary[Result any, Arg any, Datas ~[]Data, Data any](datas Datas, reducer func(Result, Data, Arg) Result, initial Result, arg Arg) (result Result) {
+	result = initial
+	for _, data := range datas {
+		result = reducer(result, data, arg)
 	}
 	return
 }

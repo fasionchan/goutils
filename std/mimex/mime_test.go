@@ -338,5 +338,5 @@ func TestMimeType(t *testing.T) {
 	} {
 		fmt.Println(mime.TypeByExtension(ext))
 	}
-	assert.Assert(t, false)
+	assert.True(t, false)
 }

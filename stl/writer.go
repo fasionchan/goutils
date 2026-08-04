@@ -17,6 +17,16 @@ type WriteCloser[Datas ~[]Data, Data any] interface {
 	io.Closer
 }
 
+func NewNopCloseWriter[Datas ~[]Data, Data any](writer Writer[Datas, Data]) WriteCloser[Datas, Data] {
+	return struct {
+		Writer[Datas, Data]
+		io.Closer
+	}{
+		Writer: writer,
+		Closer: NopCloser{},
+	}
+}
+
 func NewWriteCloser[Datas ~[]Data, Data any](writer Writer[Datas, Data], closer io.Closer) WriteCloser[Datas, Data] {
 	return struct {
 		Writer[Datas, Data]
@@ -35,16 +45,6 @@ func NewNopWriter[Datas ~[]Data, Data any]() NopWriter[Datas, Data] {
 
 func (nopWriter NopWriter[Datas, Data]) Write(datas Datas) (n int, err error) {
 	return len(datas), nil
-}
-
-func NewNopCloseWriter[Datas ~[]Data, Data any](writer Writer[Datas, Data]) WriteCloser[Datas, Data] {
-	return struct {
-		Writer[Datas, Data]
-		io.Closer
-	}{
-		Writer: writer,
-		Closer: NopCloser{},
-	}
 }
 
 type NopWriteCloser[Datas ~[]Data, Data any] struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fasionchan/goutils/std/netx"
+	"github.com/fasionchan/goutils/std/_net"
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 	"github.com/go-chi/chi/v5"
@@ -56,7 +56,7 @@ func (p *BrowserPool) EnsureBrowser(ctx context.Context, id string) (Browser, er
 
 func (p *BrowserPool) EnsureBrowserApiHandler(ctx context.Context, id string) (*BrowserApiHandler, error) {
 	handler, _, err := p.browsers.LoadOrCreate(ctx, id, func(ctx context.Context, _ string) (*BrowserApiHandler, error) {
-		opts := p.opts.Dup().WithAddr(netx.RandomLocalTcpAddr())
+		opts := p.opts.Dup().WithAddr(_net.RandomLocalTcpAddr())
 
 		browser, err := p.launcher.Launch(ctx, opts)
 		if err != nil {

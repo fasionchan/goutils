@@ -1,4 +1,4 @@
-package netx
+package _net
 
 import (
 	"math/rand/v2"

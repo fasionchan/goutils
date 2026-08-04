@@ -1,4 +1,4 @@
-package iox
+package _io
 
 import (
 	"github.com/fasionchan/goutils/stl"
