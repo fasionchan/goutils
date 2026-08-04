@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/fasionchan/goutils/baseutils"
-	"github.com/fasionchan/goutils/std/iox"
 )
 
 func TeeReader(r io.Reader, ws ...io.Writer) io.Reader {
@@ -71,7 +70,7 @@ func (builder *TeeReadCloserBuilder) Build() io.ReadCloser {
 		reader = io.TeeReader(builder.readCloser, writer)
 	}
 
-	return iox.NewReadCloser(reader, closers.PurgeNil().Simplify())
+	return NewReadCloser(reader, closers.PurgeNil().Simplify())
 }
 
 func (builder *TeeReadCloserBuilder) WithCloseWriters(closeWriters bool) *TeeReadCloserBuilder {
