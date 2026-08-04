@@ -8,7 +8,7 @@ import (
 )
 
 func NewNopCloseWriter(writer io.Writer) io.WriteCloser {
-	return stl.NewNopWriteCloser(writer)
+	return stl.NewNopCloseWriter(writer)
 }
 
 type Writers []io.Writer

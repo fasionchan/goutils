@@ -7,5 +7,4 @@ import (
 var (
 	Close        = stl.Close
 	CloseQuietly = stl.CloseQuietly
-	NewNopCloseWriter = stl.NewNopCloseWriter[[]byte, byte]
 )

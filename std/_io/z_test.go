@@ -1,4 +1,4 @@
-package _time
+package _io
 
 import "testing"
 

@@ -7,7 +7,7 @@ import (
 )
 
 func TeeReader(r io.Reader, ws ...io.Writer) io.Reader {
-	writers := NewWriters(ws).PurgeNil()
+	writers := NewWriters(ws...).PurgeNil()
 	if writers.Empty() {
 		return r
 	}
@@ -23,7 +23,7 @@ func NewTeeReadCloser(readCloser io.ReadCloser, closeWriters bool, writers ...io
 type TeeReadCloserBuilder struct {
 	readCloser io.ReadCloser
 
-	writers      IoWriters
+	writers      Writers
 	closeWriters bool
 
 	writerClosers WriteClosers
@@ -48,7 +48,7 @@ func (builder *TeeReadCloserBuilder) Build() io.ReadCloser {
 		return nil
 	}
 
-	writers := NewIoWriters().Concat(
+	writers := NewWriters().Concat(
 		builder.writers,
 		builder.writerClosers.AsWriters(),
 	)
@@ -104,7 +104,7 @@ func (builder *TeeReadCloserBuilder) WithReadCloser(readCloser io.ReadCloser) *T
 	return builder
 }
 
-func (builder *TeeReadCloserBuilder) WithWriters(writers IoWriters) *TeeReadCloserBuilder {
+func (builder *TeeReadCloserBuilder) WithWriters(writers Writers) *TeeReadCloserBuilder {
 	if builder == nil {
 		return nil
 	}

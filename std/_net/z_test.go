@@ -1,4 +1,4 @@
-package _time
+package _net
 
 import "testing"
 
