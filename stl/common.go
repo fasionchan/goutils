@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2023-03-24 08:46:11
  * Last Modified by: fasion
- * Last Modified time: 2025-04-28 09:08:39
+ * Last Modified time: 2026-08-05 23:05:31
  */
 
 package stl
@@ -69,6 +69,10 @@ func MustLookupContextValue[Value any, Key any](ctx context.Context, key Key) (v
 func GetContextValue[Value any, Key any](ctx context.Context, key Key) (value Value) {
 	value, _ = LookupContextValue[Value](ctx, key)
 	return
+}
+
+func AddrOf[Data any](data Data) *Data {
+	return &data
 }
 
 func New[Data any]() (data Data) {

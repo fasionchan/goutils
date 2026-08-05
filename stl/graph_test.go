@@ -1,0 +1,151 @@
+package stl
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+type TopoSortableData struct {
+	Key     string
+	Formers []string
+}
+
+func (d TopoSortableData) GetKey() string {
+	return d.Key
+}
+
+func (d TopoSortableData) GetFormers() []string {
+	return d.Formers
+}
+
+func assertTopoOrder[T comparable](t *testing.T, graph Graph[T], order []T) {
+	t.Helper()
+
+	index := make(map[T]int, len(order))
+	for i, node := range order {
+		index[node] = i
+	}
+
+	for from, tos := range graph {
+		fromIdx, fromOK := index[from]
+		if !fromOK {
+			continue
+		}
+		for _, to := range tos {
+			toIdx, toOK := index[to]
+			if !toOK {
+				continue
+			}
+			assert.Less(t, fromIdx, toIdx, "edge %v -> %v violated in order %v", from, to, order)
+		}
+	}
+}
+
+func TestTopoSortByFormers(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"b", "c"}},
+		{Key: "b", Formers: []string{"c"}},
+		{Key: "c", Formers: []string{}},
+	}
+
+	result := TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, nil)
+	assert.Equal(t, []string{"c", "b", "a"}, Map(result, TopoSortableData.GetKey))
+}
+
+func TestTopoSortWithOrder(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a"},
+		{Key: "b"},
+		{Key: "c"},
+		{Key: "d"},
+		{Key: "e"},
+	}
+
+	result := TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"a", "b", "c", "d", "e"}, Map(result, TopoSortableData.GetKey))
+}
+
+func TestTopoSortDataByFormersWithMaxHeap(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a"},
+		{Key: "b"},
+		{Key: "c"},
+	}
+
+	result := TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMaxHeapAsContainer[string])
+	assert.Equal(t, []string{"c", "b", "a"}, Map(result, TopoSortableData.GetKey))
+}
+
+func TestTopoSortDataByFormersIgnoresUnknownFormerInOutput(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"x"}},
+		{Key: "b", Formers: []string{"a"}},
+	}
+
+	result := TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"a", "b"}, Map(result, TopoSortableData.GetKey))
+}
+
+func TestTopoSortDataByFormersWithCycle(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"b"}},
+		{Key: "b", Formers: []string{"a"}},
+		{Key: "c", Formers: []string{}},
+	}
+
+	result := TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"c"}, Map(result, TopoSortableData.GetKey))
+}
+
+func TestGraphTopoSortEmptyAndSingle(t *testing.T) {
+	assert.Empty(t, Graph[string]{}.TopoSort(nil))
+	assert.Equal(t, []string{"a"}, Graph[string]{"a": nil}.TopoSort(NewMinHeapAsContainer[string]))
+}
+
+func TestGraphTopoSortWithMinHeap(t *testing.T) {
+	graph := Graph[string]{
+		"a": {"c"},
+		"b": {"c"},
+		"c": nil,
+	}
+
+	order := graph.TopoSort(NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"a", "b", "c"}, order)
+	assertTopoOrder(t, graph, order)
+}
+
+func TestGraphTopoSortDefaultStackIsValid(t *testing.T) {
+	graph := Graph[int]{
+		1: {3},
+		2: {3},
+		3: {4},
+		4: nil,
+	}
+
+	order := graph.TopoSort(nil)
+	assert.Len(t, order, 4)
+	assertTopoOrder(t, graph, order)
+}
+
+func TestGraphTopoSortWithCycle(t *testing.T) {
+	graph := Graph[string]{
+		"a": {"b"},
+		"b": {"a"},
+		"c": {"a"},
+	}
+
+	order := graph.TopoSort(NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"c"}, order)
+}
+
+func TestGraphTopoSortIncludesTargetOnlyNodes(t *testing.T) {
+	// "b" only appears as an edge target.
+	graph := Graph[string]{
+		"a": {"b"},
+	}
+
+	order := graph.TopoSort(NewMinHeapAsContainer[string])
+	assert.Equal(t, []string{"a", "b"}, order)
+	assertTopoOrder(t, graph, order)
+}
