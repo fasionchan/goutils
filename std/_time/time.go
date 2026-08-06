@@ -242,3 +242,120 @@ func ParseTimestampIntAuto(ts int64) time.Time {
 		return time.Unix(ts, 0)
 	}
 }
+
+func ThisMonth() time.Time {
+	return MonthOf(time.Now())
+}
+
+func MonthOf(t time.Time) time.Time {
+	if t.IsZero() {
+		return time.Time{}
+	}
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+}
+
+func ThisWeek() time.Time {
+	return WeekOf(time.Now())
+}
+
+func WeekOf(t time.Time) time.Time {
+	if t.IsZero() {
+		return time.Time{}
+	}
+
+	return t.AddDate(0, 0, -int(t.Weekday()))
+}
+
+func Weekday(t time.Time) int {
+	if t.IsZero() {
+		return -1
+	}
+
+	return int(t.Weekday())
+}
+
+type TimeRange struct {
+	Start time.Time
+	End time.Time
+}
+
+func NewTimeRange(start, end time.Time) *TimeRange {
+	return &TimeRange{
+		Start: start,
+		End:   end,
+	}
+}
+
+// Nth week of month, starts from 0, while week starts from Monday
+func IsoNthWeekOfMonth(t time.Time) int {
+	if t.IsZero() {
+		return 0
+	}
+
+	first := MonthOf(t)
+	weekday := IsoWeekday(first)
+
+	return (t.Day() + weekday - 2) / 7
+}
+
+// n starts from 0
+func IsoNthWeekRangeOfMonth(m time.Time, n int) (time.Time, time.Time) {
+	if m.IsZero() {
+		return time.Time{}, time.Time{}
+	}
+
+	first := MonthOf(m)
+	return IsoWeekRange(first.AddDate(0, 0, n*7))
+}
+
+func IsoNthWeekRangeOfMonthPack(m time.Time, n int) *TimeRange {
+	return NewTimeRange(IsoNthWeekRangeOfMonth(m, n))
+}
+
+// Monday is 1, Sunday is 7
+func IsoWeekday(t time.Time) int {
+	if t.IsZero() {
+		return -1
+	}
+
+	return (int(t.Weekday())+6)%7 + 1
+}
+
+func IsoThisWeek() time.Time {
+	return IsoWeekOf(time.Now())
+}
+
+func IsoWeekOf(t time.Time) time.Time {
+	if t.IsZero() {
+		return time.Time{}
+	}
+
+	weekday := IsoWeekday(t)
+	return t.AddDate(0, 0, -weekday+1)
+}
+
+func IsoWeekRange(t time.Time) (time.Time, time.Time) {
+	if t.IsZero() {
+		return time.Time{}, time.Time{}
+	}
+
+	first := IsoWeekOf(t)
+	return first, first.AddDate(0, 0, 7)
+}
+
+func IsoWeekRangePack(t time.Time) *TimeRange {
+	return NewTimeRange(IsoWeekRange(t))
+}
+
+func MonthRange(t time.Time) (time.Time, time.Time) {
+	if t.IsZero() {
+		return time.Time{}, time.Time{}
+	}
+
+	first := MonthOf(t)
+	return first, first.AddDate(0, 1, 0)
+}
+
+func MonthRangePack(t time.Time) *TimeRange {
+	return NewTimeRange(MonthRange(t))
+}

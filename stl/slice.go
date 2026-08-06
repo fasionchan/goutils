@@ -1,10 +1,3 @@
-/*
- * Author: fasion
- * Created time: 2022-11-14 11:27:56
- * Last Modified by: fasion
- * Last Modified time: 2026-05-01 10:21:25
- */
-
 package stl
 
 import (
@@ -14,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/fasionchan/goutils/basic"
 	"golang.org/x/exp/constraints"
 )
 
@@ -778,6 +772,52 @@ func MapWithErrorSimplified[Datas ~[]Data, Result any, Data any](datas Datas, ma
 	}
 
 	return results, nil
+}
+
+func BatchProcess[
+	Datas ~[]Data,
+	Data any,
+](datas Datas, stopWhenError bool, process func(data Data) error) Errors {
+	errs := make(Errors, 0, len(datas))
+
+	for _, data := range datas {
+		err := process(data)
+		errs = errs.Append(err)
+
+		if err != nil && stopWhenError {
+			return errs
+		}
+	}
+
+	return errs
+}
+
+func BatchProcessConcurrently[
+	Datas ~[]Data,
+	Data any,
+](datas Datas, process func(data Data) error) chan KeyValuePair[Data, error] {
+	ch := make(chan KeyValuePair[Data, error], len(datas))
+
+	for _, data := range datas {
+		go func(data Data) {
+			defer basic.PanicRecover(nil, func(panicError *basic.PanicError) {
+				ch <- KeyValuePair[Data, error]{Key: data, Value: panicError}
+			})
+
+			err := process(data)
+			ch <- KeyValuePair[Data, error]{Key: data, Value: err}
+		}(data)
+	}
+
+	return ch
+}
+
+func BatchProcessConcurrentlyForResults[
+	Datas ~[]Data,
+	Data any,
+](datas Datas, process func(data Data) error) KeyValuePairs[Data, error] {
+	errChan := BatchProcessConcurrently(datas, process)
+	return ReadChan(errChan, len(datas))
 }
 
 func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Data) error) error {

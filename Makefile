@@ -9,3 +9,6 @@ browserd-docker: browserd-linux
 
 run-browserd: browserd-docker
 	docker run -it --rm -p 8080:8080 --shm-size=1g -e BROWSER_headless=new docker-hub.fasionchan.com/fasionchan/browserd:latest pool
+
+pi-docker:
+	docker build -t docker-hub.fasionchan.com/fasionchan/pi:v0.82.1 -f docker/pi/Dockerfile .

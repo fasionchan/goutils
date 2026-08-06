@@ -2,6 +2,8 @@ package browser
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 
 	"github.com/fasionchan/goutils/stl"
@@ -14,13 +16,13 @@ import (
 type BrowserApiHandlerPtr = *BrowserApiHandler
 
 type BrowserApiHandler struct {
-	browser Browser
+	browser          Browser
 	mcpServerHandler http.Handler
 }
 
-func NewBrowserApiHandler(browser Browser, mcpServerHandler func (Browser) http.Handler) *BrowserApiHandler {
+func NewBrowserApiHandler(browser Browser, mcpServerHandler func(Browser) http.Handler) *BrowserApiHandler {
 	return &BrowserApiHandler{
-		browser: browser,
+		browser:          browser,
 		mcpServerHandler: mcpServerHandler(browser),
 	}
 }
@@ -102,7 +104,7 @@ func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 	})
 
 	// todo fix me
-	r.Mount("/mcp", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	r.Mount("/mcp", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler, err := fn(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -113,5 +115,29 @@ func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 		prefix := path[:strings.Index(path, "/mcp")]
 
 		http.StripPrefix(prefix, handler.mcpServerHandler).ServeHTTP(w, r)
+	}))
+
+	r.Mount("/cdp", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler, err := fn(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		address, err := handler.browser.GetCDPAddress()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+
+		path := r.URL.Path
+		index := strings.Index(path, "/cdp")
+		prefix := path[:index+len("/cdp")]
+		proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+			Scheme: "http",
+			Host:   address.String(),
+		})
+
+		http.StripPrefix(prefix, proxy).ServeHTTP(w, r)
 	}))
 }

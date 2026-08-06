@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,6 +87,29 @@ func (b *RodBrowser) Native() *rod.Browser {
 
 func (b *RodBrowser) Close() error {
 	return b.Native().Close()
+}
+
+func (b *RodBrowser) GetCDPAddress() (*net.TCPAddr, error) {
+	result, err := proto.BrowserGetBrowserCommandLine{}.Call(b.Native())
+	if err != nil {
+		return nil, err
+	}
+
+	address := "127.0.0.1"
+	port := ""
+	for _, argument := range result.Arguments {
+		switch {
+		case strings.HasPrefix(argument, "--remote-debugging-address="):
+			address = strings.TrimPrefix(argument, "--remote-debugging-address=")
+		case strings.HasPrefix(argument, "--remote-debugging-port="):
+			port = strings.TrimPrefix(argument, "--remote-debugging-port=")
+		}
+	}
+	if port == "" {
+		return nil, fmt.Errorf("remote debugging port not found")
+	}
+
+	return net.ResolveTCPAddr("tcp", net.JoinHostPort(address, port))
 }
 
 func (b *RodBrowser) NewTab(options *NewTabOptions) (*Tab, error) {

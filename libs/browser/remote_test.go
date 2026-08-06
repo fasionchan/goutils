@@ -3,6 +3,7 @@ package browser
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,6 +22,7 @@ type stubBrowser struct {
 	keyErr      error
 }
 
+func (b *stubBrowser) GetCDPAddress() (*net.TCPAddr, error)        { return nil, nil }
 func (b *stubBrowser) NewTab(options *NewTabOptions) (*Tab, error) { return nil, nil }
 func (b *stubBrowser) GetTab(id string) (*Tab, error)              { return nil, nil }
 func (b *stubBrowser) ListTabs() (Tabs, error)                     { return nil, nil }
