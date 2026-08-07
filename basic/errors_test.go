@@ -3,10 +3,12 @@ package basic
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func panicFunc() (err error) {
-	defer PanicRecover(&err, nil, nil, nil)
+	defer RecoverPanic(&err, nil, nil, nil)
 	panic("test")
 }
 
@@ -18,4 +20,13 @@ func callPanicFunc() {
 
 func TestPanicRecover(t *testing.T) {
 	callPanicFunc()
+}
+
+func TestCatchPanic(t *testing.T) {
+	err := CatchPanic(func () error {
+		panic("testCatchPanic")
+	})
+
+	assert.Error(t, err)
+	fmt.Println("catch result:", err)
 }

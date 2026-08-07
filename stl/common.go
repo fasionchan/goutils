@@ -83,6 +83,13 @@ func NewAsAny[T any]() any {
 	return new(T)
 }
 
+func NewIfNil[Ptr ~*Data, Data any](ptr Ptr) Ptr {
+	if ptr == nil {
+		return new(Data)
+	}
+	return ptr
+}
+
 func NewPtr[Ptr ~*Data, Data any]() Ptr {
 	var data Data
 	return &data

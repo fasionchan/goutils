@@ -47,13 +47,9 @@ func (err *PanicError) Error() string {
 	return fmt.Sprintf("panic: exception=%v || stack=\n%s", err.exception, err.stack)
 }
 
-func PanicRecover(panicError *error, onPanicErrors ...func(*PanicError)) error {
+func RecoverPanic(panicError *error, onPanicErrors ...func(*PanicError)) error {
 	if exception := recover(); exception != nil {
-		var stackBuffer [1024000]byte
-		n := runtime.Stack(stackBuffer[:], false)
-		stackTrace := string(stackBuffer[:n])
-
-		err := NewPanicError(exception, stackTrace)
+		err := NewPanicError(exception, GetStackTrace())
 		if panicError != nil {
 			*panicError = err
 		}
@@ -68,4 +64,42 @@ func PanicRecover(panicError *error, onPanicErrors ...func(*PanicError)) error {
 	}
 
 	return nil
+}
+
+func CatchPanic(fn func() error) (err error) {
+	defer RecoverPanic(&err, nil, nil, nil)
+	return fn()
+}
+
+type GetStackTraceConfig struct {
+	Limit int
+	All   bool
+}
+
+type GetStackTraceOption = func(*GetStackTraceConfig)
+
+func GetStackTraceWithLimit(limit int) GetStackTraceOption {
+	return func(config *GetStackTraceConfig) {
+		config.Limit = limit
+	}
+}
+
+func GetStackTraceAll(all bool) GetStackTraceOption {
+	return func(config *GetStackTraceConfig) {
+		config.All = all
+	}
+}
+
+func GetStackTrace(options ...GetStackTraceOption) string {
+	config := &GetStackTraceConfig{
+		Limit: 102400,
+	}
+
+	for _, option := range options {
+		option(config)
+	}
+
+	buffer := make([]byte, config.Limit)
+	n := runtime.Stack(buffer, config.All)
+	return string(buffer[:n])
 }

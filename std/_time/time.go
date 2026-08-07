@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/fasionchan/goutils/stl"
 )
 
 const (
@@ -358,4 +360,14 @@ func MonthRange(t time.Time) (time.Time, time.Time) {
 
 func MonthRangePack(t time.Time) *TimeRange {
 	return NewTimeRange(MonthRange(t))
+}
+
+type Times []time.Time
+
+func (times Times) FilterByWeekday(weekday time.Weekday) Times {
+	return stl.FilterByKey(times, time.Time.Weekday, weekday)
+}
+
+func (times Times) FilterMondays() Times {
+	return times.FilterByWeekday(time.Monday)
 }

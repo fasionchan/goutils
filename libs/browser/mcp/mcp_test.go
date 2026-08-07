@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -30,6 +31,9 @@ func (b *recordingBrowser) NewTab(options *browser.NewTabOptions) (*browser.Tab,
 	}
 	b.tabs = append(b.tabs, tab)
 	return tab, nil
+}
+func (b *recordingBrowser) GetCDPAddress() (*net.TCPAddr, error) {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 9222}, nil
 }
 func (b *recordingBrowser) GetTab(id string) (*browser.Tab, error) {
 	if b.getTabErr != nil {

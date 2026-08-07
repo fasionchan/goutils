@@ -1,35 +1,40 @@
-/*
- * Author: fasion
- * Created time: 2024-12-28 23:24:22
- * Last Modified by: fasion
- * Last Modified time: 2026-03-17 20:48:47
- */
-
 package stl
 
-// var ErrTimeout = errors.New("timeout")
+import (
+	"context"
+	"errors"
+	"time"
 
-// type Chan[Data any] chan Data
+	"github.com/fasionchan/goutils/basic"
+)
 
-// func (c Chan[Data]) PushPro(ctx context.Context, data Data, timeout time.Duration) error {
-// 	select {
-// 	case <-ctx.Done():
-// 		return nil
-// 	case c <- data:
-// 		return nil
-// 	case <-time.After(timeout):
-// 		return nil
-// 	}
-// }
+var (
+	ErrChanPipeCanceled = errors.New("ChanPipeCanceled")
+)
 
-// func (c Chan[Data]) Push(data Data) Chan[Data] {
-// 	c <- data
-// 	return c
-// }
+type ChanPtr[Data any] = *Chan[Data]
 
-// func (c Chan[Data]) Pull() Data {
-// 	return <-c
-// }
+type Chan[Data any] chan Data
+
+func (c Chan[Data]) PushPro(ctx context.Context, data Data, timeout time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case c <- data:
+		return nil
+	case <-time.After(timeout):
+		return basic.NewTimeoutError("Chan.PushPro")
+	}
+}
+
+func (c Chan[Data]) Push(data Data) Chan[Data] {
+	c <- data
+	return c
+}
+
+func (c Chan[Data]) Pull() Data {
+	return <-c
+}
 
 func PushDataToChanX[DataChan ~chan Data, Data any](dataChan DataChan, datas ...Data) DataChan {
 	for _, data := range datas {
@@ -41,6 +46,8 @@ func PushDataToChanX[DataChan ~chan Data, Data any](dataChan DataChan, datas ...
 func NewChanFromDatasX[DataChan ~chan Data, Data any](datas ...Data) DataChan {
 	return PushDataToChanX(make(DataChan, len(datas)), datas...)
 }
+
+type ChanPipePtr[Data any] = *ChanPipe[Data]
 
 type ChanPipe[Data any] struct {
 	pipe   chan Data
@@ -88,4 +95,56 @@ func (pipe *ChanPipe[Data]) Writer() chan<- Data {
 
 func (pipe *ChanPipe[Data]) Close() {
 	close(pipe.pipe)
+}
+
+func (pipe *ChanPipe[Data]) Pull() (data Data) {
+	return <-pipe.pipe
+}
+
+func (pipe *ChanPipe[Data]) PullWithCtx(ctx context.Context) (data Data, err error) {
+	if ctx == nil {
+		return <-pipe.pipe, nil
+	}
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+		return
+	case data = <-pipe.pipe:
+		return
+	}
+}
+
+func (pipe *ChanPipe[Data]) Push(data Data) error {
+	select {
+	case pipe.pipe <- data:
+		return nil
+	case <-pipe.cancel:
+		return ErrChanPipeCanceled
+	}
+}
+
+func (pipe *ChanPipe[Data]) PushWithCtx(ctx context.Context, data Data) error {
+	if ctx == nil {
+		return pipe.Push(data)
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case pipe.pipe <- data:
+		return nil
+	case <-pipe.cancel:
+		return ErrChanPipeCanceled
+	}
+}
+
+type ChanPipes[Data any] []*ChanPipe[Data]
+
+func NewChanPipes[Data any](pipes ...*ChanPipe[Data]) ChanPipes[Data] {
+	return pipes
+}
+
+func (pipes ChanPipes[Data]) Close() {
+	ForEach(pipes, ChanPipePtr[Data].Close)
 }

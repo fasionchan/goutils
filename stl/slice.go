@@ -800,7 +800,7 @@ func BatchProcessConcurrently[
 
 	for _, data := range datas {
 		go func(data Data) {
-			defer basic.PanicRecover(nil, func(panicError *basic.PanicError) {
+			defer basic.RecoverPanic(nil, func(panicError *basic.PanicError) {
 				ch <- KeyValuePair[Data, error]{Key: data, Value: panicError}
 			})
 
