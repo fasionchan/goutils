@@ -26,4 +26,4 @@
 ## 5. 收尾
 
 - [x] 5.1 确认未修改现有 `TopoSort` / `TopoSortDataByFormers` 公开签名
-- [ ] 5.2 按需开 PR（标题或 body 含 `FAS-2` / `Closes FAS-2`），便于 issue 关联
+- [ ] 5.2 按需开 PR（标题或 body 含 `FAS-2` / `Closes FAS-2`），便于 issue 关联 — 分支已推送 `fas-2-stl-topo-sort-layers`，本机缺 `gh` 登录未能自动建 PR
