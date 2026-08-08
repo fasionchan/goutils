@@ -149,3 +149,137 @@ func TestGraphTopoSortIncludesTargetOnlyNodes(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, order)
 	assertTopoOrder(t, graph, order)
 }
+
+func flattenLayers[T any](layers [][]T) []T {
+	var out []T
+	for _, layer := range layers {
+		out = append(out, layer...)
+	}
+	return out
+}
+
+func assertTopoLayers[T comparable](t *testing.T, graph Graph[T], layers [][]T) {
+	t.Helper()
+
+	layerOf := make(map[T]int)
+	for i, layer := range layers {
+		for _, node := range layer {
+			layerOf[node] = i
+		}
+	}
+
+	for from, tos := range graph {
+		fromLayer, fromOK := layerOf[from]
+		if !fromOK {
+			continue
+		}
+		for _, to := range tos {
+			toLayer, toOK := layerOf[to]
+			if !toOK {
+				continue
+			}
+			assert.Less(t, fromLayer, toLayer, "edge %v -> %v violated across layers %v", from, to, layers)
+			assert.NotEqual(t, fromLayer, toLayer, "intra-layer edge %v -> %v in layer %d", from, to, fromLayer)
+		}
+	}
+}
+
+func TestGraphTopoSortLayersEmptyAndSingle(t *testing.T) {
+	assert.Empty(t, Graph[string]{}.TopoSortLayers(nil))
+	assert.Equal(t, [][]string{{"a"}}, Graph[string]{"a": nil}.TopoSortLayers(NewMinHeapAsContainer[string]))
+}
+
+func TestGraphTopoSortLayersWithMinHeap(t *testing.T) {
+	graph := Graph[string]{
+		"a": {"c"},
+		"b": {"c"},
+		"c": nil,
+	}
+
+	layers := graph.TopoSortLayers(NewMinHeapAsContainer[string])
+	assert.Equal(t, [][]string{{"a", "b"}, {"c"}}, layers)
+	assertTopoLayers(t, graph, layers)
+}
+
+func TestGraphTopoSortLayersDefaultStackIsValid(t *testing.T) {
+	graph := Graph[int]{
+		1: {3},
+		2: {3},
+		3: {4},
+		4: nil,
+	}
+
+	layers := graph.TopoSortLayers(nil)
+	assert.Len(t, flattenLayers(layers), 4)
+	assertTopoLayers(t, graph, layers)
+}
+
+func TestGraphTopoSortLayersWithCycle(t *testing.T) {
+	graph := Graph[string]{
+		"a": {"b"},
+		"b": {"a"},
+		"c": {"a"},
+	}
+
+	layers := graph.TopoSortLayers(NewMinHeapAsContainer[string])
+	assert.Equal(t, [][]string{{"c"}}, layers)
+
+	order := graph.TopoSort(NewMinHeapAsContainer[string])
+	assert.ElementsMatch(t, order, flattenLayers(layers))
+}
+
+func TestGraphTopoSortLayersIncludesTargetOnlyNodes(t *testing.T) {
+	graph := Graph[string]{
+		"a": {"b"},
+	}
+
+	layers := graph.TopoSortLayers(NewMinHeapAsContainer[string])
+	assert.Equal(t, [][]string{{"a"}, {"b"}}, layers)
+	assertTopoLayers(t, graph, layers)
+
+	order := graph.TopoSort(NewMinHeapAsContainer[string])
+	assert.ElementsMatch(t, order, flattenLayers(layers))
+}
+
+func TestTopoSortDataByFormersLayers(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"b", "c"}},
+		{Key: "b", Formers: []string{"c"}},
+		{Key: "c", Formers: []string{}},
+	}
+
+	layers := TopoSortDataByFormersLayers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	assert.Equal(t, [][]string{{"c"}, {"b"}, {"a"}}, Map(layers, func(layer []TopoSortableData) []string {
+		return Map(layer, TopoSortableData.GetKey)
+	}))
+}
+
+func TestTopoSortDataByFormersLayersIgnoresUnknownFormer(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"x"}},
+		{Key: "b", Formers: []string{"a"}},
+	}
+
+	layers := TopoSortDataByFormersLayers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	keys := Map(flattenLayers(layers), TopoSortableData.GetKey)
+	assert.Equal(t, []string{"a", "b"}, keys)
+
+	oneDim := Map(
+		TopoSortDataByFormers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string]),
+		TopoSortableData.GetKey,
+	)
+	assert.ElementsMatch(t, oneDim, keys)
+}
+
+func TestTopoSortDataByFormersLayersWithCycle(t *testing.T) {
+	datas := []TopoSortableData{
+		{Key: "a", Formers: []string{"b"}},
+		{Key: "b", Formers: []string{"a"}},
+		{Key: "c", Formers: []string{}},
+	}
+
+	layers := TopoSortDataByFormersLayers(datas, TopoSortableData.GetKey, TopoSortableData.GetFormers, NewMinHeapAsContainer[string])
+	assert.Equal(t, [][]string{{"c"}}, Map(layers, func(layer []TopoSortableData) []string {
+		return Map(layer, TopoSortableData.GetKey)
+	}))
+}
