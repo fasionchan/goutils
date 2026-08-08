@@ -2,6 +2,33 @@ package stl
 
 type Graph[T comparable] map[T][]T
 
+func GraphFromFormers[
+	Datas ~[]Data,
+	Keys ~[]Key,
+	Data any,
+	Key comparable,
+](datas Datas, getKey func(Data) Key, getFormerKeys func(Data) Keys) (Graph[Key], map[Key]Data) {
+	mapping := MappingByKey(datas, getKey)
+
+	graph := make(Graph[Key])
+	for _, data := range datas {
+		key := getKey(data)
+		if _, ok := graph[key]; !ok {
+			graph[key] = nil
+		}
+
+		for _, former := range getFormerKeys(data) {
+			if _, ok := mapping[former]; !ok {
+				continue
+			}
+
+			graph[former] = append(graph[former], key)
+		}
+	}
+
+	return graph, mapping
+}
+
 func (g Graph[T]) TopoSort(container func(capacity int) Container[T]) []T {
 	inDegree := make(map[T]int)
 	for node := range g {
@@ -89,40 +116,13 @@ func (g Graph[T]) TopoSortLayers(container func(capacity int) Container[T]) [][]
 	return layers
 }
 
-func graphFromFormers[
-	Datas ~[]Data,
-	Keys ~[]Key,
-	Data any,
-	Key comparable,
-](datas Datas, getKey func(Data) Key, getFormerKeys func(Data) Keys) (Graph[Key], map[Key]Data) {
-	mapping := MappingByKey(datas, getKey)
-
-	graph := make(Graph[Key])
-	for _, data := range datas {
-		key := getKey(data)
-		if _, ok := graph[key]; !ok {
-			graph[key] = nil
-		}
-
-		for _, former := range getFormerKeys(data) {
-			if _, ok := mapping[former]; !ok {
-				continue
-			}
-
-			graph[former] = append(graph[former], key)
-		}
-	}
-
-	return graph, mapping
-}
-
 func TopoSortDataByFormers[
 	Datas ~[]Data,
 	Keys ~[]Key,
 	Data any,
 	Key comparable,
 ](datas Datas, getKey func(Data) Key, getFormerKeys func(Data) Keys, container func(capacity int) Container[Key]) []Data {
-	graph, mapping := graphFromFormers(datas, getKey, getFormerKeys)
+	graph, mapping := GraphFromFormers(datas, getKey, getFormerKeys)
 	return MapValuesByKeys(mapping, graph.TopoSort(container)...)
 }
 
@@ -131,13 +131,10 @@ func TopoSortDataByFormersLayers[
 	Keys ~[]Key,
 	Data any,
 	Key comparable,
-](datas Datas, getKey func(Data) Key, getFormerKeys func(Data) Keys, container func(capacity int) Container[Key]) [][]Data {
-	graph, mapping := graphFromFormers(datas, getKey, getFormerKeys)
+](datas Datas, getKey func(Data) Key, getFormerKeys func(Data) Keys, container func(capacity int) Container[Key]) []Datas {
+	graph, mapping := GraphFromFormers(datas, getKey, getFormerKeys)
 	keyLayers := graph.TopoSortLayers(container)
-
-	result := make([][]Data, 0, len(keyLayers))
-	for _, keys := range keyLayers {
-		result = append(result, MapValuesByKeys(mapping, keys...))
-	}
-	return result
+	return Map(keyLayers, func(keys []Key) Datas {
+		return MapValuesByKeys(mapping, keys...)
+	})
 }
