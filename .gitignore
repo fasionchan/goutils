@@ -21,6 +21,8 @@
 go.work
 
 .DS_Store
+.gocache/
+.tools/
 
 .env
 dist/
