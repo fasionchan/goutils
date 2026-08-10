@@ -2,8 +2,16 @@ ARG NODE_VERSION=24-bookworm-slim
 ARG PI_CODING_AGENT_VERSION=0.82.1
 ARG OPENCODE_VERSION=1.18.15
 ARG CODEX_VERSION=0.147.0
+ARG GOLANG_VERSION=1.26
+
+From golang:${GOLANG_VERSION} as GoVendor
 
 FROM node:${NODE_VERSION}
+
+COPY --from=GoVendor /usr/local/go/ /usr/local/go/
+
+ENV GOROOT=/usr/local/go \
+    PATH=/usr/local/go/bin:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \

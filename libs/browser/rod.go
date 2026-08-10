@@ -89,7 +89,7 @@ func (b *RodBrowser) Close() error {
 	return b.Native().Close()
 }
 
-func (b *RodBrowser) GetCDPAddress() (*net.TCPAddr, error) {
+func (b *RodBrowser) GetCdpAddress() (*net.TCPAddr, error) {
 	result, err := proto.BrowserGetBrowserCommandLine{}.Call(b.Native())
 	if err != nil {
 		return nil, err

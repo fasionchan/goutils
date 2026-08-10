@@ -12,6 +12,14 @@ func ErrorStringOrZero(err error) string {
 	return err.Error()
 }
 
+func MarkError(err error, mark string) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s: %w", mark, err)
+}
+
 type TimeoutError struct {
 	hint string
 }

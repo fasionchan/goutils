@@ -49,7 +49,7 @@ const (
 )
 
 type Browser interface {
-	GetCDPAddress() (*net.TCPAddr, error)
+	GetCdpAddress() (*net.TCPAddr, error)
 
 	NewTab(options *NewTabOptions) (*Tab, error)
 	GetTab(id string) (*Tab, error)

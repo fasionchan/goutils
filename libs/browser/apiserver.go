@@ -55,6 +55,15 @@ func (handler *BrowserApiHandler) NewTabHandler(id string) *TabHandler {
 	return NewTabHandler(handler.browser, id)
 }
 
+func (handler *BrowserApiHandler) HandleGetCdpAddress(_ NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[string] {
+	address, err := handler.browser.GetCdpAddress()
+	if err != nil {
+		return types.NewTypedResponseResultFromError[string](http.StatusInternalServerError, err, "Failed to get browser instance")
+	}
+
+	return types.NewTypedResponseResultFromData(address.String())
+}
+
 func (handler *BrowserApiHandler) HandleListTabs(_ NoRequestBodyParams, w http.ResponseWriter, r *http.Request) *types.TypedResponseResult[Tabs] {
 	tabs, err := handler.browser.ListTabs()
 	if err != nil {
@@ -117,6 +126,13 @@ func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 		http.StripPrefix(prefix, handler.mcpServerHandler).ServeHTTP(w, r)
 	}))
 
+	RegisterParamsBasedRequestHandler(r, http.MethodGet, "/CdpAddress", BrowserApiHandlerPtr.HandleGetCdpAddress, fn).With(
+		option.Summary("Get Cdp Address"),
+		option.Description("Get the CDP address of a browser instance"),
+		option.Tags("Instances"),
+		option.Response(http.StatusOK, new(types.TypedResponseResult[string])),
+	)
+
 	r.Mount("/cdp", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler, err := fn(r)
 		if err != nil {
@@ -124,7 +140,7 @@ func (fn GetBrowserFromRequest) RegisterChiOpenApiRoutes(r chiopenapi.Router) {
 			return
 		}
 
-		address, err := handler.browser.GetCDPAddress()
+		address, err := handler.browser.GetCdpAddress()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
