@@ -14,3 +14,10 @@
 - 函数命名: camelCase
 - 类命名: PascalCase
 - 常量: UPPER_SNAKE_CASE
+
+### goutils/stl 用法参考
+
+编写或修改依赖 `github.com/fasionchan/goutils/stl` 的代码时，优先加载 Skill
+`.agents/skills/goutils-stl/`（Cursor 软链：`.cursor/skills/goutils-stl`）。
+按 `SKILL.md` 只加载 `references/en` 或 `references/zh` 之一，再按需打开
+`capabilities/` 与 `recipes/`；勿把全量 API 粘贴进本文件。
