@@ -4,11 +4,13 @@ go 1.25.0
 
 require (
 	github.com/a2aproject/a2a-go/v2 v2.3.1
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.1.16
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cloudwego/eino v0.9.9
+	github.com/emersion/go-message v0.18.2
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-git/go-billy/v6 v6.0.0-alpha.1
@@ -23,13 +25,16 @@ require (
 	github.com/oaswrap/spec v0.5.1
 	github.com/oaswrap/spec-ui v0.2.0
 	github.com/oaswrap/spec/adapter/chiopenapi v0.5.1
+	github.com/rickb777/date v1.22.0
 	github.com/stretchr/testify v1.11.1
 	github.com/ysmood/gson v0.7.3
 	github.com/yuin/goldmark v1.8.2
+	github.com/yuin/gopher-lua v1.1.2
 	go.mongodb.org/mongo-driver v1.11.4
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.50.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+	golang.org/x/net v0.53.0
 	gonum.org/v1/plot v0.16.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -81,6 +86,7 @@ require (
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rickb777/plural v1.4.7 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
@@ -97,7 +103,6 @@ require (
 	golang.org/x/arch v0.11.0 // indirect
 	golang.org/x/image v0.25.0 // indirect
 	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
