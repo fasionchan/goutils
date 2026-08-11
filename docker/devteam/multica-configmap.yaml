@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multica-configs
+data:
+  MULTICA_TOKEN: xxxx
+  MULTICA_DAEMON_ID: xxxx
+  MULTICA_DAEMON_DEVICE_NAME: xxxx
+  MULTICA_AGENT_RUNTIME_NAME: xxxx

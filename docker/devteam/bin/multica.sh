@@ -26,7 +26,7 @@ for repo in $GIT_REPOS; do
 
 	fullpath="$workspace/$path"
 	echo "Cloning $url to $fullpath"
-	cd "$fullpath" && git clone "$url"
+	makedir -p && cd "$fullpath" && git clone "$url"
 done
 
 if [ $# -gt 0 ]; then

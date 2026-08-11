@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: devteam
+  labels:
+    app: devteam
+spec:
+  containers:
+    - name: multica
+      image: ghcr.io/fasionchan/goutils/devteam:devteam-1cd35977453ed39072be2457d1af6efa72dacfa7
+      command: ["multica.sh"]
+      env:
+        - name: DEEPSEEK_API_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: deepseek-configs
+              key: DEEPSEEK_API_KEY
+        - name: MULTICA_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              name: multica-configs
+              key: MULTICA_TOKEN
+        - name: MULTICA_DAEMON_ID
+          valueFrom:
+            configMapKeyRef:
+              name: multica-configs
+              key: MULTICA_DAEMON_ID
+        - name: MULTICA_DAEMON_DEVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: multica-configs
+              key: MULTICA_DAEMON_DEVICE_NAME
+        - name: MULTICA_AGENT_RUNTIME_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: multica-configs
+              key: MULTICA_AGENT_RUNTIME_NAME
+        - name: GIT_REPOS
+          valueFrom:
+            configMapKeyRef:
+              name: workspace-configs
+              key: GIT_REPOS
+      volumeMounts:
+        - name: devteam-workspace
+          mountPath: /workspace
+  volumes:
+    - name: devteam-workspace
+      emptyDir: {}
