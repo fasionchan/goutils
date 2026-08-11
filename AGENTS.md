@@ -21,3 +21,8 @@
 `.agents/skills/goutils-stl/`（Cursor 软链：`.cursor/skills/goutils-stl`）。
 按 `SKILL.md` 只加载 `references/en` 或 `references/zh` 之一，再按需打开
 `capabilities/` 与 `recipes/`；勿把全量 API 粘贴进本文件。
+
+### code-review 评审参考
+
+进行 Go 代码评审 / code review / 检查风格与惯例时，加载 Skill `.agents/skills/code-review/`（Cursor 软链：`.cursor/skills/code-review`）。按 `SKILL.md` 只加载 `references/zh/`，再按 `INDEX.md` 打开章节；扩展位为空则跳过。
+
