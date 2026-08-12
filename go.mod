@@ -3,7 +3,6 @@ module github.com/fasionchan/goutils
 go 1.25.0
 
 require (
-	github.com/a2aproject/a2a-go/v2 v2.3.1
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.1.16
@@ -17,15 +16,17 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-alpha.3
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-rod/rod v0.116.2
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/h2non/filetype v1.1.3
 	github.com/joho/godotenv v1.5.1
+	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/mark3labs/mcp-go v0.43.0
+	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/oaswrap/spec v0.5.1
 	github.com/oaswrap/spec-ui v0.2.0
 	github.com/oaswrap/spec/adapter/chiopenapi v0.5.1
 	github.com/rickb777/date v1.22.0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.11.1
 	github.com/ysmood/gson v0.7.3
 	github.com/yuin/goldmark v1.8.2
@@ -39,6 +40,7 @@ require (
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
+	rsc.io/qr v0.2.0
 )
 
 require (
@@ -73,6 +75,7 @@ require (
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -102,10 +105,11 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.11.0 // indirect
 	golang.org/x/image v0.25.0 // indirect
-	golang.org/x/mod v0.34.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )

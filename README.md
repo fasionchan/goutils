@@ -4,6 +4,7 @@ Golang utility library. Package docs on pkg.go.dev:
 
 - [github.com/fasionchan/goutils](https://pkg.go.dev/github.com/fasionchan/goutils)
 - [stl](https://pkg.go.dev/github.com/fasionchan/goutils/stl) — generics helpers for slices, maps, sets, seq, buffers, cache fetchers, graphs, channels
+- [libs/qrcode](https://pkg.go.dev/github.com/fasionchan/goutils/libs/qrcode) — pure-Go QR code utilities: decode (png/jpeg), terminal output, encode (png/jpeg), with `cmd/goutils-qrcode` CLI
 
 ## Agent skill: goutils-stl (English)
 
