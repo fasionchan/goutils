@@ -14,6 +14,11 @@ FROM golang:${GOLANG_VERSION} as GoVendor
 
 FROM node:${NODE_VERSION}
 
+ARG PYTHON_VERSION
+ARG PI_CODING_AGENT_VERSION
+ARG OPENCODE_VERSION
+ARG CODEX_VERSION
+
 # 基础包
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -46,6 +51,8 @@ RUN mkdir -p /opt/uv/python && chmod 755 /opt/uv/python && \
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION}
 RUN npm install -g opencode-ai@${OPENCODE_VERSION}
 RUN npm install -g @openai/codex@${CODEX_VERSION}
+
+ENV PATH="/root/.local/bin:$PATH"
 RUN curl https://cursor.com/install -fsS | bash && cursor-agent sandbox disable
 
 # Multica

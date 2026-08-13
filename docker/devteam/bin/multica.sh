@@ -20,13 +20,15 @@ set -euo pipefail
 
 workspace=$(pwd)
 
-for repo in $GIT_REPOS; do
+for repo in ${GIT_REPOS:-}; do
 	path="${repo%%:*}"
 	url="${repo#*:}"
 
 	fullpath="$workspace/$path"
-	echo "Cloning $url to $fullpath"
-	makedir -p && cd "$fullpath" && git clone "$url"
+	if [ ! -e "$fullpath" ]; then
+		echo "Cloning $url to $fullpath"
+		mkdir -p "$fullpath" && (cd "$fullpath" && git clone "$url")
+	fi
 done
 
 if [ $# -gt 0 ]; then
