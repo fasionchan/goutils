@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: multica-configs
 data:
+  # MULTICA_SERVER_URL: xxxx
+  # MULTICA_APP_URL: xxxx
   MULTICA_TOKEN: xxxx
   MULTICA_DAEMON_ID: xxxx
   MULTICA_DAEMON_DEVICE_NAME: xxxx

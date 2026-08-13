@@ -1,6 +1,7 @@
 package stl
 
 import (
+	"math"
 	"sort"
 
 	"golang.org/x/exp/constraints"
@@ -188,4 +189,72 @@ func Sum[Datas ~[]Data, Data Addend](datas Datas, start Data) Data {
 		start += data
 	}
 	return start
+}
+
+func CalculatePercentage[R Number, T Number](part, total T, precision int) R {
+	if total == 0 {
+		return 0
+	}
+	if precision < 0 {
+		precision = 0
+	}
+	return R(RoundFloat64(float64(part)/float64(total)*100, precision))
+}
+
+func RoundFloat32(value float32, precision int) float32 {
+	result := RoundFloat64(float64(value), precision)
+	return float32(result)
+}
+
+func RoundFloat64(value float64, precision int) float64 {
+	base := math.Pow10(precision)
+	return math.Round(value*base) / base
+}
+
+type Comparables[T comparable] Slice[T]
+
+func (comparables Comparables[T]) Slice() Slice[T] {
+	return Slice[T](comparables)
+}
+
+func (comparables Comparables[T]) Filter(value T) Comparables[T] {
+	return FilterValue(comparables, value)
+}
+
+func (comparables Comparables[T]) Purge(value T) Comparables[T] {
+	return PurgeValue(comparables, value)
+}
+
+func (comparables Comparables[T]) PurgeZero() Comparables[T] {
+	return PurgeZero(comparables)
+}
+
+type Orderables[T constraints.Ordered] Comparables[T]
+
+func (orderables Orderables[T]) Native() []T {
+	return []T(orderables)
+}
+
+func (orderables Orderables[T]) Slice() Slice[T] {
+	return (Slice[T])(orderables)
+}
+
+func (orderables Orderables[T]) Comparables() Comparables[T] {
+	return (Comparables[T])(orderables)
+}
+
+func (orderables Orderables[T]) Compare(other Orderables[T]) int {
+	return Compare(orderables, other)
+}
+
+func (slice Orderables[T]) Less(other Orderables[T]) bool {
+	return slice.Compare(other) < 0
+}
+
+func (slice Orderables[T]) Greater(other Orderables[T]) bool {
+	return slice.Compare(other) > 0
+}
+
+func (slice Orderables[T]) Equal(other Orderables[T]) bool {
+	return slice.Compare(other) == 0
 }

@@ -15,6 +15,8 @@ import (
 	"github.com/emersion/go-message"
 	"github.com/fasionchan/goutils/libs/datarender"
 	"github.com/fasionchan/goutils/std/templatex"
+	"github.com/fasionchan/goutils/stl"
+	"github.com/fasionchan/goutils/types"
 )
 
 const (
@@ -178,4 +180,60 @@ func (t HeaderText) Parse() http.Header {
 	}
 
 	return header
+}
+
+type UserAgent string
+
+func (ua UserAgent) Native() string {
+	return string(ua)
+}
+
+func (ua UserAgent) Contains(keyword string) bool {
+	return strings.Contains(ua.Native(), keyword)
+}
+
+func (ua UserAgent) ContainsAny(keywords types.Strings) bool {
+	return stl.AnyMatch(keywords, ua.Contains)
+}
+
+func (ua UserAgent) ContainsAnyX(keywords ...string) bool {
+	return ua.ContainsAny(keywords)
+}
+
+func (ua UserAgent) IsPc() bool {
+	return ua.ContainsAnyX(
+		"windows",
+		"macintosh",
+		"x86",
+		"x86_64",
+		"x64",
+	)
+}
+
+func (ua UserAgent) IsWxWork() bool {
+	return ua.ContainsAnyX(
+		"wxwork",
+	)
+}
+
+func (ua UserAgent) IsWeixin() bool {
+	return ua.ContainsAnyX(
+		"weixin",
+	)
+}
+
+func (ua UserAgent) IsWxWorkOrWeixin() bool {
+	return ua.IsWxWork() || ua.IsWeixin()
+}
+
+func (ua UserAgent) IsWindows() bool {
+	return ua.ContainsAnyX(
+		"windows",
+	)
+}
+
+func (ua UserAgent) IsMac() bool {
+	return ua.ContainsAnyX(
+		"macintosh",
+	)
 }

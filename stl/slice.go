@@ -570,6 +570,12 @@ func FilterByKeySet[Datas ~[]Data, Data any, Key comparable](datas Datas, dataKe
 	})
 }
 
+func FilterValue[Data comparable, Datas ~[]Data](datas Datas, value Data) Datas {
+	return Filter(datas, func(data Data) bool {
+		return data == value
+	})
+}
+
 func FilterZeroKey[Datas ~[]Data, Data any, Key comparable](datas Datas, key func(Data) Key) Datas {
 	var zeroKey Key
 	return Filter(datas, func(data Data) bool {

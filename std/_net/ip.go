@@ -46,3 +46,28 @@ type IpNets []*net.IPNet
 func (nets IpNets) Contains(ip net.IP) bool {
 	return stl.AnyMatchUnary(nets, (*net.IPNet).Contains, ip)
 }
+
+func GetLocalIpv4Addr() (string, error) {
+	srcAddr := net.UDPAddr{
+		IP:   net.IPv4zero,
+		Port: 0,
+	}
+	dstAddr := net.UDPAddr{
+		IP:   net.ParseIP("8.8.8.8"),
+		Port: 8,
+	}
+
+	conn, err := net.DialUDP("udp", &srcAddr, &dstAddr)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr()
+	host, _, err := net.SplitHostPort(localAddr.String())
+	if err != nil {
+		return "", err
+	}
+
+	return host, nil
+}
