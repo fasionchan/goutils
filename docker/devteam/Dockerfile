@@ -6,6 +6,7 @@ ARG PYTHON_VERSION=3.12
 # ARG OPENCODE_VERSION=1.18.15
 # ARG CODEX_VERSION=0.147.0
 
+ARG DSH_VERSION=latest
 ARG PI_CODING_AGENT_VERSION=latest
 ARG OPENCODE_VERSION=latest
 ARG CODEX_VERSION=latest
@@ -49,6 +50,7 @@ RUN mkdir -p /opt/uv/python && chmod 755 /opt/uv/python && \
     uv python install ${PYTHON_VERSION} && uv python pin --global ${PYTHON_VERSION}
 
 # Agents
+RUN npm install -g @deepseek-ai/dsh@${DSH_VERSION}
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION}
 RUN npm install -g opencode-ai@${OPENCODE_VERSION}
 RUN npm install -g @openai/codex@${CODEX_VERSION}

@@ -1,6 +1,7 @@
 IMAGE_REGISTRY ?= docker-hub.fasionchan.com/my
 
 DEVTEAM_IMAGE_TAG ?= v0.1
+DSH_IMAGE_TAG ?= v0.1
 
 browserd:
 	time nice -n 19 go build -p 2 -o dist/$(shell go env GOOS)/browserd github.com/fasionchan/goutils/libs/browser/cmd/browserd
@@ -38,3 +39,22 @@ devteam-manifest: devteam-images
 
 run-devteam:
 	docker run -it --rm --env-file .env docker-hub.fasionchan.com/fasionchan/devteam:v0.1
+
+dsh-image-amd64:
+	time docker build \
+	--platform linux/amd64 \
+	-t $(IMAGE_REGISTRY)/dsh:$(DSH_IMAGE_TAG)-amd64 \
+	-f docker/dsh/Dockerfile .
+
+dsh-image-arm64:
+	time docker build \
+	--platform linux/arm64 \
+	-t $(IMAGE_REGISTRY)/dsh:$(DSH_IMAGE_TAG)-arm64 \
+	-f docker/dsh/Dockerfile .
+
+dsh-images: dsh-image-amd64 dsh-image-arm64
+
+dsh-manifest: dsh-images
+	docker manifest create $(IMAGE_REGISTRY)/dsh:$(DSH_IMAGE_TAG) \
+	$(IMAGE_REGISTRY)/dsh:$(DSH_IMAGE_TAG)-amd64 \
+	$(IMAGE_REGISTRY)/dsh:$(DSH_IMAGE_TAG)-arm64
