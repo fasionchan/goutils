@@ -570,6 +570,16 @@ func FilterByKeySet[Datas ~[]Data, Data any, Key comparable](datas Datas, dataKe
 	})
 }
 
+func FilterUnary[
+	Datas ~[]Data,
+	Arg any,
+	Data any,
+](datas Datas, fn func(data Data, arg Arg) bool, arg Arg) Datas {
+	return Filter(datas, func(data Data) bool {
+		return fn(data, arg)
+	})
+}
+
 func FilterValue[Data comparable, Datas ~[]Data](datas Datas, value Data) Datas {
 	return Filter(datas, func(data Data) bool {
 		return data == value
@@ -630,6 +640,16 @@ func Purge[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 		}
 	}
 	return result
+}
+
+func PurgeUnary[
+	Datas ~[]Data,
+	Arg any,
+	Data any,
+](datas Datas, fn func(data Data, arg Arg) bool, arg Arg) Datas {
+	return Purge(datas, func(data Data) bool {
+		return fn(data, arg)
+	})
 }
 
 func PurgeValue[Datas ~[]Data, Data comparable](datas Datas, value Data) Datas {

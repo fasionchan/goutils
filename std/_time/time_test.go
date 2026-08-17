@@ -1,9 +1,13 @@
 package _time
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/fasionchan/goutils/std/_testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseTimestamp(t *testing.T) {
@@ -63,4 +67,32 @@ func TestParseTimestamp(t *testing.T) {
 			t.Errorf("ParseTimestamp(%v, %s) = %v, want %v", test.ts, test.format, got, test.want)
 		}
 	}
+}
+
+type TruncateLocalTest struct {
+	t time.Time
+	d time.Duration
+	want time.Time
+}
+
+func (test TruncateLocalTest) GetName() string {
+	return fmt.Sprintf("TruncateLocal(%s, %s)", test.t.Format(time.RFC3339), test.d.String())
+}
+
+func (test TruncateLocalTest) Run(t *testing.T) {
+	got := TruncateLocal(test.t, test.d)
+	assert.Equal(t, test.want, got)
+}
+
+func TestTruncateLocal(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []TruncateLocalTest{
+		{t: time.Date(2021, 1, 1, 12, 0, 0, 0, time.UTC), d: time.Hour, want: time.Date(2021, 1, 1, 12, 0, 0, 0, time.UTC)},
+		{t: time.Date(2021, 1, 1, 12, 0, 0, 0, time.UTC), d: time.Hour * 24, want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
+
+		{t: time.Date(2021, 1, 1, 8, 0, 0, 0, time.Local), d: time.Hour, want: time.Date(2021, 1, 1, 8, 0, 0, 0, time.Local)},
+		{t: time.Date(2021, 1, 1, 7, 0, 0, 0, time.Local), d: time.Hour * 24, want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.Local)},
+		{t: time.Date(2021, 1, 1, 7, 0, 0, 0, time.Local), d: time.Hour * 3, want: time.Date(2021, 1, 1, 6, 0, 0, 0, time.Local)},
+		{t: time.Date(2021, 1, 1, 8, 0, 0, 0, time.Local), d: time.Hour * 24, want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.Local)},
+		{t: time.Date(2021, 1, 1, 9, 0, 0, 0, time.Local), d: time.Hour * 24, want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.Local)},
+	})
 }

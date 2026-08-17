@@ -496,7 +496,7 @@ func (client *Client) WithHeader(name, value string) *Client {
 	return client
 }
 
-func (client *Client) AddHeaders(headers http.Header) *Client {
+func (client *Client) SetHeaders(headers http.Header) *Client {
 	if client == nil {
 		return nil
 	}

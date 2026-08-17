@@ -249,6 +249,20 @@ func ThisMonth() time.Time {
 	return MonthOf(time.Now())
 }
 
+func TruncateLocal(t time.Time, d time.Duration) time.Time {
+	if d <= time.Minute {
+		return t.Truncate(d)
+	}
+
+	_, offset := t.Zone()
+	step := d.Nanoseconds() / 1000000000
+
+	unix := t.Unix() + int64(offset)
+	unix = unix/step*step - int64(offset)
+
+	return time.Unix(unix, 0).In(t.Location())
+}
+
 func MonthOf(t time.Time) time.Time {
 	if t.IsZero() {
 		return time.Time{}
