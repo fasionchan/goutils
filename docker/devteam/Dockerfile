@@ -24,11 +24,11 @@ ARG CODEX_VERSION
 # 基础包
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
+    build-essential \
     ca-certificates \
     curl \
     fd-find \
     git \
-    make \
     openssh-client \
     ripgrep && \
     rm -rf /var/lib/apt/lists/*
