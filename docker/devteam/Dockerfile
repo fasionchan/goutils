@@ -48,7 +48,11 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python \
     PATH="/usr/local/bin:$PATH"
 
 RUN mkdir -p /opt/uv/python && chmod 755 /opt/uv/python && \
-    uv python install ${PYTHON_VERSION} && uv python pin --global ${PYTHON_VERSION}
+    uv python install ${PYTHON_VERSION} && uv python pin --global ${PYTHON_VERSION} && \
+    ln -s /usr/local/bin/python${PYTHON_VERSION} /usr/local/bin/python3 && \
+    ln -s /usr/local/bin/python${PYTHON_VERSION} /usr/local/bin/python
+
+ENV npm_config_python=/usr/local/bin/python${PYTHON_VERSION}
 
 RUN npm config set python /usr/local/bin/python${PYTHON_VERSION}
 
