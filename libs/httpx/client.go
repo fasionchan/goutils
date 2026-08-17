@@ -1,10 +1,3 @@
-/*
- * Author: fasion
- * Created time: 2024-03-19 13:41:41
- * Last Modified by: fasion
- * Last Modified time: 2026-01-14 08:48:04
- */
-
 package httpx
 
 import (
@@ -35,10 +28,10 @@ const (
 	ContentTypeMultipartFormData             = "multipart/form-data"
 	ContentTypeApplicationXwwwFormUrlencoded = "application/x-www-form-urlencoded"
 
-	QueryParameterPrefixQuery            = "_query_"
-	QueryParameterPrefixCookie           = "_cookie_"
-	QueryParameterPrefixHeader           = "_header_"
-	QueryParameterPrefixLengthCookie     = len(QueryParameterPrefixCookie)
+	QueryParameterPrefixQuery             = "_query_"
+	QueryParameterPrefixCookie            = "_cookie_"
+	QueryParameterPrefixHeader            = "_header_"
+	QueryParameterPrefixLengthCookie      = len(QueryParameterPrefixCookie)
 	QueryParameterNameBearerToken         = "_bearerToken"
 	QueryParameterNameHmacAuthAccessKey   = "_hmacAuthAccessKey"
 	QueryParameterNameHmacAuthSecretKey   = "_hmacAuthSecretKey"
@@ -567,6 +560,10 @@ func (client *Client) WithRequestAuthenticator(authenticator RequestAuthenticato
 
 	client.requestAuthenticator = authenticator
 	return client
+}
+
+func (client *Client) WithRequestAuthenticatorFunc(fn RequestAuthenticatorFunc) *Client {
+	return client.WithRequestAuthenticator(fn)
 }
 
 func (client *Client) WithResponseValidatorDefault() *Client {
