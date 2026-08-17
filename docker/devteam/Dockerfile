@@ -54,8 +54,6 @@ RUN mkdir -p /opt/uv/python && chmod 755 /opt/uv/python && \
 
 ENV npm_config_python=/usr/local/bin/python${PYTHON_VERSION}
 
-RUN npm config set python /usr/local/bin/python${PYTHON_VERSION}
-
 # Agents
 RUN npm install -g @deepseek-ai/dsh@${DSH_VERSION}
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION}
