@@ -64,7 +64,7 @@ func (m Mapping[Key, Value]) LoadAndDelete(key Key) (value Value, ok bool) {
 	return
 }
 
-func (m Mapping[Key, Value]) LoadOrCreate(key Key, create func () Value) (Value, bool) {
+func (m Mapping[Key, Value]) LoadOrCreate(key Key, create func() Value) (Value, bool) {
 	value, ok := m.Load(key)
 	if ok {
 		return value, true
@@ -121,7 +121,7 @@ func (m Mapping[Key, Value]) SwapOk(key Key, value Value) (previous Value, loade
 	return
 }
 
-func (m Mapping[Key,Value]) Values() []Value {
+func (m Mapping[Key, Value]) Values() []Value {
 	return MapValues(m)
 }
 
@@ -559,6 +559,20 @@ func (counter Counter[Key]) Increase(key Key) Counter[Key] {
 func (counter Counter[Key]) IncreaseValue(key Key, value int) Counter[Key] {
 	counter[key] += value
 	return counter
+}
+
+func (counter Counter[Key]) Filter(tester func(Key, int, Counter[Key]) bool) Counter[Key] {
+	return FilterMap(counter, tester)
+}
+
+func (counter Counter[Key]) FilterByValue(tester func(int) bool) Counter[Key] {
+	return FilterMap(counter, func(key Key, value int, counter Counter[Key]) bool {
+		return tester(value)
+	})
+}
+
+func (counter Counter[Key]) Keys() Slice[Key] {
+	return MapKeys(counter)
 }
 
 func (counter Counter[Key]) NativeMap() map[Key]int {

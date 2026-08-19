@@ -2,7 +2,7 @@
  * Author: fasion
  * Created time: 2022-11-12 21:45:25
  * Last Modified by: fasion
- * Last Modified time: 2025-07-31 14:20:46
+ * Last Modified time: 2026-08-19 23:20:08
  */
 
 package queryutils
@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fasionchan/goutils/std/reflectx"
 	"github.com/fasionchan/goutils/stl"
 	"github.com/fasionchan/goutils/types"
 )
@@ -138,9 +139,10 @@ func NewSetinHandlerPro[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKey func(SubData) Key,
 	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
+	detectAmbiguousSubdata bool,
 ) SetinHandler[Datas, DataPtr, Data] {
 	return func(ctx context.Context, datas Datas) error {
-		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler)
+		return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, subDataKey, setinHandler, detectAmbiguousSubdata)
 	}
 }
 
@@ -160,7 +162,7 @@ func NewSetinHandler[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
 ) SetinHandler[Datas, DataPtr, Data] {
-	return NewSetinHandlerPro[Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
+	return NewSetinHandlerPro[Datas](dataSubKeys, subDataFetcher, SubData.GetId, setinHandler, true)
 }
 
 func NewReversedSetinHandlerPro[
@@ -252,6 +254,7 @@ func SetinPro[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	subDataKey func(SubData) Key,
 	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
+	detectAmbiguousSubdata bool,
 ) error {
 	keys := stl.MapAndConcat(datas, dataSubKeys)
 	keys = Keys(stl.NewSet(keys...).Slice()) // 集合去重
@@ -262,6 +265,13 @@ func SetinPro[
 	}
 
 	subDataMapping := stl.MappingByKey(subDatas, subDataKey)
+	if len(subDataMapping) != len(subDatas) && detectAmbiguousSubdata {
+		duplicatedKeys := stl.CountByKey(subDatas, subDataKey).FilterByValue(func(value int) bool {
+			return value > 1
+		}).Keys()
+		return fmt.Errorf("ambiguous subdata of type %s with keys: %v", reflectx.TypeOf[SubData]().Name(), duplicatedKeys)
+	}
+
 	BatchCallUnarySetinHandler(datas, setinHandler, subDataMapping)
 
 	return nil
@@ -285,7 +295,7 @@ func Setin[
 	subDataFetcher func(ctx context.Context, keys Keys) (SubDatas, error),
 	setinHandler func(data DataPtr, subDataMapping SubDataMapping) DataPtr,
 ) error {
-	return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler)
+	return SetinPro(ctx, datas, dataSubKeys, subDataFetcher, SubData.GetId, setinHandler, true)
 }
 
 // 调整类型参数顺序，方便指定
