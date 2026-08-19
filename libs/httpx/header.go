@@ -201,7 +201,7 @@ func (ua UserAgent) ContainsAnyX(keywords ...string) bool {
 }
 
 func (ua UserAgent) IsPc() bool {
-	return ua.ContainsAnyX(
+	return ua.ToLower().ContainsAnyX(
 		"windows",
 		"macintosh",
 		"x86",
@@ -236,4 +236,8 @@ func (ua UserAgent) IsMac() bool {
 	return ua.ContainsAnyX(
 		"macintosh",
 	)
+}
+
+func (ua UserAgent) ToLower() UserAgent {
+	return UserAgent(strings.ToLower(ua.Native()))
 }

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/fasionchan/goutils/std/_testing"
 	"github.com/fasionchan/goutils/std/templatex"
 	"github.com/stretchr/testify/assert"
 )
@@ -136,4 +137,30 @@ func TestHeader_ContentDisposition(t *testing.T) {
 
 		assert.Equal(t, testCase.filename, filename)
 	}
+}
+
+type UserAgentIsPcTestCase struct {
+	userAgent UserAgent
+	isPc bool
+}
+
+func (testCase UserAgentIsPcTestCase) GetName() string {
+	return testCase.userAgent.Native()
+}
+
+func (testCase UserAgentIsPcTestCase) Run(t *testing.T) {
+	assert.Equal(t, testCase.isPc, testCase.userAgent.IsPc())
+}
+
+func TestUserAgent_IsPc(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []UserAgentIsPcTestCase{
+		{
+			userAgent: UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			isPc: true,
+		},
+		{
+			userAgent: UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			isPc: true,
+		},
+	})
 }
