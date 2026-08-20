@@ -2,13 +2,20 @@ package _time
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"time"
 
+	"github.com/fasionchan/goutils/stl"
+	"github.com/fasionchan/goutils/types"
 	"github.com/rickb777/date/period"
 )
 
 type Duration time.Duration
+
+func DurationFromNative(d time.Duration) Duration {
+	return Duration(d)
+}
 
 func ParseIso8601Duration(s string) (Duration, error) {
 	p, err := period.Parse(s)
@@ -26,6 +33,18 @@ func ParseIso8601Duration(s string) (Duration, error) {
 
 func (d Duration) Duration() time.Duration {
 	return time.Duration(d)
+}
+
+func (d Duration) Factor() FactoredDurationUnits {
+	return CommonDurationUnits.Factor(d)
+}
+
+func (d Duration) LocaleString(locale string) string {
+	return d.LocaleStringPro(locale, true, true, 2)
+}
+
+func (d Duration) LocaleStringPro(locale string, purgeZeroHead, purgeZeroTail bool, limit int) string {
+	return d.Factor().LocaleStringPro(locale, purgeZeroHead, purgeZeroTail, limit)
 }
 
 func (d Duration) Parts() (int, int, int, int, int, int) {
@@ -126,4 +145,150 @@ func DurationBetween(since, until time.Time) time.Duration {
 	}
 
 	return until.Sub(since)
+}
+
+const (
+	DurationUnitYear = iota
+	DurationUnitMonth
+	DurationUnitDay
+	DurationUnitHour
+	DurationUnitMinute
+	DurationUnitSecond
+)
+
+var (
+	CommonDurationUnits = DurationUnits{
+		{Unit: DurationUnitYear, Base: Year},
+		{Unit: DurationUnitMonth, Base: Month},
+		{Unit: DurationUnitDay, Base: Day},
+		{Unit: DurationUnitHour, Base: Hour},
+		{Unit: DurationUnitMinute, Base: Minute},
+		{Unit: DurationUnitSecond, Base: Second},
+	}
+
+	DurationUnitLocales = map[string]map[int]string{
+		"cn": {
+			DurationUnitYear:   "年",
+			DurationUnitMonth:  "月",
+			DurationUnitDay:    "天",
+			DurationUnitHour:   "小时",
+			DurationUnitMinute: "分钟",
+			DurationUnitSecond: "秒",
+		},
+		"en": {
+			DurationUnitYear:   "yr",
+			DurationUnitMonth:  "mo",
+			DurationUnitDay:    "d",
+			DurationUnitHour:   "hr",
+			DurationUnitMinute: "min",
+			DurationUnitSecond: "sec",
+		},
+	}
+)
+
+type DurationUnit struct {
+	Unit int
+	Base Duration
+}
+
+func (unit DurationUnit) factor(ptr *Duration) (result FactoredDurationUnit) {
+	result.DurationUnit = unit
+
+	if ptr == nil {
+		return
+	}
+
+	d := *ptr
+	if d < unit.Base {
+		return
+	}
+
+	result.Factor = d / unit.Base
+	*ptr = d % unit.Base
+
+	return
+}
+
+type DurationUnits []DurationUnit
+
+func (uints DurationUnits) Factor(d Duration) FactoredDurationUnits {
+	return stl.MapUnary(uints, DurationUnit.factor, &d)
+}
+
+type FactoredDurationUnit struct {
+	DurationUnit
+	Factor Duration
+}
+
+func (unit FactoredDurationUnit) IsFactorZero() bool {
+	return unit.Factor == 0
+}
+
+func (unit FactoredDurationUnit) LocaleString(localeName string) string {
+	locale := DurationUnitLocales[localeName]
+	if locale == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%d%s", int64(unit.Factor), locale[unit.Unit])
+}
+
+type FactoredDurationUnits []FactoredDurationUnit
+
+func (units FactoredDurationUnits) PurgeZero() FactoredDurationUnits {
+	return stl.Purge(units, FactoredDurationUnit.IsFactorZero)
+}
+
+func (units FactoredDurationUnits) PurgeZeroHead() FactoredDurationUnits {
+	return stl.PurgeHead(units, FactoredDurationUnit.IsFactorZero)
+}
+
+func (units FactoredDurationUnits) PurgeZeroTail() FactoredDurationUnits {
+	return stl.PurgeTail(units, FactoredDurationUnit.IsFactorZero)
+}
+
+func (units FactoredDurationUnits) LocaleStringParts(locale string) types.Strings {
+	return stl.MapUnary(units, FactoredDurationUnit.LocaleString, locale)
+}
+
+func (units FactoredDurationUnits) LocaleString(locale string) string {
+	return units.LocaleStringParts(locale).Join("")
+}
+
+func (units FactoredDurationUnits) LocaleStringPro(locale string, purgeZeroHead, purgeZeroTail bool, limit int) string {
+	if purgeZeroHead {
+		units = units.PurgeZeroHead()
+	}
+
+	units = units.Limit(limit)
+
+	if purgeZeroTail {
+		units = units.PurgeZeroTail()
+	}
+
+	return units.LocaleString(locale)
+}
+
+func (units FactoredDurationUnits) Limit(limit int) FactoredDurationUnits {
+	n := len(units)
+	if limit < 0 {
+		limit = 0
+	} else if limit > n {
+		limit = n
+	}
+
+	return units[:limit]
+}
+
+var (
+	DurationLocaleString    = Duration.LocaleString
+	DurationLocaleStringPro = Duration.LocaleStringPro
+)
+
+func NativeDurationLocaleString(d time.Duration, locale string) string {
+	return DurationFromNative(d).LocaleString(locale)
+}
+
+func NativeDurationLocaleStringPro(d time.Duration, locale string, purgeZeroHead, purgeZeroTail bool, limit int) string {
+	return DurationFromNative(d).LocaleStringPro(locale, purgeZeroHead, purgeZeroTail, limit)
 }

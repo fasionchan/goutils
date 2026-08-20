@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/fasionchan/goutils/std/_testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseIso8601Duration(t *testing.T) {
@@ -405,4 +408,134 @@ func TestDuration_RandomBetween(t *testing.T) {
 			}
 		})
 	}
+}
+
+type FormatDurationTestCase struct {
+	d           time.Duration
+	formattedCn string
+	formattedEn string
+}
+
+func (t FormatDurationTestCase) GetName() string {
+	return t.d.String()
+}
+
+func (tc FormatDurationTestCase) Run(t *testing.T) {
+	assert.Equal(t, tc.formattedCn, NativeDurationLocaleString(tc.d, "cn"))
+	assert.Equal(t, tc.formattedEn, NativeDurationLocaleString(tc.d, "en"))
+}
+
+func TestNativeDurationLocaleString(t *testing.T) {
+	_testing.RunNamedTestCasesX(t,
+		FormatDurationTestCase{
+			d:           0,
+			formattedCn: "",
+			formattedEn: "",
+		},
+		FormatDurationTestCase{
+			d:           500 * time.Millisecond,
+			formattedCn: "",
+			formattedEn: "",
+		},
+		FormatDurationTestCase{
+			d:           1500 * time.Millisecond,
+			formattedCn: "1秒",
+			formattedEn: "1sec",
+		},
+		FormatDurationTestCase{
+			d:           Second.Duration(),
+			formattedCn: "1秒",
+			formattedEn: "1sec",
+		},
+		FormatDurationTestCase{
+			d:           Minute.Duration(),
+			formattedCn: "1分钟",
+			formattedEn: "1min",
+		},
+		FormatDurationTestCase{
+			d:           Hour.Duration(),
+			formattedCn: "1小时",
+			formattedEn: "1hr",
+		},
+		FormatDurationTestCase{
+			d:           Day.Duration(),
+			formattedCn: "1天",
+			formattedEn: "1d",
+		},
+		FormatDurationTestCase{
+			d:           Month.Duration(),
+			formattedCn: "1月",
+			formattedEn: "1mo",
+		},
+		FormatDurationTestCase{
+			d:           Year.Duration(),
+			formattedCn: "1年",
+			formattedEn: "1yr",
+		},
+		FormatDurationTestCase{
+			d:           (Minute + Second).Duration(),
+			formattedCn: "1分钟1秒",
+			formattedEn: "1min1sec",
+		},
+		FormatDurationTestCase{
+			d:           (Hour + Minute).Duration(),
+			formattedCn: "1小时1分钟",
+			formattedEn: "1hr1min",
+		},
+		FormatDurationTestCase{
+			d:           (Day + Hour).Duration(),
+			formattedCn: "1天1小时",
+			formattedEn: "1d1hr",
+		},
+		FormatDurationTestCase{
+			d:           (Month + Day).Duration(),
+			formattedCn: "1月1天",
+			formattedEn: "1mo1d",
+		},
+		FormatDurationTestCase{
+			d:           (Year + Month).Duration(),
+			formattedCn: "1年1月",
+			formattedEn: "1yr1mo",
+		},
+		FormatDurationTestCase{
+			d:           (Hour + Second).Duration(),
+			formattedCn: "1小时",
+			formattedEn: "1hr",
+		},
+		FormatDurationTestCase{
+			d:           (Day + Minute).Duration(),
+			formattedCn: "1天",
+			formattedEn: "1d",
+		},
+		FormatDurationTestCase{
+			d:           (Year + Day).Duration(),
+			formattedCn: "1年",
+			formattedEn: "1yr",
+		},
+		FormatDurationTestCase{
+			d:           (Hour + Minute + Second).Duration(),
+			formattedCn: "1小时1分钟",
+			formattedEn: "1hr1min",
+		},
+		FormatDurationTestCase{
+			d:           (Year + Month + Day).Duration(),
+			formattedCn: "1年1月",
+			formattedEn: "1yr1mo",
+		},
+		FormatDurationTestCase{
+			d:           (2 * Hour).Duration(),
+			formattedCn: "2小时",
+			formattedEn: "2hr",
+		},
+		FormatDurationTestCase{
+			d:           (90 * Minute).Duration(),
+			formattedCn: "1小时30分钟",
+			formattedEn: "1hr30min",
+		},
+		FormatDurationTestCase{
+			d:           (-Hour).Duration(),
+			formattedCn: "",
+			formattedEn: "",
+		},
+	)
 }

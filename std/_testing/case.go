@@ -2,7 +2,6 @@ package _testing
 
 import "testing"
 
-// todo move to goutils
 type TestCaseName string
 
 func (name TestCaseName) GetName() string {

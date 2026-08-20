@@ -239,8 +239,8 @@ func Subslice[Datas ~[]Data, Data any](datas Datas, start, length int) Datas {
 		start += n
 	}
 
-	if start + length <= n {
-		return datas[start:start+length]
+	if start+length <= n {
+		return datas[start : start+length]
 	}
 
 	result := make(Datas, 0, length)
@@ -546,7 +546,7 @@ func ForEachTernaryByMapper[
 ](datas Datas, mapper func(Data, Arg1, Arg2, Arg3) Result, arg1 Arg1, arg2 Arg2, arg3 Arg3) {
 	for _, data := range datas {
 
-	mapper(data, arg1, arg2, arg3)
+		mapper(data, arg1, arg2, arg3)
 	}
 }
 
@@ -640,6 +640,24 @@ func Purge[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 		}
 	}
 	return result
+}
+
+func PurgeHead[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
+	for i := range datas {
+		if !filter(datas[i]) {
+			return DupSlice(datas[i:])
+		}
+	}
+	return nil
+}
+
+func PurgeTail[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
+	for i := len(datas) - 1; i >= 0; i-- {
+		if !filter(datas[i]) {
+			return DupSlice(datas[:i+1])
+		}
+	}
+	return nil
 }
 
 func PurgeUnary[
