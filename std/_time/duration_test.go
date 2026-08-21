@@ -421,7 +421,7 @@ func (t FormatDurationTestCase) GetName() string {
 }
 
 func (tc FormatDurationTestCase) Run(t *testing.T) {
-	assert.Equal(t, tc.formattedCn, NativeDurationLocaleString(tc.d, "cn"))
+	assert.Equal(t, tc.formattedCn, NativeDurationLocaleString(tc.d, "zh"))
 	assert.Equal(t, tc.formattedEn, NativeDurationLocaleString(tc.d, "en"))
 }
 

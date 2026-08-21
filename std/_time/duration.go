@@ -36,7 +36,15 @@ func (d Duration) Duration() time.Duration {
 }
 
 func (d Duration) Factor() FactoredDurationUnits {
-	return CommonDurationUnits.Factor(d)
+	return d.FactorByUnitsX(DurationUnitYear, DurationUnitMonth, DurationUnitDay, DurationUnitHour, DurationUnitMinute, DurationUnitSecond)
+}
+
+func (d Duration) FactorByUnits(units []int) FactoredDurationUnits {
+	return CommonDurationUnitsMapping.ValuesByKeys(units...).Factor(d)
+}
+
+func (d Duration) FactorByUnitsX(units ...int) FactoredDurationUnits {
+	return d.FactorByUnits(units)
 }
 
 func (d Duration) LocaleString(locale string) string {
@@ -154,6 +162,12 @@ const (
 	DurationUnitHour
 	DurationUnitMinute
 	DurationUnitSecond
+	DurationUnitMillisecond
+	DurationUnitMicrosecond
+	DurationUnitNanosecond
+
+	DurationUnitLocaleEn = "en"
+	DurationUnitLocaleZh = "zh"
 )
 
 var (
@@ -164,15 +178,20 @@ var (
 		{Unit: DurationUnitHour, Base: Hour},
 		{Unit: DurationUnitMinute, Base: Minute},
 		{Unit: DurationUnitSecond, Base: Second},
+		{Unit: DurationUnitMillisecond, Base: Millisecond},
+		{Unit: DurationUnitMicrosecond, Base: Microsecond},
+		{Unit: DurationUnitNanosecond, Base: Nanosecond},
 	}
 
+	CommonDurationUnitsMapping = CommonDurationUnits.MappingByUnit()
+
 	DurationUnitLocales = map[string]map[int]string{
-		"cn": {
+		"zh": {
 			DurationUnitYear:   "年",
 			DurationUnitMonth:  "月",
 			DurationUnitDay:    "天",
-			DurationUnitHour:   "小时",
-			DurationUnitMinute: "分钟",
+			DurationUnitHour:   "时",
+			DurationUnitMinute: "分",
 			DurationUnitSecond: "秒",
 		},
 		"en": {
@@ -189,6 +208,10 @@ var (
 type DurationUnit struct {
 	Unit int
 	Base Duration
+}
+
+func (unit DurationUnit) GetUnit() int {
+	return unit.Unit
 }
 
 func (unit DurationUnit) factor(ptr *Duration) (result FactoredDurationUnit) {
@@ -213,6 +236,16 @@ type DurationUnits []DurationUnit
 
 func (uints DurationUnits) Factor(d Duration) FactoredDurationUnits {
 	return stl.MapUnary(uints, DurationUnit.factor, &d)
+}
+
+func (units DurationUnits) MappingByUnit() DurationUnitMappingByInt {
+	return stl.MappingByKey(units, DurationUnit.GetUnit)
+}
+
+type DurationUnitMappingByInt map[int]DurationUnit
+
+func (mapping DurationUnitMappingByInt) ValuesByKeys(keys ...int) DurationUnits {
+	return stl.MapValuesByKeys(mapping, keys...)
 }
 
 type FactoredDurationUnit struct {
