@@ -17,6 +17,8 @@ var (
 	errPercentNeedsLimit = errors.New("memory threshold: percent requires a finite memory limit (k8s/cgroup)")
 )
 
+// MemoryThreshold 内存阈值：绝对值（字节）或相对内存上限的百分比，二者只设其一。
+// 百分比相对 ReadProcessMemory 得到的 Limit（优先 k8s/cgroup memory limit）。
 type MemoryThreshold struct {
 	Bytes   uint64
 	Percent float64
