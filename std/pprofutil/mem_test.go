@@ -6,178 +6,214 @@ import (
 	"testing"
 
 	"github.com/fasionchan/goutils/std/_testing"
+	"github.com/fasionchan/goutils/stl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type MemoryThresholdValidateTestCase struct {
+type MemoryThresholdIsEnabledTestCase struct {
 	_testing.TestCaseName
 	threshold MemoryThreshold
-	wantErr   error
+	want      bool
 }
 
-func (tc MemoryThresholdValidateTestCase) Run(t *testing.T) {
-	err := tc.threshold.Validate()
-	if tc.wantErr == nil {
-		assert.NoError(t, err)
-		return
-	}
-	assert.ErrorIs(t, err, tc.wantErr)
+func (tc MemoryThresholdIsEnabledTestCase) Run(t *testing.T) {
+	assert.Equal(t, tc.want, tc.threshold.IsEnabled())
 }
 
-func TestMemoryThresholdValidate(t *testing.T) {
-	_testing.TypedRunNamedTestCases(t, []MemoryThresholdValidateTestCase{
+func TestMemoryThresholdIsEnabled(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []MemoryThresholdIsEnabledTestCase{
 		{
 			TestCaseName: "bytes",
-			threshold:    MemoryThreshold{Bytes: 1024},
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(1024))},
+			want:         true,
 		},
 		{
 			TestCaseName: "percent",
-			threshold:    MemoryThreshold{Percent: 80},
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.0)},
+			want:         true,
 		},
 		{
-			TestCaseName: "percent 100",
-			threshold:    MemoryThreshold{Percent: 100},
+			TestCaseName: "both",
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(1)), Percent: stl.AddrOf(1.0)},
+			want:         true,
 		},
 		{
 			TestCaseName: "empty",
 			threshold:    MemoryThreshold{},
-			wantErr:      errThresholdEmpty,
-		},
-		{
-			TestCaseName: "both",
-			threshold:    MemoryThreshold{Bytes: 1, Percent: 1},
-			wantErr:      errThresholdBoth,
-		},
-		{
-			TestCaseName: "percent too large",
-			threshold:    MemoryThreshold{Percent: 101},
-			wantErr:      errThresholdPercent,
 		},
 	})
 }
 
-type MemoryThresholdResolveTestCase struct {
+type MemoryThresholdExceedsTestCase struct {
 	_testing.TestCaseName
 	threshold MemoryThreshold
+	current   uint64
 	limit     uint64
-	want      uint64
-	wantErr   error
-}
-
-func (tc MemoryThresholdResolveTestCase) Run(t *testing.T) {
-	got, err := tc.threshold.Resolve(tc.limit)
-	if tc.wantErr != nil {
-		assert.ErrorIs(t, err, tc.wantErr)
-		assert.Equal(t, uint64(0), got)
-		return
-	}
-	require.NoError(t, err)
-	assert.Equal(t, tc.want, got)
-}
-
-func TestMemoryThresholdResolve(t *testing.T) {
-	_testing.TypedRunNamedTestCases(t, []MemoryThresholdResolveTestCase{
-		{
-			TestCaseName: "bytes ignores limit",
-			threshold:    MemoryThreshold{Bytes: 4096},
-			want:         4096,
-		},
-		{
-			TestCaseName: "percent of limit",
-			threshold:    MemoryThreshold{Percent: 50},
-			limit:        1000,
-			want:         500,
-		},
-		{
-			TestCaseName: "percent of zero limit",
-			threshold:    MemoryThreshold{Percent: 80},
-			wantErr:      errPercentNeedsLimit,
-		},
-		{
-			TestCaseName: "percent of unlimited",
-			threshold:    MemoryThreshold{Percent: 80},
-			limit:        unlimitedMemoryLimit,
-			wantErr:      errPercentNeedsLimit,
-		},
-		{
-			TestCaseName: "invalid empty",
-			threshold:    MemoryThreshold{},
-			wantErr:      errThresholdEmpty,
-		},
-	})
-}
-
-type ProcessMemoryExceedsTestCase struct {
-	_testing.TestCaseName
-	mem       ProcessMemory
-	threshold MemoryThreshold
 	want      bool
-	wantErr   error
 }
 
-func (tc ProcessMemoryExceedsTestCase) Run(t *testing.T) {
-	got, err := tc.mem.Exceeds(tc.threshold)
-	if tc.wantErr != nil {
-		assert.ErrorIs(t, err, tc.wantErr)
-		assert.False(t, got)
-		return
-	}
-	require.NoError(t, err)
-	assert.Equal(t, tc.want, got)
+func (tc MemoryThresholdExceedsTestCase) Run(t *testing.T) {
+	assert.Equal(t, tc.want, tc.threshold.Exceeds(tc.current, tc.limit))
+	assert.Equal(t, tc.want, ProcessMemory{Current: tc.current, Limit: tc.limit}.Exceeds(tc.threshold))
 }
 
-func TestProcessMemoryExceeds(t *testing.T) {
-	mem := ProcessMemory{Current: 800, Limit: 1000}
-	_testing.TypedRunNamedTestCases(t, []ProcessMemoryExceedsTestCase{
+func TestMemoryThresholdExceeds(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []MemoryThresholdExceedsTestCase{
 		{
 			TestCaseName: "bytes equal is over",
-			mem:          mem,
-			threshold:    MemoryThreshold{Bytes: 800},
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(800))},
+			current:      800,
 			want:         true,
 		},
 		{
 			TestCaseName: "bytes under",
-			mem:          mem,
-			threshold:    MemoryThreshold{Bytes: 801},
-			want:         false,
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(801))},
+			current:      800,
+		},
+		{
+			TestCaseName: "bytes ignores limit",
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(800))},
+			current:      800,
+			limit:        1,
+			want:         true,
 		},
 		{
 			TestCaseName: "percent equal is over",
-			mem:          mem,
-			threshold:    MemoryThreshold{Percent: 80},
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.0)},
+			current:      800,
+			limit:        1000,
 			want:         true,
 		},
 		{
 			TestCaseName: "percent under",
-			mem:          mem,
-			threshold:    MemoryThreshold{Percent: 80.1},
-			want:         false,
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.1)},
+			current:      800,
+			limit:        1000,
 		},
 		{
-			TestCaseName: "invalid threshold",
-			mem:          mem,
+			TestCaseName: "percent of zero limit always over",
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.0)},
+			current:      800,
+			want:         true,
+		},
+		{
+			TestCaseName: "empty never exceeds",
 			threshold:    MemoryThreshold{},
-			wantErr:      errThresholdEmpty,
+			current:      800,
+			limit:        1000,
 		},
 		{
-			TestCaseName: "percent needs limit",
-			mem:          ProcessMemory{Current: 800},
-			threshold:    MemoryThreshold{Percent: 80},
-			wantErr:      errPercentNeedsLimit,
+			TestCaseName: "both bytes hits",
+			threshold: MemoryThreshold{
+				Bytes:   stl.AddrOf(uint64(800)),
+				Percent: stl.AddrOf(90.0),
+			},
+			current: 800,
+			limit:   1000,
+			want:    true,
+		},
+		{
+			TestCaseName: "both percent hits",
+			threshold: MemoryThreshold{
+				Bytes:   stl.AddrOf(uint64(900)),
+				Percent: stl.AddrOf(80.0),
+			},
+			current: 800,
+			limit:   1000,
+			want:    true,
+		},
+		{
+			TestCaseName: "both miss",
+			threshold: MemoryThreshold{
+				Bytes:   stl.AddrOf(uint64(801)),
+				Percent: stl.AddrOf(80.1),
+			},
+			current: 800,
+			limit:   1000,
+		},
+	})
+}
+
+type MemoryThresholdBytesExceedsTestCase struct {
+	_testing.TestCaseName
+	threshold MemoryThreshold
+	current   uint64
+	want      bool
+}
+
+func (tc MemoryThresholdBytesExceedsTestCase) Run(t *testing.T) {
+	assert.Equal(t, tc.want, tc.threshold.BytesExceeds(tc.current))
+}
+
+func TestMemoryThresholdBytesExceeds(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []MemoryThresholdBytesExceedsTestCase{
+		{
+			TestCaseName: "nil",
+			current:      800,
+		},
+		{
+			TestCaseName: "equal",
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(800))},
+			current:      800,
+			want:         true,
+		},
+		{
+			TestCaseName: "under",
+			threshold:    MemoryThreshold{Bytes: stl.AddrOf(uint64(801))},
+			current:      800,
+		},
+	})
+}
+
+type MemoryThresholdPercentExceedsTestCase struct {
+	_testing.TestCaseName
+	threshold MemoryThreshold
+	current   uint64
+	limit     uint64
+	want      bool
+}
+
+func (tc MemoryThresholdPercentExceedsTestCase) Run(t *testing.T) {
+	assert.Equal(t, tc.want, tc.threshold.PercentExceeds(tc.current, tc.limit))
+}
+
+func TestMemoryThresholdPercentExceeds(t *testing.T) {
+	_testing.TypedRunNamedTestCases(t, []MemoryThresholdPercentExceedsTestCase{
+		{
+			TestCaseName: "nil",
+			current:      800,
+			limit:        1000,
+		},
+		{
+			TestCaseName: "equal",
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.0)},
+			current:      800,
+			limit:        1000,
+			want:         true,
+		},
+		{
+			TestCaseName: "under",
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.1)},
+			current:      800,
+			limit:        1000,
+		},
+		{
+			TestCaseName: "zero limit",
+			threshold:    MemoryThreshold{Percent: stl.AddrOf(80.0)},
+			current:      1,
+			want:         true,
 		},
 	})
 }
 
 type ProfileHeapTestCase struct {
 	_testing.TestCaseName
-	emptyPath        bool
-	seedExisting     bool
-	thresholdBytes   uint64
-	thresholdPercent float64
-	wantErrIs        error
-	wantExceeds      bool
-	wantDumped       bool
+	emptyPath      bool
+	seedExisting   bool
+	bytes          *uint64
+	wantErrContain string
+	wantDumped     bool
 }
 
 func (tc ProfileHeapTestCase) Run(t *testing.T) {
@@ -187,27 +223,19 @@ func (tc ProfileHeapTestCase) Run(t *testing.T) {
 		opts = []HeapProfilerOption{WithHeapProfilerPath("")}
 		path = ""
 	}
-	if tc.thresholdBytes > 0 {
-		opts = append(opts, WithHeapProfilerThresholdBytes(tc.thresholdBytes))
-	}
-	if tc.thresholdPercent > 0 {
-		opts = append(opts, WithHeapProfilerThresholdPercent(tc.thresholdPercent))
+	if tc.bytes != nil {
+		opts = append(opts, WithHeapProfilerThresholdBytes(*tc.bytes))
 	}
 	if tc.seedExisting && path != "" {
 		require.NoError(t, os.WriteFile(path, []byte("old"), 0o644))
 	}
 
 	err := ProfileHeap(opts...)
-	switch {
-	case tc.wantErrIs != nil:
-		assert.ErrorIs(t, err, tc.wantErrIs)
-	case tc.wantExceeds:
+	if tc.wantErrContain != "" {
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "memory exceeds threshold")
-	case tc.wantDumped:
+		assert.Contains(t, err.Error(), tc.wantErrContain)
+	} else {
 		require.NoError(t, err)
-	default:
-		require.Error(t, err)
 	}
 
 	if path == "" {
@@ -230,51 +258,44 @@ func (tc ProfileHeapTestCase) Run(t *testing.T) {
 func TestProfileHeap(t *testing.T) {
 	_testing.TypedRunNamedTestCases(t, []ProfileHeapTestCase{
 		{
-			TestCaseName:   "dump under high bytes threshold",
-			thresholdBytes: ^uint64(0),
-			wantDumped:     true,
+			TestCaseName: "dump without threshold",
+			wantDumped:   true,
 		},
 		{
-			TestCaseName:   "overwrite existing profile",
-			seedExisting:   true,
-			thresholdBytes: ^uint64(0),
-			wantDumped:     true,
+			TestCaseName: "overwrite existing profile",
+			seedExisting: true,
+			wantDumped:   true,
 		},
 		{
-			TestCaseName:   "refuse when over bytes threshold",
-			thresholdBytes: 1,
-			wantExceeds:    true,
+			TestCaseName: "dump when over bytes threshold",
+			bytes:        stl.AddrOf(uint64(1)),
+			wantDumped:   true,
 		},
 		{
-			TestCaseName:   "refuse does not overwrite",
-			seedExisting:   true,
-			thresholdBytes: 1,
-			wantExceeds:    true,
+			TestCaseName: "skip when under bytes threshold",
+			bytes:        stl.AddrOf(^uint64(0)),
 		},
 		{
-			TestCaseName: "empty threshold",
-			wantErrIs:    errThresholdEmpty,
+			TestCaseName: "skip does not overwrite",
+			seedExisting: true,
+			bytes:        stl.AddrOf(^uint64(0)),
 		},
 		{
 			TestCaseName:   "empty path",
 			emptyPath:      true,
-			thresholdBytes: ^uint64(0),
+			wantErrContain: "heap profile path is required",
 		},
 		{
-			TestCaseName:     "both thresholds",
-			thresholdBytes:   1024,
-			thresholdPercent: 80,
-			wantErrIs:        errThresholdBoth,
+			TestCaseName: "empty path skipped under threshold",
+			emptyPath:    true,
+			bytes:        stl.AddrOf(^uint64(0)),
 		},
 	})
 }
 
 func TestHeapProfilerProfile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "heap.pprof")
-	p := &HeapProfiler{
-		path:      path,
-		threshold: MemoryThreshold{Bytes: ^uint64(0)},
-	}
+	p := &HeapProfiler{path: path}
 	require.NoError(t, p.Profile())
 
 	data, err := os.ReadFile(path)

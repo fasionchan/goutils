@@ -17,39 +17,37 @@ var (
 	errPercentNeedsLimit = errors.New("memory threshold: percent requires a finite memory limit (k8s/cgroup)")
 )
 
-// MemoryThreshold 内存阈值：绝对值（字节）或相对内存上限的百分比，二者只设其一。
+// MemoryThreshold 内存阈值：绝对值（字节）或相对内存上限的百分比。两者都设置时，有一个满足即可。
 // 百分比相对 ReadProcessMemory 得到的 Limit（优先 k8s/cgroup memory limit）。
 type MemoryThreshold struct {
-	Bytes   uint64
-	Percent float64
+	Bytes   *uint64
+	Percent *float64
 }
 
-func (t MemoryThreshold) Validate() error {
-	hasBytes := t.Bytes > 0
-	hasPercent := t.Percent > 0
-	switch {
-	case hasBytes && hasPercent:
-		return errThresholdBoth
-	case !hasBytes && !hasPercent:
-		return errThresholdEmpty
-	case hasPercent && t.Percent > 100:
-		return errThresholdPercent
-	default:
-		return nil
-	}
+func (t MemoryThreshold) IsEnabled() bool {
+	return t.Bytes != nil || t.Percent != nil
 }
 
-func (t MemoryThreshold) Resolve(limit uint64) (uint64, error) {
-	if err := t.Validate(); err != nil {
-		return 0, err
+func (t MemoryThreshold) Exceeds(current uint64, limit uint64) bool {
+	return t.BytesExceeds(current) || t.PercentExceeds(current, limit)
+}
+
+func (t MemoryThreshold) BytesExceeds(current uint64) bool {
+	bytes := t.Bytes
+	if bytes == nil {
+		return false
 	}
-	if t.Bytes > 0 {
-		return t.Bytes, nil
+
+	return current >= *bytes
+}
+
+func (t MemoryThreshold) PercentExceeds(current uint64, limit uint64) bool {
+	percent := t.Percent
+	if percent == nil {
+		return false
 	}
-	if isUnlimitedMemory(limit) {
-		return 0, errPercentNeedsLimit
-	}
-	return uint64(float64(limit) * t.Percent / 100), nil
+
+	return current >= uint64(float64(limit) * *percent / 100)
 }
 
 type HeapProfiler struct {
@@ -58,15 +56,15 @@ type HeapProfiler struct {
 }
 
 func (p *HeapProfiler) Profile() error {
-	mem, err := ReadProcessMemory()
-	if err != nil {
-		return fmt.Errorf("read process memory: %w", err)
-	}
+	if p.threshold.IsEnabled() {
+		mem, err := ReadProcessMemory()
+		if err != nil {
+			return fmt.Errorf("read process memory: %w", err)
+		}
 
-	if exceeds, err := mem.Exceeds(p.threshold); err != nil {
-		return fmt.Errorf("check memory exceeds: %w", err)
-	} else if exceeds {
-		return fmt.Errorf("memory exceeds threshold: %d > %d", mem.Current, p.threshold.Bytes)
+		if !mem.Exceeds(p.threshold) {
+			return nil
+		}
 	}
 
 	path := p.path
@@ -93,10 +91,6 @@ type HeapProfilerOption = stl.Option[*HeapProfiler]
 func ProfileHeap(opts ...HeapProfilerOption) error {
 	return stl.NewOptions(opts...).Apply(&HeapProfiler{
 		path: "heap.pprof",
-		threshold: MemoryThreshold{
-			Bytes:   0,
-			Percent: 0,
-		},
 	}).Profile()
 }
 
@@ -108,13 +102,13 @@ func WithHeapProfilerPath(path string) HeapProfilerOption {
 
 func WithHeapProfilerThresholdBytes(bytes uint64) HeapProfilerOption {
 	return func(p *HeapProfiler) {
-		p.threshold.Bytes = bytes
+		p.threshold.Bytes = &bytes
 	}
 }
 
 func WithHeapProfilerThresholdPercent(percent float64) HeapProfilerOption {
 	return func(p *HeapProfiler) {
-		p.threshold.Percent = percent
+		p.threshold.Percent = &percent
 	}
 }
 
@@ -128,10 +122,6 @@ func ReadProcessMemory() (ProcessMemory, error) {
 	return readProcessMemory()
 }
 
-func (m ProcessMemory) Exceeds(threshold MemoryThreshold) (bool, error) {
-	bound, err := threshold.Resolve(m.Limit)
-	if err != nil {
-		return false, err
-	}
-	return m.Current >= bound, nil
+func (m ProcessMemory) Exceeds(threshold MemoryThreshold) bool {
+	return threshold.Exceeds(m.Current, m.Limit)
 }

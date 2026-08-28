@@ -1,45 +1,45 @@
 package promdig
 
 import (
-	"github.com/fasionchan/goutils/libs/_prometheus"
+	"github.com/fasionchan/goutils/libs/prometheusutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/dig"
 )
 
 type CollectorGroupsIn struct {
 	dig.In
-	Groups _prometheus.CollectorGroups `name:"default"`
+	Groups prometheusutil.CollectorGroups `name:"default"`
 }
 
-func (in CollectorGroupsIn) Collectors() _prometheus.Collectors {
+func (in CollectorGroupsIn) Collectors() prometheusutil.Collectors {
 	return in.Groups.Stack()
 }
 
 type CollectorGroupsOut struct {
 	dig.Out
-	Groups _prometheus.CollectorGroups `name:"default"`
+	Groups prometheusutil.CollectorGroups `name:"default"`
 }
 
 type collectorGroupSliceIn struct {
 	dig.In
-	Groups []_prometheus.CollectorGroup `group:"default"`
+	Groups []prometheusutil.CollectorGroup `group:"default"`
 }
 
 func (in collectorGroupSliceIn) GroupsOut() CollectorGroupsOut {
 	return CollectorGroupsOut{
-		Groups: _prometheus.CollectorGroups(in.Groups),
+		Groups: prometheusutil.CollectorGroups(in.Groups),
 	}
 }
 
 type CollectorGroupOut struct {
 	dig.Out
-	Group _prometheus.CollectorGroup `group:"default"`
+	Group prometheusutil.CollectorGroup `group:"default"`
 }
 
 func (out *CollectorGroupOut) Append(collectors ...prometheus.Collector) {
 	out.Group = out.Group.Append(collectors...)
 }
 
-func (out *CollectorGroupOut) Concat(groups ..._prometheus.CollectorGroup) {
+func (out *CollectorGroupOut) Concat(groups ...prometheusutil.CollectorGroup) {
 	out.Group = out.Group.Concat(groups...)
 }

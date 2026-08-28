@@ -1,4 +1,4 @@
-package _prometheus
+package prometheusutil
 
 import (
 	"net/http"
