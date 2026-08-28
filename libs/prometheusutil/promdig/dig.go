@@ -43,3 +43,11 @@ func (out *CollectorGroupOut) Append(collectors ...prometheus.Collector) {
 func (out *CollectorGroupOut) Concat(groups ...prometheusutil.CollectorGroup) {
 	out.Group = out.Group.Concat(groups...)
 }
+
+func GetProviderFuncs() []any {
+	return []any{
+		collectorGroupSliceIn.GroupsOut,
+		CollectorGroupsIn.Collectors,
+		prometheusutil.Collectors.BuildRegistry,
+	}
+}
