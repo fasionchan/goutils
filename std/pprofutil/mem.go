@@ -1,20 +1,13 @@
 package pprofutil
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"time"
 
 	"github.com/fasionchan/goutils/stl"
-)
-
-var (
-	errThresholdEmpty    = errors.New("memory threshold: Bytes or Percent is required")
-	errThresholdBoth     = errors.New("memory threshold: set either Bytes or Percent, not both")
-	errThresholdPercent  = errors.New("memory threshold: Percent must be in (0, 100]")
-	errPercentNeedsLimit = errors.New("memory threshold: percent requires a finite memory limit (k8s/cgroup)")
 )
 
 // MemoryThreshold 内存阈值：绝对值（字节）或相对内存上限的百分比。两者都设置时，有一个满足即可。
@@ -50,9 +43,65 @@ func (t MemoryThreshold) PercentExceeds(current uint64, limit uint64) bool {
 	return current >= uint64(float64(limit) * *percent / 100)
 }
 
+func ProfileHeap(opts ...HeapProfilerOption) error {
+	return NewHeapProfiler(opts...).Profile()
+}
+
+type HeapProfilerOption = stl.Option[*HeapProfiler]
+
+func WithHeapProfilerPath(path string) HeapProfilerOption {
+	return func(p *HeapProfiler) {
+		p.path = path
+	}
+}
+
+func WithHeapProfilerThresholdBytes(bytes uint64) HeapProfilerOption {
+	return func(p *HeapProfiler) {
+		p.threshold.Bytes = &bytes
+	}
+}
+
+func WithHeapProfilerThresholdPercent(percent float64) HeapProfilerOption {
+	return func(p *HeapProfiler) {
+		p.threshold.Percent = &percent
+	}
+}
+
+func WithHeapProfilerThrottleDuration(duration time.Duration) HeapProfilerOption {
+	return func(p *HeapProfiler) {
+		p.throttle.duration = duration
+	}
+}
+
+type Throttle struct {
+	duration time.Duration
+	lastTime time.Time
+}
+
+func (t *Throttle) IsThrottled(now time.Time) bool {
+	return t.duration > 0 && time.Since(t.lastTime) < t.duration
+}
+
+func (t *Throttle) Execute(fn func() error) error {
+	now := time.Now()
+	if t.IsThrottled(now) {
+		return nil
+	}
+
+	t.lastTime = now
+	return fn()
+}
+
 type HeapProfiler struct {
-	path      string
-	threshold MemoryThreshold
+	path             string
+	threshold        MemoryThreshold
+	throttle         Throttle
+}
+
+func NewHeapProfiler(opts ...HeapProfilerOption) *HeapProfiler {
+	return stl.NewOptions(opts...).Apply(&HeapProfiler{
+		path: "heap.pprof",
+	})
 }
 
 func (p *HeapProfiler) Profile() error {
@@ -78,38 +127,14 @@ func (p *HeapProfiler) Profile() error {
 	}
 	defer f.Close()
 
-	runtime.GC()
-	if err := pprof.Lookup("heap").WriteTo(f, 0); err != nil {
-		return fmt.Errorf("write heap profile: %w", err)
-	}
+	return p.throttle.Execute(func() error {
+		runtime.GC()
+		if err := pprof.Lookup("heap").WriteTo(f, 0); err != nil {
+			return fmt.Errorf("write heap profile: %w", err)
+		}
 
-	return nil
-}
-
-type HeapProfilerOption = stl.Option[*HeapProfiler]
-
-func ProfileHeap(opts ...HeapProfilerOption) error {
-	return stl.NewOptions(opts...).Apply(&HeapProfiler{
-		path: "heap.pprof",
-	}).Profile()
-}
-
-func WithHeapProfilerPath(path string) HeapProfilerOption {
-	return func(p *HeapProfiler) {
-		p.path = path
-	}
-}
-
-func WithHeapProfilerThresholdBytes(bytes uint64) HeapProfilerOption {
-	return func(p *HeapProfiler) {
-		p.threshold.Bytes = &bytes
-	}
-}
-
-func WithHeapProfilerThresholdPercent(percent float64) HeapProfilerOption {
-	return func(p *HeapProfiler) {
-		p.threshold.Percent = &percent
-	}
+		return nil
+	})
 }
 
 // ProcessMemory 当前进程/容器内存用量与可用于百分比的上限。
