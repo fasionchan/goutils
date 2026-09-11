@@ -10,6 +10,7 @@ ARG DSH_VERSION=latest
 ARG PI_CODING_AGENT_VERSION=latest
 ARG OPENCODE_VERSION=latest
 ARG CODEX_VERSION=latest
+ARG CODEGRAPH_VERSION=latest
 
 FROM golang:${GOLANG_VERSION} AS GoVendor
 
@@ -20,6 +21,7 @@ ARG DSH_VERSION
 ARG PI_CODING_AGENT_VERSION
 ARG OPENCODE_VERSION
 ARG CODEX_VERSION
+ARG CODEGRAPH_VERSION
 
 # 基础包
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -59,6 +61,7 @@ RUN npm install -g @deepseek-ai/dsh@${DSH_VERSION}
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_CODING_AGENT_VERSION}
 RUN npm install -g opencode-ai@${OPENCODE_VERSION}
 RUN npm install -g @openai/codex@${CODEX_VERSION}
+RUN npm install -g @colbymchenry/codegraph@${CODEGRAPH_VERSION}
 
 ENV PATH="/root/.local/bin:$PATH"
 RUN curl https://cursor.com/install -fsS | bash && cursor-agent sandbox disable
