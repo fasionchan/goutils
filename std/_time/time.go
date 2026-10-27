@@ -385,3 +385,7 @@ func (times Times) FilterByWeekday(weekday time.Weekday) Times {
 func (times Times) FilterMondays() Times {
 	return times.FilterByWeekday(time.Monday)
 }
+
+func UnixNanoStringNow() string {
+	return strconv.FormatInt(time.Now().UnixNano(), 10)
+}

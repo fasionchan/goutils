@@ -261,3 +261,47 @@ func UrlValuesToMap(values url.Values, unique func([]string) string) map[string]
 
 	return result
 }
+
+const (
+	HttpRequestOriginContextKey = "HttpRequest.Origin"
+)
+
+func RequestOriginInjector(key string) func (http.Handler) http.Handler {
+	if key == "" {
+		key = HttpRequestOriginContextKey
+	}
+
+	return func (handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if origin := GetRequestOrigin(r); origin != "" {
+				ctx := context.WithValue(r.Context(), key, origin)
+				r = r.WithContext(ctx)
+			}
+			handler.ServeHTTP(w, r)
+		})
+	}
+}
+
+func GetRequestOrigin(r *http.Request) string {
+	headers := r.Header
+
+	host := headers.Get("X-Forwarded-Host")
+	if host == "" {
+		host = r.Host
+	}
+
+	proto := headers.Get("X-Forwarded-Proto")
+	if proto == "" {
+		if r.TLS == nil {
+			proto = "http"
+		} else {
+			proto = "https"
+		}
+	}
+
+	return fmt.Sprintf("%s://%s", proto, host)
+}
+
+func DefaultRequestOriginInjector() func (http.Handler) http.Handler {
+	return RequestOriginInjector("")
+}

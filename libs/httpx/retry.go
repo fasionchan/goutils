@@ -8,8 +8,9 @@
 package httpx
 
 import (
+	"context"
+
 	"github.com/avast/retry-go"
-	"golang.org/x/net/context"
 )
 
 const (

@@ -55,7 +55,21 @@ func (err *PanicError) Error() string {
 	return fmt.Sprintf("panic: exception=%v || stack=\n%s", err.exception, err.stack)
 }
 
-func RecoverPanic(panicError *error, onPanicErrors ...func(*PanicError)) error {
+func (err *PanicError) GetException() any {
+	if err == nil {
+		return nil
+	}
+	return err.exception
+}
+
+func (err *PanicError) GetStack() string {
+	if err == nil {
+		return ""
+	}
+	return err.stack
+}
+
+func RecoverPanic(panicError *error, onPanicErrors ...func(*PanicError)) {
 	if exception := recover(); exception != nil {
 		err := NewPanicError(exception, GetStackTrace())
 		if panicError != nil {
@@ -68,14 +82,12 @@ func RecoverPanic(panicError *error, onPanicErrors ...func(*PanicError)) error {
 			}
 		}
 
-		return err
+		return
 	}
-
-	return nil
 }
 
-func CatchPanic(fn func() error) (err error) {
-	defer RecoverPanic(&err, nil, nil, nil)
+func CatchPanic(fn func() error, onPanicErrors ...func(*PanicError)) (err error) {
+	defer RecoverPanic(&err, onPanicErrors...)
 	return fn()
 }
 

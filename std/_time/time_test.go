@@ -96,3 +96,10 @@ func TestTruncateLocal(t *testing.T) {
 		{t: time.Date(2021, 1, 1, 9, 0, 0, 0, time.Local), d: time.Hour * 24, want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.Local)},
 	})
 }
+
+func TestUnixNanoStringNow(t *testing.T) {
+	now := UnixNanoStringNow()
+	fmt.Println(now)
+	fmt.Println(now[:len(now)-9])
+	assert.NotEmpty(t, now)
+}

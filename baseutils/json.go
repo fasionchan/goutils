@@ -7,7 +7,10 @@
 
 package baseutils
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
 type JsonRawStrMessage string
 
@@ -25,4 +28,12 @@ func (msg *JsonRawStrMessage) UnmarshalJSON(data []byte) error {
 
 	*msg = JsonRawStrMessage(data)
 	return nil
+}
+
+func MarshalJsonAsString(v any) (string, error) {
+	jsonBytes, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
 }

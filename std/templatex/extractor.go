@@ -122,7 +122,7 @@ func ExtractDataByTemplate(data any, tplText string, funcMap TemplateFuncMap) (a
 	return ExtractDataByTemplateCustom(data, tplText, funcMap, "", "")
 }
 
-func ExtractDataByPathTempalteCustom(data any, path string, funcMap TemplateFuncMap, tplName string, containerName string) (any, error) {
+func ExtractDataByPathTemplateCustom(data any, path string, funcMap TemplateFuncMap, tplName string, containerName string) (any, error) {
 	if path == "" || path == "." {
 		return data, nil
 	}
@@ -135,15 +135,15 @@ func ExtractDataByPathTempalteCustom(data any, path string, funcMap TemplateFunc
 	return extractor.Extract(data)
 }
 
-func ExtractDataByPathTempalte(data any, path string, funcMap TemplateFuncMap) (any, error) {
-	return ExtractDataByPathTempalteCustom(data, path, funcMap, "", "")
+func ExtractDataByPathTemplate(data any, path string, funcMap TemplateFuncMap) (any, error) {
+	return ExtractDataByPathTemplateCustom(data, path, funcMap, "", "")
 }
 
-func ExtractDataByExpressionTempalte(data any, expression, pretreatment string, funcMap TemplateFuncMap) (any, error) {
-	return ExtractDataByExpressionTempalteCustom(data, expression, pretreatment, funcMap, "", "")
+func ExtractDataByExpressionTemplate(data any, expression, pretreatment string, funcMap TemplateFuncMap) (any, error) {
+	return ExtractDataByExpressionTemplateCustom(data, expression, pretreatment, funcMap, "", "")
 }
 
-func ExtractDataByExpressionTempalteCustom(data any, expression, pretreatment string, funcMap TemplateFuncMap, tplName string, containerName string) (any, error) {
+func ExtractDataByExpressionTemplateCustom(data any, expression, pretreatment string, funcMap TemplateFuncMap, tplName string, containerName string) (any, error) {
 	extractor, err := NewTemplateDataExtractorByExpressionCustom(expression, pretreatment, funcMap, false, tplName, containerName)
 	if err != nil {
 		return nil, err
