@@ -642,6 +642,12 @@ func Purge[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 	return result
 }
 
+func PurgeByKey[Datas ~[]Data, Key comparable, Data any](datas Datas, getKey func(Data) Key, key Key) Datas {
+	return Purge(datas, func (data Data) bool {
+		return getKey(data) == key
+	})
+}
+
 func PurgeHead[Datas ~[]Data, Data any](datas Datas, filter func(Data) bool) Datas {
 	for i := range datas {
 		if !filter(datas[i]) {
@@ -862,6 +868,38 @@ func BatchProcessConcurrentlyForResults[
 ](datas Datas, process func(data Data) error) KeyValuePairs[Data, error] {
 	errChan := BatchProcessConcurrently(datas, process)
 	return ReadChan(errChan, len(datas))
+}
+
+func BatchProcessUnary[
+	Datas ~[]Data,
+	Argument any,
+	Data any,
+](datas Datas, process func(Data, Argument) error, argument Argument, stopWhenError bool) (errs Errors) {
+	errs = make(Errors, 0, len(datas))
+
+	for _, data := range datas {
+		err := process(data, argument)
+		errs = errs.Append(err)
+
+		if err != nil && stopWhenError {
+			return
+		}
+	}
+
+	return
+}
+
+func BatchProcessUnaryUntilFirstError[
+	Datas ~[]Data,
+	Argument any,
+	Data any,
+](datas Datas, process func(Data, Argument) error, argument Argument) error {
+	for _, data := range datas {
+		if err := process(data, argument); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func BatchProcessUntilFirstError[Data any, Datas ~[]Data](datas Datas, f func(Data) error) error {

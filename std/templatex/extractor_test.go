@@ -64,7 +64,7 @@ var PathTemplateDataExtractorCases = []struct {
 
 func TestExtracDataByPathTempalte(t *testing.T) {
 	for _, item := range PathTemplateDataExtractorCases {
-		result, err := ExtractDataByPathTempalte(item.data, item.path, nil)
+		result, err := ExtractDataByPathTemplate(item.data, item.path, nil)
 		if err != nil {
 			t.Error(err)
 			continue

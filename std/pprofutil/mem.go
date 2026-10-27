@@ -1,13 +1,16 @@
 package pprofutil
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"time"
 
+	"github.com/fasionchan/goutils/libs/logging"
 	"github.com/fasionchan/goutils/stl"
+	"go.uber.org/zap"
 )
 
 // MemoryThreshold 内存阈值：绝对值（字节）或相对内存上限的百分比。两者都设置时，有一个满足即可。
@@ -43,8 +46,8 @@ func (t MemoryThreshold) PercentExceeds(current uint64, limit uint64) bool {
 	return current >= uint64(float64(limit) * *percent / 100)
 }
 
-func ProfileHeap(opts ...HeapProfilerOption) error {
-	return NewHeapProfiler(opts...).Profile()
+func ProfileHeap(ctx context.Context, opts ...HeapProfilerOption) error {
+	return NewHeapProfiler(opts...).Profile(ctx)
 }
 
 type HeapProfilerOption = stl.Option[*HeapProfiler]
@@ -104,7 +107,9 @@ func NewHeapProfiler(opts ...HeapProfilerOption) *HeapProfiler {
 	})
 }
 
-func (p *HeapProfiler) Profile() error {
+func (p *HeapProfiler) Profile(ctx context.Context) error {
+	logger := logging.LoggerFromContextWithFallbacksX(ctx, "HeapProfiler", logging.GetLogger())
+
 	if p.threshold.IsEnabled() {
 		mem, err := ReadProcessMemory()
 		if err != nil {
@@ -114,6 +119,13 @@ func (p *HeapProfiler) Profile() error {
 		if !mem.Exceeds(p.threshold) {
 			return nil
 		}
+
+		logger.Info("MemoryUsageExceedsThreshold",
+			zap.Uint64("Current", mem.Current),
+			zap.Uint64("Limit", mem.Limit),
+			zap.Uint64p("Bytes", p.threshold.Bytes),
+			zap.Float64p("Percent", p.threshold.Percent),
+		)
 	}
 
 	path := p.path
